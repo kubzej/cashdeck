@@ -1,0 +1,25 @@
+{
+  "name": "Label",
+  "import": "import { Label } from \"@/components/ui/label\"",
+  "description": "The accessible name for a form control — always tied to it by id.",
+  "props": {
+    "htmlFor": {
+      "type": "string",
+      "description": "The id of the control this labels. Always set it."
+    },
+    "render": {
+      "type": "ReactElement",
+      "description": "Change the element (defaults to <label>)."
+    }
+  },
+  "forbidden": [
+    "Do not leave a Label unassociated — always set htmlFor to the control's id.",
+    "Do not use Label as generic text; use Text or Eyebrow for non-control labels.",
+    "Do not restyle size/weight via className; it's a fixed token style."
+  ],
+  "example": "<Label htmlFor=\"email\">Email</Label>\n<Input id=\"email\" type=\"email\" />",
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Interactive targets should remain at least 44px. Layouts should fit parent width without horizontal overflow on mobile."
+  }
+}

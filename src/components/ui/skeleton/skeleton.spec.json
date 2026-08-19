@@ -1,0 +1,41 @@
+{
+  "name": "Skeleton",
+  "import": "import { Skeleton } from \"@/components/ui/skeleton\"",
+  "description": "A decorative loading placeholder for content that is still being fetched or prepared.",
+  "props": {
+    "shape": {
+      "type": "enum",
+      "values": ["line", "block", "circle", "pill"],
+      "default": "line",
+      "description": "Base silhouette. Use className only to tune dimensions/layout."
+    },
+    "animated": {
+      "type": "boolean",
+      "default": true,
+      "description": "Pulse the placeholder when the user has not requested reduced motion."
+    },
+    "className": {
+      "type": "string",
+      "description": "Layout and size escape hatch: width, height, flex/grid placement. Do not restyle color, radius, or animation."
+    },
+    "aria-hidden": {
+      "type": "boolean",
+      "default": true,
+      "description": "Skeleton is decorative by default. Put accessible loading copy or aria-busy on the parent."
+    },
+    "render": {
+      "type": "ReactElement | render function",
+      "description": "Polymorphic render target, Base UI style. Rarely needed."
+    }
+  },
+  "forbidden": [
+    "Do not use Skeleton as the only loading announcement; parent regions need accessible loading text or aria-busy.",
+    "Do not put final content text inside Skeleton.",
+    "Do not restyle color, radius, or animation via className; use the closed props and tokens.",
+    "Do not show Skeleton for tiny optimistic waits that would resolve without a visible loading state."
+  ],
+  "responsive": {
+    "note": "Skeleton should match the layout it is replacing on both mobile and desktop. Let rows wrap/stack the same way as final content."
+  },
+  "example": "<div aria-busy=\"true\" className=\"space-y-3\">\n  <span className=\"sr-only\">Loading profile</span>\n  <Skeleton shape=\"circle\" />\n  <Skeleton className=\"w-40\" />\n  <Skeleton className=\"w-64 max-w-full\" />\n</div>"
+}

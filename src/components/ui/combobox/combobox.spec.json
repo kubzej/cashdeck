@@ -1,0 +1,52 @@
+{
+  "name": "Combobox",
+  "import": "import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxEmpty } from \"@/components/ui/combobox\"",
+  "description": "A searchable select — type to filter a large list of options.",
+  "parts": {
+    "Combobox": {
+      "description": "The root. Give it `items`; it filters them by the input text.",
+      "props": {
+        "items": {
+          "type": "readonly T[]",
+          "description": "All options. Filtered automatically as the user types."
+        },
+        "value": {
+          "type": "T | null",
+          "description": "Controlled selected value. Use with onValueChange."
+        },
+        "defaultValue": {
+          "type": "T | null",
+          "description": "Uncontrolled initial value."
+        },
+        "onValueChange": {
+          "type": "(value) => void"
+        },
+        "multiple": {
+          "type": "boolean",
+          "default": false,
+          "description": "Select several values (with chips)."
+        }
+      }
+    },
+    "ComboboxItem": {
+      "description": "One option, rendered by the ComboboxList render function.",
+      "props": {
+        "value": {
+          "type": "T",
+          "description": "The value this option selects."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use a Combobox for a short list (≤ ~7); a Select is simpler and needs no typing.",
+    "Always include ComboboxEmpty so an empty search isn't a blank void.",
+    "Give the input a placeholder and an accessible name (a Label).",
+    "Trigger/popup/item colors come from tokens; don't restyle via className."
+  ],
+  "example": "<Combobox items={frameworks}>\n  <ComboboxInput placeholder=\"Search framework…\" />\n  <ComboboxContent>\n    <ComboboxEmpty>No framework found.</ComboboxEmpty>\n    <ComboboxList>\n      {(item) => (\n        <ComboboxItem key={item} value={item}>{item}</ComboboxItem>\n      )}\n    </ComboboxList>\n  </ComboboxContent>\n</Combobox>",
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Interactive targets should remain at least 44px. Layouts should fit parent width without horizontal overflow on mobile."
+  }
+}

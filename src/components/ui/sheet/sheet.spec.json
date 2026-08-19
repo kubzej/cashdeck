@@ -1,0 +1,177 @@
+{
+  "name": "Sheet",
+  "import": "import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetBody, SheetFooter, SheetClose } from \"@/components/ui/sheet\"",
+  "description": "A modal edge panel for mobile navigation, selectors, and compact side workflows.",
+  "parts": {
+    "Sheet": {
+      "description": "Root state holder built on Base UI Dialog.",
+      "props": {
+        "open": {
+          "type": "boolean",
+          "description": "Controlled open state."
+        },
+        "defaultOpen": {
+          "type": "boolean",
+          "default": false,
+          "description": "Initial uncontrolled open state."
+        },
+        "onOpenChange": {
+          "type": "(open: boolean, details) => void",
+          "description": "Called when trigger, close, escape, or outside press changes open state."
+        },
+        "modal": {
+          "type": "boolean | 'trap-focus'",
+          "default": true,
+          "description": "Keep modal for most sheets so focus stays inside the panel."
+        },
+        "children": {
+          "type": "ReactNode | render function",
+          "description": "SheetTrigger and SheetContent."
+        }
+      }
+    },
+    "SheetTrigger": {
+      "description": "Control that opens the sheet. Compose with kubkit Button through render.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Trigger label or icon."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use render={<Button />} so triggers use kubkit Button styling."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Disables opening."
+        }
+      }
+    },
+    "SheetContent": {
+      "description": "Portal-backed panel with backdrop, viewport, and sliding popup.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Header, body, footer, or a custom panel layout."
+        },
+        "side": {
+          "type": "enum",
+          "values": ["top", "right", "bottom", "left"],
+          "default": "right",
+          "description": "Edge the sheet slides from."
+        },
+        "showCloseButton": {
+          "type": "boolean",
+          "default": true,
+          "description": "Shows an icon close button in the top-right corner."
+        },
+        "initialFocus": {
+          "type": "boolean | RefObject | function",
+          "description": "Base UI focus target when opened."
+        },
+        "finalFocus": {
+          "type": "boolean | RefObject | function",
+          "description": "Base UI focus target when closed."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only; do not restyle surface, shadow, or placement language."
+        }
+      }
+    },
+    "SheetHeader": {
+      "description": "Fixed header area for title, description, or compact toolbar.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Usually SheetTitle, optional SheetDescription, and small header actions."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "SheetTitle": {
+      "description": "Accessible title for the panel.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Short title naming the navigation area or workflow."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "SheetDescription": {
+      "description": "Accessible supporting description.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Concise helper text."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "SheetBody": {
+      "description": "Scrollable main panel area.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Navigation, selectors, forms, or task content."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "SheetFooter": {
+      "description": "Optional fixed action row.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Primary and secondary actions composed from kubkit Button."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "SheetClose": {
+      "description": "Control that closes the sheet.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Visible close/cancel label when used in footer or custom header."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use render={<Button variant=\"secondary\" />} for styled close actions."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Prevents closing through this control."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use Sheet for plain text hints; use Tooltip.",
+    "Do not use Sheet for short anchored controls; use Popover.",
+    "Do not use Sheet for required decisions; use AlertDialog from the Dialog module.",
+    "Do not add visible custom borders to the sheet surface.",
+    "Do not place a long workflow in a bottom sheet; use a right or left sheet."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Use bottom sheets for short mobile selectors, side sheets for navigation or longer workflows. Header and footer actions must keep 44px touch targets."
+  },
+  "example": "<Sheet>\n  <SheetTrigger render={<Button />}>Open panel</SheetTrigger>\n  <SheetContent side=\"right\">\n    <SheetHeader>\n      <SheetTitle>Panel title</SheetTitle>\n      <SheetDescription>Short helper text.</SheetDescription>\n    </SheetHeader>\n    <SheetBody>{/* scrollable content */}</SheetBody>\n    <SheetFooter>\n      <SheetClose render={<Button variant=\"secondary\" />}>Cancel</SheetClose>\n      <Button>Save</Button>\n    </SheetFooter>\n  </SheetContent>\n</Sheet>"
+}

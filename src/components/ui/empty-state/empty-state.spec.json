@@ -1,0 +1,133 @@
+{
+  "name": "Empty state",
+  "import": "import { EmptyState, EmptyStateIcon, EmptyStateTitle, EmptyStateDescription, EmptyStateActions } from \"@/components/ui/empty-state\"",
+  "description": "A calm fallback block for empty collections, filtered results, and first-run setup.",
+  "parts": {
+    "EmptyState": {
+      "description": "Root layout wrapper. Owns spacing, alignment, and the soft surface.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Use EmptyStateIcon, EmptyStateTitle, EmptyStateDescription, optional custom content, and EmptyStateActions."
+        },
+        "variant": {
+          "type": "enum",
+          "values": [
+            "default",
+            "quiet",
+            "tinted"
+          ],
+          "default": "default",
+          "description": "Surface treatment. Default is soft-fill; quiet removes the fill; tinted uses the secondary surface."
+        },
+        "size": {
+          "type": "enum",
+          "values": [
+            "sm",
+            "default",
+            "lg"
+          ],
+          "default": "default",
+          "description": "Vertical density. Use sm inside panels and lg for full-page or first-run states."
+        },
+        "align": {
+          "type": "enum",
+          "values": [
+            "center",
+            "start"
+          ],
+          "default": "center",
+          "description": "Content alignment. Use start when the empty state sits inside a left-aligned settings or table area."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Polymorphic render target, Base UI style. Rarely needed."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only; do not restyle surface, tone, radius, or spacing."
+        }
+      }
+    },
+    "EmptyStateIcon": {
+      "description": "Decorative visual anchor. Usually wraps a lucide icon.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "A decorative icon with aria-hidden, or omit the part when an icon would add noise."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use only when the icon wrapper needs different semantics."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only; do not recolor ad hoc."
+        }
+      }
+    },
+    "EmptyStateTitle": {
+      "description": "Short heading that explains what is empty.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "One short sentence fragment, not a promo headline."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use to render the correct heading level for the surrounding page."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "EmptyStateDescription": {
+      "description": "Supporting copy that explains the next useful step.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "One concise sentence or two short lines. Avoid required information that only appears here."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use only when a different semantic element is needed."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "EmptyStateActions": {
+      "description": "Optional action row. Compose real Button components here.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "One primary Button and, rarely, one secondary Button. Actions stack on mobile."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use only when a different semantic wrapper is needed."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use EmptyState as a decorative card when content exists.",
+    "Do not put domain-specific copy in generic examples.",
+    "Do not invent custom icon colors or borders via className.",
+    "Do not hide important recovery guidance only in an icon or tooltip.",
+    "Do not put more than two primary-looking actions in EmptyStateActions."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "EmptyState itself is static. Buttons inside EmptyStateActions must keep kubkit Button sizing so mobile tap targets stay at least 44px."
+  },
+  "example": "<EmptyState>\n  <EmptyStateIcon><Inbox aria-hidden /></EmptyStateIcon>\n  <EmptyStateTitle>No messages yet</EmptyStateTitle>\n  <EmptyStateDescription>New conversations will appear here.</EmptyStateDescription>\n  <EmptyStateActions>\n    <Button>Create message</Button>\n  </EmptyStateActions>\n</EmptyState>"
+}

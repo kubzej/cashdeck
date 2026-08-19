@@ -1,0 +1,2 @@
+-- Phase 1 intentionally has no application seed data.
+-- Default categories and test fixtures belong to Phase 3.

@@ -1,0 +1,61 @@
+{
+  "name": "Select",
+  "import": "import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from \"@/components/ui/select\"",
+  "description": "Pick one option from a list — an accessible listbox in a portal, built on Base UI.",
+  "parts": {
+    "Select": {
+      "description": "The root — owns the value. Compose Trigger + Content inside.",
+      "props": {
+        "items": {
+          "type": "Record<value, label>",
+          "description": "Map of value → label. Set this so the trigger shows the label (not the raw value) and typeahead works."
+        },
+        "value": {
+          "type": "any",
+          "description": "Controlled value. Use with onValueChange."
+        },
+        "defaultValue": {
+          "type": "any",
+          "description": "Uncontrolled initial value."
+        },
+        "onValueChange": {
+          "type": "(value) => void",
+          "description": "Fires when the selection changes."
+        },
+        "disabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "multiple": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow selecting several values."
+        }
+      }
+    },
+    "SelectItem": {
+      "description": "One option in the list.",
+      "props": {
+        "value": {
+          "type": "any",
+          "description": "The value this option sets. Required."
+        },
+        "disabled": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not style trigger/popup height or colors via className; use tokens.",
+    "Do not use Select for 2–3 options that fit inline; use radios or a segmented control.",
+    "Do not use Select for a boolean; use Switch or Checkbox.",
+    "Always give the trigger an accessible name — a Label or aria-label."
+  ],
+  "example": "<Select>\n  <SelectTrigger><SelectValue placeholder=\"Sort by…\" /></SelectTrigger>\n  <SelectContent>\n    <SelectItem value=\"newest\">Newest</SelectItem>\n    <SelectItem value=\"oldest\">Oldest</SelectItem>\n  </SelectContent>\n</Select>",
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Interactive targets should remain at least 44px. Layouts should fit parent width without horizontal overflow on mobile."
+  }
+}

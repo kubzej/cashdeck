@@ -1,0 +1,253 @@
+{
+  "name": "Dialog",
+  "import": "import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter, DialogClose, AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogBody, AlertDialogFooter, AlertDialogClose } from \"@/components/ui/dialog\"",
+  "description": "Modal dialog primitives for focused workflows, plus AlertDialog parts for required confirmations.",
+  "parts": {
+    "Dialog": {
+      "description": "Root state holder for a modal workflow.",
+      "props": {
+        "open": {
+          "type": "boolean",
+          "description": "Controlled open state."
+        },
+        "defaultOpen": {
+          "type": "boolean",
+          "default": false,
+          "description": "Initial uncontrolled open state."
+        },
+        "onOpenChange": {
+          "type": "(open: boolean, details) => void",
+          "description": "Called when trigger, close, escape, or outside press changes open state."
+        },
+        "modal": {
+          "type": "boolean | 'trap-focus'",
+          "default": true,
+          "description": "Base UI modal behavior. Keep true for normal dialogs."
+        },
+        "children": {
+          "type": "ReactNode | render function",
+          "description": "DialogTrigger and DialogContent."
+        }
+      }
+    },
+    "DialogTrigger": {
+      "description": "Button that opens the dialog. Compose with kubkit Button through render.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Trigger label or icon."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use render={<Button />} so triggers use kubkit Button styling."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Disables opening."
+        }
+      }
+    },
+    "DialogContent": {
+      "description": "Portal-backed modal surface with backdrop, viewport, popup, and optional close icon.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "DialogHeader, DialogBody, DialogFooter, and custom content."
+        },
+        "size": {
+          "type": "enum",
+          "values": ["sm", "default", "lg"],
+          "default": "default",
+          "description": "Maximum popup width. Use lg for denser forms, not arbitrary max-width classes."
+        },
+        "showCloseButton": {
+          "type": "boolean",
+          "default": true,
+          "description": "Shows the icon close button. Keep enabled unless the flow must be completed with footer actions."
+        },
+        "initialFocus": {
+          "type": "boolean | RefObject | function",
+          "description": "Base UI focus target when opened."
+        },
+        "finalFocus": {
+          "type": "boolean | RefObject | function",
+          "description": "Base UI focus target when closed."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only; do not restyle surface, radius, backdrop, or shadow."
+        }
+      }
+    },
+    "DialogHeader": {
+      "description": "Header wrapper for title and description.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Usually DialogTitle and optional DialogDescription."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "DialogBody": {
+      "description": "Scrollable content area.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Form fields, explanatory content, or workflow UI."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "DialogFooter": {
+      "description": "Action row. Compose kubkit Button and DialogClose here.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "One primary action and one secondary/cancel action."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "DialogTitle": {
+      "description": "Accessible dialog title.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Short title that names the workflow."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "DialogDescription": {
+      "description": "Accessible supporting description.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Concise explanation, not a full instructions page."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "DialogClose": {
+      "description": "Close control. Render kubkit Button as this part for footer actions.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Close/cancel label when used in footer."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use render={<Button variant=\"secondary\" />} for styled close actions."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Prevents closing through this control."
+        }
+      }
+    },
+    "AlertDialog": {
+      "description": "Root state holder for required confirmations. Use for destructive or irreversible decisions.",
+      "props": {
+        "open": {
+          "type": "boolean",
+          "description": "Controlled open state."
+        },
+        "defaultOpen": {
+          "type": "boolean",
+          "default": false,
+          "description": "Initial uncontrolled open state."
+        },
+        "onOpenChange": {
+          "type": "(open: boolean, details) => void",
+          "description": "Called when the confirmation opens or closes."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "AlertDialogTrigger and AlertDialogContent."
+        }
+      }
+    },
+    "AlertDialogTrigger": {
+      "description": "Button that opens a required confirmation.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Trigger label or icon."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use render={<Button variant=\"destructive\" />} for dangerous actions."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Disables opening."
+        }
+      }
+    },
+    "AlertDialogContent": {
+      "description": "Confirmation popup. Defaults to a smaller size.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "AlertDialogHeader, optional AlertDialogBody, and AlertDialogFooter."
+        },
+        "size": {
+          "type": "enum",
+          "values": ["sm", "default", "lg"],
+          "default": "sm",
+          "description": "Maximum popup width. Keep confirmations compact."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "AlertDialogClose": {
+      "description": "Confirmation response control. Use for both cancel and confirm actions.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Cancel or confirm label."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Use render={<Button />} or render={<Button variant=\"destructive\" />} for styled actions."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Prevents this response while async work is pending."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not create a separate ConfirmDialog component unless the app has repeated business-specific copy or async behavior to centralize.",
+    "Do not use Dialog for simple inline feedback; use Alert.",
+    "Do not use Dialog as a full page replacement on mobile; use Sheet for edge panels once available.",
+    "Do not add custom visible borders to the popup surface.",
+    "Do not put more than one primary action in the footer.",
+    "Do not hide a required close path in modal dialogs; touch screen readers need an escape control."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Footer actions stack on mobile and should be composed with kubkit Button. Dialog viewport scrolls when content is taller than the screen."
+  },
+  "example": "<Dialog>\n  <DialogTrigger render={<Button />}>Open dialog</DialogTrigger>\n  <DialogContent>\n    <DialogHeader>\n      <DialogTitle>Edit details</DialogTitle>\n      <DialogDescription>Update the information shown to teammates.</DialogDescription>\n    </DialogHeader>\n    <DialogBody>{/* form fields */}</DialogBody>\n    <DialogFooter>\n      <DialogClose render={<Button variant=\"secondary\" />}>Cancel</DialogClose>\n      <Button>Save</Button>\n    </DialogFooter>\n  </DialogContent>\n</Dialog>"
+}
