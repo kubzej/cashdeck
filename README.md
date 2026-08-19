@@ -5,7 +5,7 @@ simpler, performance-focused replacement for Spendee.
 
 ## Foundation status
 
-Phase 1 implementation is ready for review. The repository currently contains
+Phase 1 foundation is complete and approved. The repository currently contains
 the project foundation:
 
 - React + TypeScript + Vite;
