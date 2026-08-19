@@ -2,6 +2,126 @@
   min-height: 100svh;
 }
 
+.auth-screen,
+.auth-state-screen {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 1.25rem;
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.auth-panel,
+.auth-state-panel {
+  display: grid;
+  width: 100%;
+  max-width: 28rem;
+  gap: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
+  padding: 1.25rem;
+  box-shadow: 0 0.75rem 2rem color-mix(in oklab, var(--color-foreground) 8%, transparent);
+}
+
+.auth-brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.auth-brand-mark {
+  width: 3rem;
+  height: 3rem;
+}
+
+.auth-heading {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.auth-heading h1,
+.auth-heading p {
+  margin: 0;
+}
+
+.auth-heading h1 {
+  color: var(--color-card-foreground);
+  font-size: 2rem;
+  font-weight: 650;
+  line-height: 1.1;
+}
+
+.auth-heading > p:last-child {
+  color: var(--color-muted-foreground);
+  font-size: 0.95rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-input-wrap > svg {
+  position: absolute;
+  left: 0.75rem;
+  z-index: 1;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-muted-foreground);
+  pointer-events: none;
+}
+
+.auth-input-wrap input {
+  padding-left: 2.5rem;
+}
+
+.auth-submit {
+  width: 100%;
+}
+
+.auth-footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--color-muted-foreground);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.auth-footnote svg {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.1rem;
+}
+
+.auth-state-screen {
+  padding: 1rem;
+}
+
+.auth-state-panel {
+  place-items: center;
+  text-align: center;
+}
+
+.auth-state-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.auth-state-feedback {
+  max-width: 28rem;
+}
+
 .app-shell {
   min-height: 100svh;
   background: var(--color-background);

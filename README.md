@@ -17,7 +17,7 @@ the project foundation:
 - Playwright foundation smoke test and a Vitest runner for future pure logic;
 - local project rules and CI foundation.
 
-Auth, Supabase tables, financial data, and real navigation are intentionally
+Neon Auth, Neon tables, financial data, and real navigation are intentionally
 deferred to later phases. No Netlify deploy has been created; `netlify.toml`
 only describes the future production build.
 
@@ -34,18 +34,19 @@ pnpm test:e2e
 pnpm build
 ```
 
-The app shell does not require Supabase credentials yet. Copy `.env.example`
-to `.env.local` when the authentication phase is approved. The browser test
+The app shell does not require Neon credentials yet. Copy `.env.example`
+to `.env.local` when the authentication phase is implemented. The browser test
 starts its own temporary Vite server on port `4173`.
 
 Playwright is not part of the normal development server. Run `pnpm test:e2e`
 only when adding or changing browser tests, or when you want to verify a full
 user flow locally.
 
-Docker is not needed to run the current frontend shell. It will be needed
-later for the local Supabase stack, started with `pnpm dlx supabase start`.
-Stop the local frontend with `Ctrl-C`; the Playwright command manages and
-stops its own temporary server automatically.
+Docker is not needed to run the current frontend shell. Database migrations
+and PostgreSQL tests belong to the database phase; they will use the selected
+Neon development branch or an isolated PostgreSQL test database, not a local
+hosted backend stack. Stop the local frontend with `Ctrl-C`; the Playwright command
+manages and stops its own temporary server automatically.
 
 ## Design rules
 

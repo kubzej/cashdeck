@@ -9,9 +9,12 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm dev --host 127.0.0.1 --port 4173',
+    command: './node_modules/.bin/vite --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: true,
+    env: {
+      VITE_NEON_AUTH_URL: 'http://neon.test/auth',
+    },
   },
   projects: [
     {

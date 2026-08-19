@@ -28,8 +28,11 @@
 
 ## Data and security
 
-- Supabase is the online source of truth. Local storage is cache/session
+- Neon PostgreSQL is the online source of truth. Local storage is cache/session
   mechanics only; never present stale financial data as current offline.
+- Neon Auth owns email/password sessions and Neon Data API/RLS protects
+  browser-accessible user data. Railway is reserved for trusted short-lived
+  scheduled work such as recurring generation.
 - Never expose service-role keys or secrets to the client.
 - Every user-owned database row is protected by RLS and user-scoped ownership.
 - Financial writes must be server-confirmed. Do not add optimistic financial
