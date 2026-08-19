@@ -1,0 +1,17 @@
+services:
+  postgres:
+    build:
+      context: ./docker
+    environment:
+      POSTGRES_DB: cashdeck_test
+      POSTGRES_PASSWORD: cashdeck_test
+      POSTGRES_USER: postgres
+    ports:
+      - "55432:5432"
+    volumes:
+      - ./test:/opt/cashdeck/test:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cashdeck_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20

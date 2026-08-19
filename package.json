@@ -11,7 +11,13 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "db:up": "node scripts/db.mjs up",
+    "db:down": "node scripts/db.mjs down",
+    "db:migrate": "node scripts/db.mjs migrate",
+    "db:migrate:test": "node scripts/db.mjs migrate",
+    "db:fixture:test": "node scripts/db.mjs fixture",
+    "db:test": "node scripts/db.mjs test"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -31,10 +37,12 @@
     "@playwright/test": "^1.55.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
+    "@types/pg": "^8.15.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
+    "pg": "^8.16.3",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
