@@ -5,8 +5,7 @@ simpler, performance-focused replacement for Spendee.
 
 ## Project status
 
-Phase 1 foundation and Phase 2 authentication/app shell are complete and
-approved. The repository currently contains:
+The repository currently contains:
 
 - React + TypeScript + Vite;
 - Kubkit-owned theme tokens plus the base Button, form, page-shell, state,
@@ -16,12 +15,12 @@ approved. The repository currently contains:
 - portrait PWA manifest and service-worker build configuration;
 - Playwright foundation smoke test and a Vitest runner for future pure logic;
 - local project rules and CI foundation;
-- Neon Auth email/password login with persistent sessions;
-- protected mobile shell with the four Cashdeck destinations;
-- Phase 3 SQL migrations, Docker PostgreSQL 18, pgTAP fixtures, and RLS tests.
+- a clean mobile shell with the four Cashdeck destinations.
 
-Financial screens and production deployment remain deferred. No Netlify deploy
-has been created; `netlify.toml` only describes the future production build.
+The previous database and authentication integration was intentionally removed.
+It will be rebuilt as a backend-first architecture: browser to Cashdeck API,
+Cashdeck API to Neon Postgres. Financial screens and production deployment
+remain deferred.
 
 ## Commands
 
@@ -34,30 +33,11 @@ pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build
-pnpm db:test
 ```
-
-Copy `.env.example` to `.env.local` for local Neon Auth login. The browser test
-uses a mocked Auth API and does not depend on production data. It starts its own
-temporary Vite server on port `4173`.
 
 Playwright is not part of the normal development server. Run `pnpm test:e2e`
 only when adding or changing browser tests, or when you want to verify a full
-user flow locally.
-
-The database test command builds a temporary PostgreSQL 18 + pgTAP container,
-applies every migration, loads fixtures, runs the database tests, and removes
-the container again:
-
-```bash
-pnpm db:test
-```
-
-For a manually running local test database use `pnpm db:up`, then
-`pnpm db:migrate:test` and `pnpm db:fixture:test`. Stop it with `pnpm db:down`.
-These commands target only the local Docker database. A deliberate migration
-against another database must set `CASHDECK_DATABASE_URL` explicitly before
-running `pnpm db:migrate`; Neon production is never used by CI.
+user flow locally. It starts its own temporary Vite server on port `4173`.
 
 Stop the local frontend with `Ctrl-C`; the Playwright command manages and stops
 its own temporary server automatically.

@@ -12,9 +12,9 @@ import {
   WifiOff,
   type LucideIcon,
 } from 'lucide-react'
-import { useAuth } from './auth/auth-context'
 import { AuthProvider } from './auth/auth-provider'
 import { LoginScreen } from './auth/login-screen'
+import { useAuth } from './auth/auth-context'
 import { Button } from './components/ui/button'
 import {
   FeedbackState,
@@ -66,21 +66,10 @@ function App() {
 function AuthGate({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) => void }) {
   const { status, errorMessage, refreshSession } = useAuth()
 
-  if (status === 'loading') {
-    return <AuthLoadingState />
-  }
-
-  if (status === 'unavailable') {
-    return <AuthUnavailableState />
-  }
-
-  if (status === 'error') {
-    return <AuthErrorState message={errorMessage} onRetry={refreshSession} />
-  }
-
-  if (status === 'signed-out') {
-    return <LoginScreen />
-  }
+  if (status === 'loading') return <AuthLoadingState />
+  if (status === 'unavailable') return <AuthUnavailableState />
+  if (status === 'error') return <AuthErrorState message={errorMessage} onRetry={refreshSession} />
+  if (status === 'signed-out') return <LoginScreen />
 
   return <AppShell theme={theme} setTheme={setTheme} />
 }
@@ -101,14 +90,10 @@ function AuthUnavailableState() {
   return (
     <main className="auth-state-screen">
       <FeedbackState status="error" layout="panel" className="auth-state-feedback">
-        <FeedbackStateIcon>
-          <WifiOff aria-hidden="true" />
-        </FeedbackStateIcon>
+        <FeedbackStateIcon><WifiOff aria-hidden="true" /></FeedbackStateIcon>
         <FeedbackStateContent>
           <FeedbackStateTitle>Nelze načíst přihlášení</FeedbackStateTitle>
-          <FeedbackStateDescription>
-            Neon Auth není pro toto prostředí nastavený.
-          </FeedbackStateDescription>
+          <FeedbackStateDescription>Neon Auth není pro toto prostředí nastavený.</FeedbackStateDescription>
         </FeedbackStateContent>
       </FeedbackState>
     </main>
@@ -119,14 +104,10 @@ function AuthErrorState({ message, onRetry }: { message: string | null; onRetry:
   return (
     <main className="auth-state-screen">
       <FeedbackState status="error" layout="panel" className="auth-state-feedback">
-        <FeedbackStateIcon>
-          <CircleAlert aria-hidden="true" />
-        </FeedbackStateIcon>
+        <FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon>
         <FeedbackStateContent>
           <FeedbackStateTitle>Přihlášení není dostupné</FeedbackStateTitle>
-          <FeedbackStateDescription>
-            {message ?? 'Zkontroluj připojení a zkus to znovu.'}
-          </FeedbackStateDescription>
+          <FeedbackStateDescription>{message ?? 'Zkontroluj připojení a zkus to znovu.'}</FeedbackStateDescription>
         </FeedbackStateContent>
         <FeedbackStateActions>
           <Button variant="outline" onClick={() => void onRetry()}>
@@ -143,9 +124,7 @@ function AppShell({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) 
   const { status, signOut } = useAuth()
   const [activeNav, setActiveNav] = useState<NavKey>('transactions')
 
-  if (status !== 'signed-in') {
-    return null
-  }
+  if (status !== 'signed-in') return null
 
   return (
     <div className="app-shell">
@@ -158,15 +137,20 @@ function AppShell({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) 
               <p className="brand-context">Osobní finance</p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={theme === 'dark' ? 'Přepnout na světlý motiv' : 'Přepnout na tmavý motiv'}
-            aria-pressed={theme === 'dark'}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            {theme === 'dark' ? <Sun /> : <Moon />}
-          </Button>
+          <div className="app-header-actions">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={theme === 'dark' ? 'Přepnout na světlý motiv' : 'Přepnout na tmavý motiv'}
+              aria-pressed={theme === 'dark'}
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            >
+              {theme === 'dark' ? <Sun /> : <Moon />}
+            </Button>
+            <Button variant="ghost" size="icon" aria-label="Odhlásit se" onClick={() => void signOut()}>
+              <LogOut aria-hidden="true" />
+            </Button>
+          </div>
         </header>
 
         <main className="app-content">
@@ -175,30 +159,7 @@ function AppShell({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) 
             <h1>{navItems.find((item) => item.key === activeNav)?.label}</h1>
           </div>
 
-          <section className="foundation-panel" aria-labelledby="foundation-title">
-            <div className="foundation-panel__intro">
-              <div className="foundation-icon" aria-hidden="true">
-                <ReceiptText />
-              </div>
-              <div>
-                <h2 id="foundation-title">Cashdeck je připravený</h2>
-                <p>Foundation shell pro další fáze projektu.</p>
-              </div>
-            </div>
-
-            <div className="foundation-skeleton" aria-label="Načítání obsahu">
-              <Skeleton className="h-4 w-3/5" />
-              <Skeleton className="h-4 w-4/5" />
-              <Skeleton className="h-20 w-full rounded-lg" />
-            </div>
-
-            {activeNav === 'settings' ? (
-              <Button variant="outline" onClick={() => void signOut()}>
-                <LogOut aria-hidden="true" />
-                Odhlásit se
-              </Button>
-            ) : null}
-          </section>
+          <FoundationPanel />
         </main>
 
         <nav className="bottom-nav" aria-label="Hlavní navigace">
@@ -222,6 +183,28 @@ function AppShell({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) 
         </nav>
       </div>
     </div>
+  )
+}
+
+function FoundationPanel() {
+  return (
+    <section className="foundation-panel" aria-labelledby="foundation-title">
+      <div className="foundation-panel__intro">
+        <div className="foundation-icon" aria-hidden="true">
+          <ReceiptText />
+        </div>
+        <div>
+          <h2 id="foundation-title">Obsah se připravuje</h2>
+          <p>Základní shell je připravený pro novou bezpečnou datovou vrstvu.</p>
+        </div>
+      </div>
+
+      <div className="foundation-skeleton" aria-label="Připravený obsah">
+        <Skeleton className="h-4 w-3/5" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-20 w-full rounded-lg" />
+      </div>
+    </section>
   )
 }
 

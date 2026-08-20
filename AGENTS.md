@@ -30,11 +30,14 @@
 
 - Neon PostgreSQL is the online source of truth. Local storage is cache/session
   mechanics only; never present stale financial data as current offline.
-- Neon Auth owns email/password sessions and Neon Data API/RLS protects
-  browser-accessible user data. Railway is reserved for trusted short-lived
-  scheduled work such as recurring generation.
-- Never expose service-role keys or secrets to the client.
-- Every user-owned database row is protected by RLS and user-scoped ownership.
+- Neon Auth owns email/password sessions. The Cashdeck API on Railway is the
+  only application data gateway; the browser must never call Neon Data API or
+  PostgreSQL directly.
+- The API verifies the Neon Auth JWT and forwards it through the official Neon
+  serverless driver to Neon RLS. Never expose database connection strings,
+  service roles, or secrets to the client.
+- Every user-owned database row is protected by RLS and `auth.user_id()`.
+  Keep SQL scopes explicit even when RLS already enforces ownership.
 - Financial writes must be server-confirmed. Do not add optimistic financial
   rows without an explicit product decision.
 
@@ -43,7 +46,7 @@
 - Never fetch the complete financial history for a screen.
 - Use explicit columns, scoped queries, bounded RPCs, keyset pagination, and
   measured indexes.
-- Every new behavior needs the smallest appropriate test: Vitest for simple
-  deterministic unit logic, pgTAP for database behavior, and Playwright for
-  user workflows. No component-test framework is included.
+- Every new behavior needs the smallest appropriate test: Vitest for backend
+  and frontend deterministic unit logic, and Playwright for user workflows.
+  No component-test framework or database-test framework is included.
 - Keep CI green: lint, typecheck, tests, and build must pass before merging.

@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-server
 dist-ssr
 playwright-report
 test-results
@@ -16,6 +17,7 @@ test-results
 .env
 .env.*
 !.env.example
+!server/.env.example
 
 # Editor directories and files
 .vscode/*

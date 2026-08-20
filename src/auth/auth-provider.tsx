@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthSession, type AuthStatus } from './auth-context'
 import { authClient, isNeonAuthConfigured } from '../lib/auth-client'
 
@@ -20,23 +14,20 @@ function getAuthErrorMessage(error: unknown) {
       return 'Email nebo heslo není správně.'
     case 'TOO_MANY_REQUESTS':
       return 'Příliš mnoho pokusů. Zkus to za chvíli znovu.'
-    case 'EMAIL_NOT_VERIFIED':
-      return 'Email účtu ještě není ověřený.'
+    case 'USER_ALREADY_EXISTS':
+      return 'Účet s tímto emailem už existuje.'
     default:
       return 'Přihlášení se nepodařilo. Zkus to znovu.'
   }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>(
-    isNeonAuthConfigured ? 'loading' : 'unavailable',
-  )
+  const [status, setStatus] = useState<AuthStatus>(isNeonAuthConfigured ? 'loading' : 'unavailable')
   const [session, setSession] = useState<AuthSession>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const refreshSession = useCallback(async () => {
     const client = authClient
-
     if (!client) {
       setStatus('unavailable')
       setSession(null)
@@ -47,7 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const response = await client.getSession()
-
       if (response.error) {
         setStatus('error')
         setSession(null)
@@ -55,9 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const hasUser = Boolean(response.data?.user)
-      setSession(hasUser ? response.data : null)
-      setStatus(hasUser ? 'signed-in' : 'signed-out')
+      const nextSession = response.data?.user ? response.data : null
+      setSession(nextSession)
+      setStatus(nextSession ? 'signed-in' : 'signed-out')
     } catch {
       setStatus('error')
       setSession(null)
@@ -66,23 +56,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    const loadSessionTask = window.setTimeout(() => void refreshSession(), 0)
-
-    return () => window.clearTimeout(loadSessionTask)
+    void refreshSession()
   }, [refreshSession])
 
   const signIn = useCallback(async (email: string, password: string) => {
     const client = authClient
-
-    if (!client) {
-      return 'Neon Auth není pro toto prostředí nastavený.'
-    }
-
-    setErrorMessage(null)
+    if (!client) return 'Neon Auth není pro toto prostředí nastavený.'
 
     try {
       const response = await client.signIn.email({ email, password })
+      if (response.error) {
+        const message = getAuthErrorMessage(response.error)
+        setStatus('signed-out')
+        setErrorMessage(message)
+        return message
+      }
 
+      await refreshSession()
+      return null
+    } catch (error) {
+      const message = getAuthErrorMessage(error)
+      setStatus('signed-out')
+      setErrorMessage(message)
+      return message
+    }
+  }, [refreshSession])
+
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
+    const client = authClient
+    if (!client) return 'Neon Auth není pro toto prostředí nastavený.'
+
+    try {
+      const response = await client.signUp.email({ name, email, password })
       if (response.error) {
         const message = getAuthErrorMessage(response.error)
         setStatus('signed-out')
@@ -102,22 +107,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     const client = authClient
-
-    if (!client) {
-      setSession(null)
-      setStatus('signed-out')
-      return
-    }
-
-    await client.signOut()
+    if (client) await client.signOut()
     setSession(null)
     setStatus('signed-out')
     setErrorMessage(null)
   }, [])
 
   const value = useMemo(
-    () => ({ status, session, errorMessage, refreshSession, signIn, signOut }),
-    [errorMessage, refreshSession, session, signIn, signOut, status],
+    () => ({ status, session, errorMessage, refreshSession, signIn, signUp, signOut }),
+    [errorMessage, refreshSession, session, signIn, signOut, signUp, status],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
