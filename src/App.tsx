@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   BarChart3,
   CircleAlert,
   LogOut,
-  Moon,
   ReceiptText,
   RefreshCw,
   Settings2,
-  Sun,
   WalletCards,
   WifiOff,
   type LucideIcon,
@@ -25,15 +23,25 @@ import {
   FeedbackStateTitle,
 } from './components/ui/feedback-state'
 import { Skeleton } from './components/ui/skeleton'
+import {
+  EmptyState,
+  EmptyStateDescription,
+  EmptyStateIcon,
+  EmptyStateTitle,
+} from './components/ui/empty-state'
 import './App.css'
 
-type Theme = 'light' | 'dark'
 type NavKey = 'transactions' | 'wallets' | 'overview' | 'settings'
 
 type NavItem = {
   key: NavKey
   label: string
   icon: LucideIcon
+}
+
+type PlaceholderContent = {
+  title: string
+  description: string
 }
 
 const navItems: NavItem[] = [
@@ -43,27 +51,30 @@ const navItems: NavItem[] = [
   { key: 'settings', label: 'Nastavení', icon: Settings2 },
 ]
 
-function getInitialTheme(): Theme {
-  return localStorage.getItem('cashdeck-theme') === 'dark' ? 'dark' : 'light'
+const placeholderContent: Record<Exclude<NavKey, 'settings'>, PlaceholderContent> = {
+  transactions: {
+    title: 'Zatím bez transakcí',
+    description: 'První záznamy se zobrazí tady.',
+  },
+  wallets: {
+    title: 'Zatím bez peněženek',
+    description: 'Přidané peněženky se zobrazí tady.',
+  },
+  overview: {
+    title: 'Zatím bez přehledu',
+    description: 'Přehled se zobrazí po přidání prvních záznamů.',
+  },
 }
 
 function App() {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme)
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-    document.documentElement.classList.toggle('light', theme === 'light')
-    localStorage.setItem('cashdeck-theme', theme)
-  }, [theme])
-
   return (
     <AuthProvider>
-      <AuthGate theme={theme} setTheme={setTheme} />
+      <AuthGate />
     </AuthProvider>
   )
 }
 
-function AuthGate({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) => void }) {
+function AuthGate() {
   const { status, errorMessage, refreshSession } = useAuth()
 
   if (status === 'loading') return <AuthLoadingState />
@@ -71,7 +82,7 @@ function AuthGate({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) 
   if (status === 'error') return <AuthErrorState message={errorMessage} onRetry={refreshSession} />
   if (status === 'signed-out') return <LoginScreen />
 
-  return <AppShell theme={theme} setTheme={setTheme} />
+  return <AppShell />
 }
 
 function AuthLoadingState() {
@@ -120,46 +131,26 @@ function AuthErrorState({ message, onRetry }: { message: string | null; onRetry:
   )
 }
 
-function AppShell({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) => void }) {
-  const { status, signOut } = useAuth()
+function AppShell() {
+  const { session, status, signOut } = useAuth()
   const [activeNav, setActiveNav] = useState<NavKey>('transactions')
+  const activeItem = navItems.find((item) => item.key === activeNav)
 
   if (status !== 'signed-in') return null
 
   return (
     <div className="app-shell">
       <div className="app-main">
-        <header className="app-header">
-          <div className="brand-lockup">
-            <img src="/cashdeck-mark.svg" alt="" className="brand-mark" />
-            <div>
-              <p className="brand-name">Cashdeck</p>
-              <p className="brand-context">Osobní finance</p>
-            </div>
-          </div>
-          <div className="app-header-actions">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={theme === 'dark' ? 'Přepnout na světlý motiv' : 'Přepnout na tmavý motiv'}
-              aria-pressed={theme === 'dark'}
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            >
-              {theme === 'dark' ? <Sun /> : <Moon />}
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Odhlásit se" onClick={() => void signOut()}>
-              <LogOut aria-hidden="true" />
-            </Button>
-          </div>
-        </header>
-
         <main className="app-content">
           <div className="screen-heading">
-            <p className="eyebrow">Přehled</p>
-            <h1>{navItems.find((item) => item.key === activeNav)?.label}</h1>
+            <h1>{activeItem?.label}</h1>
           </div>
 
-          <FoundationPanel />
+          {activeNav === 'settings' ? (
+            <SettingsScreen email={session?.user.email ?? ''} onSignOut={signOut} />
+          ) : activeItem ? (
+            <PlaceholderScreen item={activeItem} />
+          ) : null}
         </main>
 
         <nav className="bottom-nav" aria-label="Hlavní navigace">
@@ -169,7 +160,7 @@ function AppShell({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) 
             return (
               <Button
                 key={key}
-                variant={isActive ? 'secondary' : 'ghost'}
+                variant="ghost"
                 size="sm"
                 className={`bottom-nav__item${isActive ? ' bottom-nav__item--active' : ''}`}
                 aria-current={isActive ? 'page' : undefined}
@@ -186,24 +177,35 @@ function AppShell({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) 
   )
 }
 
-function FoundationPanel() {
-  return (
-    <section className="foundation-panel" aria-labelledby="foundation-title">
-      <div className="foundation-panel__intro">
-        <div className="foundation-icon" aria-hidden="true">
-          <ReceiptText />
-        </div>
-        <div>
-          <h2 id="foundation-title">Obsah se připravuje</h2>
-          <p>Základní shell je připravený pro novou bezpečnou datovou vrstvu.</p>
-        </div>
-      </div>
+function PlaceholderScreen({ item }: { item: NavItem }) {
+  const content = placeholderContent[item.key as Exclude<NavKey, 'settings'>]
+  const Icon = item.icon
 
-      <div className="foundation-skeleton" aria-label="Připravený obsah">
-        <Skeleton className="h-4 w-3/5" />
-        <Skeleton className="h-4 w-4/5" />
-        <Skeleton className="h-20 w-full rounded-lg" />
-      </div>
+  return (
+    <EmptyState variant="quiet" size="lg" className="screen-placeholder">
+      <EmptyStateIcon><Icon aria-hidden="true" /></EmptyStateIcon>
+      <EmptyStateTitle>{content.title}</EmptyStateTitle>
+      <EmptyStateDescription>{content.description}</EmptyStateDescription>
+    </EmptyState>
+  )
+}
+
+function SettingsScreen({ email, onSignOut }: { email: string; onSignOut: () => Promise<void> }) {
+  return (
+    <section className="settings-screen" aria-label="Nastavení aplikace">
+      <section className="settings-section" aria-labelledby="session-title">
+        <div className="settings-section__heading">
+          <h2 id="session-title">Účet</h2>
+        </div>
+        <div className="settings-account" aria-label="Přihlášený účet">
+          <span className="settings-account__label">Přihlášený e-mail</span>
+          <span className="settings-account__email">{email}</span>
+        </div>
+        <Button variant="outline" className="settings-sign-out" onClick={() => void onSignOut()}>
+          <LogOut aria-hidden="true" />
+          Odhlásit se
+        </Button>
+      </section>
     </section>
   )
 }

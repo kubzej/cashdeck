@@ -1,8 +1,17 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
-test('signs in, protects the shell, and signs out', async ({ page }) => {
-  let isAuthenticated = false
-  const user = { id: 'user-1', email: 'jakub@example.com', name: 'Jakub' }
+export const testUser = {
+  id: 'user-1',
+  email: 'jakub@example.com',
+  name: 'Jakub',
+}
+
+type AuthMockOptions = {
+  signedIn?: boolean
+}
+
+export async function mockAuthAndApi(page: Page, { signedIn = false }: AuthMockOptions = {}) {
+  let isAuthenticated = signedIn
 
   await page.route('http://neon.test/auth/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname
@@ -11,8 +20,8 @@ test('signs in, protects the shell, and signs out', async ({ page }) => {
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
-          session: isAuthenticated ? { id: 'session-1', userId: user.id, token: 'token-1' } : null,
-          user: isAuthenticated ? user : null,
+          session: isAuthenticated ? { id: 'session-1', userId: testUser.id, token: 'token-1' } : null,
+          user: isAuthenticated ? testUser : null,
         }),
       })
       return
@@ -20,7 +29,7 @@ test('signs in, protects the shell, and signs out', async ({ page }) => {
 
     if (pathname.endsWith('/sign-in/email')) {
       isAuthenticated = true
-      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ user }) })
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ user: testUser }) })
       return
     }
 
@@ -37,23 +46,20 @@ test('signs in, protects the shell, and signs out', async ({ page }) => {
     expect(route.request().headers().authorization).toBe('Bearer token-1')
     await route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ userId: user.id }),
+      body: JSON.stringify({ userId: testUser.id }),
     })
   })
+}
 
-  await page.goto('/')
-
-  await expect(page.getByRole('heading', { name: 'Přihlášení' })).toBeVisible()
-  await page.getByLabel('Email').fill('jakub@example.com')
+export async function signIn(page: Page) {
+  await page.getByLabel('Email').fill(testUser.email)
   await page.getByLabel('Heslo').fill('secure-password')
   await page.getByRole('button', { name: 'Přihlásit se' }).click()
-
   await expect(page.getByRole('heading', { name: 'Transakce', exact: true })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Hlavní navigace' })).toBeVisible()
+}
 
-  await page.getByRole('button', { name: 'Peněženky' }).click()
-  await expect(page.getByRole('heading', { name: 'Peněženky' })).toBeVisible()
-
-  await page.getByRole('button', { name: 'Odhlásit se' }).click()
-  await expect(page.getByRole('heading', { name: 'Přihlášení' })).toBeVisible()
-})
+export async function openSignedInApp(page: Page) {
+  await mockAuthAndApi(page)
+  await page.goto('/')
+  await signIn(page)
+}

@@ -39,20 +39,11 @@ export function LoginScreen() {
       <section className="auth-panel" aria-labelledby="login-title">
         <div className="auth-brand-lockup">
           <img src="/cashdeck-mark.svg" alt="" className="auth-brand-mark" />
-          <div>
-            <p className="brand-name">Cashdeck</p>
-            <p className="brand-context">Osobní finance</p>
-          </div>
-        </div>
-
-        <div className="auth-heading">
-          <p className="eyebrow">Vítej zpět</p>
-          <h1 id="login-title">Přihlášení</h1>
-          <p>Přihlas se ke svému přehledu financí.</p>
+          <h1 id="login-title" className="brand-name">Cashdeck</h1>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          <Field>
+          <Field invalid={Boolean(errorMessage)}>
             <FieldLabel>Email</FieldLabel>
             <div className="auth-input-wrap">
               <Mail aria-hidden="true" />
@@ -64,14 +55,13 @@ export function LoginScreen() {
                 placeholder="ty@example.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                aria-invalid={Boolean(errorMessage) || undefined}
                 disabled={isSubmitting}
                 required
               />
             </div>
           </Field>
 
-          <Field>
+          <Field invalid={Boolean(errorMessage)}>
             <FieldLabel>Heslo</FieldLabel>
             <div className="auth-input-wrap">
               <LockKeyhole aria-hidden="true" />
@@ -82,7 +72,6 @@ export function LoginScreen() {
                 placeholder="Tvoje heslo"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                aria-invalid={Boolean(errorMessage) || undefined}
                 disabled={isSubmitting}
                 required
               />

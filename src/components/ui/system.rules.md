@@ -24,8 +24,9 @@ constraints, not suggestions.
 
 ## 3. Theming
 
-- Everything must work in light AND dark. Colors come from semantic tokens only, so dark mode
-  is automatic — never hardcode a color that won't flip.
+- Cashdeck is light-only by product decision. Use semantic tokens so the
+  interface remains internally consistent, but do not add dark-mode behavior,
+  theme switching, or system-theme detection.
 
 ## 4. Composition & density
 

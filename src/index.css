@@ -2,6 +2,7 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
+/* Keep Kubkit dark utilities dormant: Cashdeck never applies the .dark class. */
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -13,8 +14,7 @@
   --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, monospace;
 }
 
-:root,
-.light {
+:root {
   color-scheme: light;
   --radius: 0.625rem;
   --brand: #0f766e;
@@ -37,30 +37,6 @@
   --border: #d8e6e3;
   --input: #c7dad6;
   --ring: #14b8a6;
-}
-
-.dark {
-  color-scheme: dark;
-  --brand: #5eead4;
-  --background: #10201f;
-  --foreground: #e8f6f3;
-  --card: #17302d;
-  --card-foreground: #e8f6f3;
-  --popover: #17302d;
-  --popover-foreground: #e8f6f3;
-  --primary: #5eead4;
-  --primary-foreground: #10201f;
-  --secondary: #21413d;
-  --secondary-foreground: #d6fbf5;
-  --muted: #21413d;
-  --muted-foreground: #a5c3bd;
-  --accent: #28504b;
-  --accent-foreground: #e8f6f3;
-  --destructive: #f87171;
-  --destructive-foreground: #2b1010;
-  --border: #315650;
-  --input: #3b655e;
-  --ring: #5eead4;
 }
 
 @theme inline {

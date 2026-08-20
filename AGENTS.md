@@ -18,8 +18,9 @@
   label.
 - Use semantic tokens and the shared spacing/radius system. Do not add
   arbitrary colors, radii, or spacing values to UI classes.
-- Respect 44px touch targets, safe areas, light/dark theme behavior, and
-  loading/error/empty/disabled states.
+- Respect 44px touch targets, safe areas, the light-only visual system, and
+  loading/error/empty/disabled states. Do not add a theme switch or dark-mode
+  work unless the product decision changes.
 - Before creating a new UI primitive or styling a one-off replacement, inspect
   `src/components/ui/_registry.index.json` and the live Kubkit registry. If a
   matching component exists, install and use it through Kubkit's command flow.

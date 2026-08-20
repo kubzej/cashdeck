@@ -1,11 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Cashdeck</title>
-  <desc id="desc">Three offset cards forming a simple deck.</desc>
+  <desc id="desc">Three overlapping cards forming a minimal deck.</desc>
   <rect width="512" height="512" rx="128" fill="#14211f"/>
-  <rect x="125" y="154" width="242" height="154" rx="26" fill="#315b53" transform="rotate(-8 125 154)"/>
-  <rect x="145" y="170" width="242" height="154" rx="26" fill="#4a887b" transform="rotate(4 145 170)"/>
-  <rect x="130" y="205" width="252" height="160" rx="28" fill="#f3fbf8"/>
-  <path d="M188 270h136" stroke="#14211f" stroke-width="22" stroke-linecap="round"/>
-  <circle cx="188" cy="270" r="18" fill="#63d8c4"/>
-  <path d="M326 310h28" stroke="#63d8c4" stroke-width="12" stroke-linecap="round"/>
+  <rect x="116" y="144" width="258" height="170" rx="28" fill="#315b53" transform="rotate(-9 245 229)"/>
+  <rect x="142" y="172" width="258" height="170" rx="28" fill="#5ac8b4" transform="rotate(5 271 257)"/>
+  <rect x="127" y="204" width="258" height="170" rx="30" fill="#f3fbf8"/>
 </svg>
