@@ -25,7 +25,7 @@ export function WalletDetailScreen({
       </header>
 
       <div className="wallet-detail-summary">
-        <WalletCards className={`wallet-detail-icon wallet-icon--${wallet.colorKey}`} aria-hidden="true" />
+        <WalletCards className={`wallet-detail-icon wallet-icon color-key--${wallet.colorKey}`} aria-hidden="true" />
         <span className="wallet-detail-balance">{formatCzk(wallet.openingBalanceCzk)}</span>
       </div>
     </section>

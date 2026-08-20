@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowLeft, Check, CircleAlert } from 'lucide-react'
+import { ArrowLeft, CircleAlert } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { ColorPicker } from '../../components/color-picker'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
-import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group'
-import { createWallet, deleteWallet, updateWallet, walletColorKeys, type Wallet, type WalletColorKey } from './api'
+import { createWallet, deleteWallet, updateWallet, type Wallet, type WalletColorKey } from './api'
 import './wallets.css'
 
 type WalletFormValues = {
@@ -83,9 +83,7 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
         </Field>
         <fieldset className="wallet-color-field">
           <legend>Barva</legend>
-          <ToggleGroup type="single" value={values.colorKey} variant="ghost" size="icon" aria-label="Barva peněženky" className="wallet-color-grid" onValueChange={(colorKey) => { if (colorKey) setValues((current) => ({ ...current, colorKey: colorKey as WalletColorKey })) }}>
-            {walletColorKeys.map((colorKey) => <ToggleGroupItem key={colorKey} aria-label={colorLabel(colorKey)} className="wallet-color-choice" value={colorKey}><span className={`wallet-color-dot wallet-color-dot--${colorKey}`} aria-hidden="true">{values.colorKey === colorKey ? <Check className="wallet-color-choice__check" aria-hidden="true" /> : null}</span></ToggleGroupItem>)}
-          </ToggleGroup>
+          <ColorPicker value={values.colorKey} ariaLabel="Barva peněženky" onValueChange={(colorKey) => setValues((current) => ({ ...current, colorKey: colorKey as WalletColorKey }))} />
         </fieldset>
         <Field invalid={Boolean(errors.openingBalanceCzk)}>
           <FieldLabel>Počáteční zůstatek</FieldLabel>
@@ -129,8 +127,4 @@ function getPragueToday() {
 
 function dateInputValue(value: string) {
   return value.slice(0, 10)
-}
-
-function colorLabel(colorKey: WalletColorKey) {
-  return { slate: 'Šedá', red: 'Červená', orange: 'Oranžová', amber: 'Jantarová', lime: 'Limetková', green: 'Zelená', teal: 'Tyrkysová', cyan: 'Azurová', sky: 'Nebeská', blue: 'Modrá', indigo: 'Indigová', violet: 'Fialová', pink: 'Růžová', rose: 'Růžovočervená' }[colorKey]
 }

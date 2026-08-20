@@ -6,6 +6,8 @@ import {
   normalizeCategoryName,
   normalizeLabelName,
   parseCalendarDate,
+  parseCategoryIconKey,
+  parseColorKey,
   parseWholeCzk,
 } from './domain.js'
 
@@ -19,6 +21,11 @@ test('rejects invalid whole-CZK values and calendar dates', () => {
   expect(() => parseWholeCzk(-1, 'Částka', { allowNegative: false })).toThrow(DomainError)
   expect(() => parseWholeCzk(1.5, 'Částka', { allowNegative: true })).toThrow(DomainError)
   expect(() => parseCalendarDate('2026-02-30', 'Datum')).toThrow(DomainError)
+})
+
+test('accepts the extended category icon and color catalogs', () => {
+  expect(parseCategoryIconKey('chart-no-axes-combined')).toBe('chart-no-axes-combined')
+  expect(parseColorKey('brown-dark')).toBe('brown-dark')
 })
 
 test('defines the agreed one-time default category set', () => {

@@ -14,8 +14,8 @@ export function SortableWalletRow({ wallet, disabled, onSelect }: { wallet: Wall
   }
 
   return (
-    <ListItem render={<div ref={setNodeRef} style={style} />} role="listitem" variant="quiet" size="spacious" className="wallet-row" interactive onClick={() => onSelect(wallet)}>
-      <WalletCards className={`wallet-icon wallet-icon--${wallet.colorKey}`} aria-hidden="true" />
+    <ListItem render={<div ref={setNodeRef} style={style} />} role="listitem" variant="quiet" size="spacious" className="wallet-row surface-row" interactive onClick={() => onSelect(wallet)}>
+      <WalletCards className={`wallet-icon color-key--${wallet.colorKey}`} aria-hidden="true" />
       <ListItemContent className="wallet-row__content">
         <ListItemTitle className="wallet-name">{wallet.name}</ListItemTitle>
       </ListItemContent>

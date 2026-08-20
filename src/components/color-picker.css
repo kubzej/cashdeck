@@ -1,0 +1,40 @@
+.color-picker {
+  display: grid;
+  width: 100%;
+  height: 12.5rem;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: 2.75rem;
+  gap: 0.5rem;
+  overflow-y: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.color-picker__choice,
+.color-picker__choice[data-pressed] {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  box-shadow: none;
+}
+
+.color-picker__dot {
+  display: grid;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 999px;
+  place-items: center;
+  background: var(--color-key-value);
+}
+
+.color-picker__choice[data-pressed] .color-picker__dot {
+  box-shadow: 0 0 0 0.1875rem var(--color-background), 0 0 0 0.3125rem var(--color-primary);
+}
+
+.color-picker__check {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--primary-foreground);
+}

@@ -37,21 +37,76 @@
   --border: #d8e6e3;
   --input: #c7dad6;
   --ring: #14b8a6;
-  --wallet-color-slate: #64748b;
-  --wallet-color-red: #ef4444;
-  --wallet-color-orange: #f97316;
-  --wallet-color-amber: #f59e0b;
-  --wallet-color-lime: #84cc16;
-  --wallet-color-green: #22c55e;
-  --wallet-color-teal: #14b8a6;
-  --wallet-color-cyan: #06b6d4;
-  --wallet-color-sky: #0ea5e9;
-  --wallet-color-blue: #3b82f6;
-  --wallet-color-indigo: #6366f1;
-  --wallet-color-violet: #8b5cf6;
-  --wallet-color-pink: #ec4899;
-  --wallet-color-rose: #f43f5e;
+  --swatch-slate-light: #94a3b8;
+  --swatch-slate: #64748b;
+  --swatch-slate-dark: #334155;
+  --swatch-gray-light: #9ca3af;
+  --swatch-gray: #6b7280;
+  --swatch-gray-dark: #374151;
+  --swatch-red-light: #fb7185;
+  --swatch-red: #ef4444;
+  --swatch-red-dark: #b91c1c;
+  --swatch-orange-light: #fb923c;
+  --swatch-orange: #f97316;
+  --swatch-orange-dark: #c2410c;
+  --swatch-yellow-light: #fde047;
+  --swatch-yellow: #eab308;
+  --swatch-yellow-dark: #a16207;
+  --swatch-amber-light: #fbbf24;
+  --swatch-amber: #f59e0b;
+  --swatch-amber-dark: #b45309;
+  --swatch-lime-light: #a3e635;
+  --swatch-lime: #84cc16;
+  --swatch-lime-dark: #4d7c0f;
+  --swatch-green-light: #4ade80;
+  --swatch-green: #22c55e;
+  --swatch-green-dark: #15803d;
+  --swatch-teal-light: #2dd4bf;
+  --swatch-teal: #14b8a6;
+  --swatch-teal-dark: #0f766e;
+  --swatch-cyan-light: #22d3ee;
+  --swatch-cyan: #06b6d4;
+  --swatch-cyan-dark: #0e7490;
+  --swatch-sky-light: #38bdf8;
+  --swatch-sky: #0ea5e9;
+  --swatch-sky-dark: #0369a1;
+  --swatch-blue-light: #60a5fa;
+  --swatch-blue: #3b82f6;
+  --swatch-blue-dark: #1d4ed8;
+  --swatch-indigo-light: #818cf8;
+  --swatch-indigo: #6366f1;
+  --swatch-indigo-dark: #4338ca;
+  --swatch-violet-light: #a78bfa;
+  --swatch-violet: #8b5cf6;
+  --swatch-violet-dark: #6d28d9;
+  --swatch-pink-light: #f472b6;
+  --swatch-pink: #ec4899;
+  --swatch-pink-dark: #be185d;
+  --swatch-rose-light: #fb7185;
+  --swatch-rose: #f43f5e;
+  --swatch-rose-dark: #be123c;
+  --swatch-brown-light: #d6a16d;
+  --swatch-brown: #a1623d;
+  --swatch-brown-dark: #6f3d22;
 }
+
+.color-key--slate-light { --color-key-value: var(--swatch-slate-light); }.color-key--slate { --color-key-value: var(--swatch-slate); }.color-key--slate-dark { --color-key-value: var(--swatch-slate-dark); }
+.color-key--gray-light { --color-key-value: var(--swatch-gray-light); }.color-key--gray { --color-key-value: var(--swatch-gray); }.color-key--gray-dark { --color-key-value: var(--swatch-gray-dark); }
+.color-key--red-light { --color-key-value: var(--swatch-red-light); }.color-key--red { --color-key-value: var(--swatch-red); }.color-key--red-dark { --color-key-value: var(--swatch-red-dark); }
+.color-key--orange-light { --color-key-value: var(--swatch-orange-light); }.color-key--orange { --color-key-value: var(--swatch-orange); }.color-key--orange-dark { --color-key-value: var(--swatch-orange-dark); }
+.color-key--yellow-light { --color-key-value: var(--swatch-yellow-light); }.color-key--yellow { --color-key-value: var(--swatch-yellow); }.color-key--yellow-dark { --color-key-value: var(--swatch-yellow-dark); }
+.color-key--amber-light { --color-key-value: var(--swatch-amber-light); }.color-key--amber { --color-key-value: var(--swatch-amber); }.color-key--amber-dark { --color-key-value: var(--swatch-amber-dark); }
+.color-key--lime-light { --color-key-value: var(--swatch-lime-light); }.color-key--lime { --color-key-value: var(--swatch-lime); }.color-key--lime-dark { --color-key-value: var(--swatch-lime-dark); }
+.color-key--green-light { --color-key-value: var(--swatch-green-light); }.color-key--green { --color-key-value: var(--swatch-green); }.color-key--green-dark { --color-key-value: var(--swatch-green-dark); }
+.color-key--teal-light { --color-key-value: var(--swatch-teal-light); }.color-key--teal { --color-key-value: var(--swatch-teal); }.color-key--teal-dark { --color-key-value: var(--swatch-teal-dark); }
+.color-key--cyan-light { --color-key-value: var(--swatch-cyan-light); }.color-key--cyan { --color-key-value: var(--swatch-cyan); }.color-key--cyan-dark { --color-key-value: var(--swatch-cyan-dark); }
+.color-key--sky-light { --color-key-value: var(--swatch-sky-light); }.color-key--sky { --color-key-value: var(--swatch-sky); }.color-key--sky-dark { --color-key-value: var(--swatch-sky-dark); }
+.color-key--blue-light { --color-key-value: var(--swatch-blue-light); }.color-key--blue { --color-key-value: var(--swatch-blue); }.color-key--blue-dark { --color-key-value: var(--swatch-blue-dark); }
+.color-key--indigo-light { --color-key-value: var(--swatch-indigo-light); }.color-key--indigo { --color-key-value: var(--swatch-indigo); }.color-key--indigo-dark { --color-key-value: var(--swatch-indigo-dark); }
+.color-key--violet-light { --color-key-value: var(--swatch-violet-light); }.color-key--violet { --color-key-value: var(--swatch-violet); }.color-key--violet-dark { --color-key-value: var(--swatch-violet-dark); }
+.color-key--pink-light { --color-key-value: var(--swatch-pink-light); }.color-key--pink { --color-key-value: var(--swatch-pink); }.color-key--pink-dark { --color-key-value: var(--swatch-pink-dark); }
+.color-key--rose-light { --color-key-value: var(--swatch-rose-light); }.color-key--rose { --color-key-value: var(--swatch-rose); }.color-key--rose-dark { --color-key-value: var(--swatch-rose-dark); }
+.color-key--brown-light { --color-key-value: var(--swatch-brown-light); }.color-key--brown { --color-key-value: var(--swatch-brown); }.color-key--brown-dark { --color-key-value: var(--swatch-brown-dark); }
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

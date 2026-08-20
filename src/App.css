@@ -143,60 +143,16 @@
   margin-block: auto;
 }
 
-.settings-screen {
-  display: grid;
-  gap: 2rem;
+.surface-row {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
+  box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 4%, transparent);
 }
 
-.settings-section {
-  display: grid;
-  gap: 1rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.settings-section:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.settings-section__heading {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.settings-section__heading h2,
-.settings-section__heading p {
-  margin: 0;
-}
-
-.settings-section__heading h2 {
-  font-size: 1rem;
-  font-weight: 650;
-}
-
-.settings-account {
-  display: grid;
-  gap: 0.25rem;
-  padding-block: 0.875rem;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.settings-account__label {
-  color: var(--color-muted-foreground);
-  font-size: 0.875rem;
-}
-
-.settings-account__email {
-  overflow-wrap: anywhere;
-  color: var(--color-foreground);
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.settings-sign-out {
-  width: 100%;
+.surface-row[data-interactive='true']:hover {
+  border-color: color-mix(in oklab, var(--color-primary) 30%, var(--color-border));
+  background: var(--color-card);
 }
 
 .bottom-nav {
