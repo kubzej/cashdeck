@@ -5,13 +5,13 @@ export default defineConfig({
   fullyParallel: true,
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: 'http://127.0.0.1:4174',
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: './node_modules/.bin/vite --host 127.0.0.1 --port 4173',
-    url: 'http://127.0.0.1:4173',
-    reuseExistingServer: true,
+    command: './node_modules/.bin/vite --host 127.0.0.1 --port 4174',
+    url: 'http://127.0.0.1:4174',
+    reuseExistingServer: false,
     env: {
       VITE_NEON_AUTH_URL: 'http://neon.test/auth',
       VITE_API_URL: 'http://api.test/api',

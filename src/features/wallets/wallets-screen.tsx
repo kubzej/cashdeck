@@ -11,7 +11,7 @@ import { listWallets, reorderWallets, type Wallet } from './api'
 import { SortableWalletRow } from './sortable-wallet-row'
 import './wallets.css'
 
-export function WalletsScreen({ onCreate }: { onCreate: () => void }) {
+export function WalletsScreen({ onCreate, onSelect }: { onCreate: () => void; onSelect: (wallet: Wallet) => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [wallets, setWallets] = useState<Wallet[]>([])
   const [reorderError, setReorderError] = useState<string | null>(null)
@@ -87,7 +87,7 @@ export function WalletsScreen({ onCreate }: { onCreate: () => void }) {
       {reorderError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Pořadí se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{reorderError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => void handleDragEnd(event)}>
         <SortableContext items={wallets.map((wallet) => wallet.id)} strategy={verticalListSortingStrategy}>
-          <List gap="sm">{wallets.map((wallet) => <SortableWalletRow key={wallet.id} wallet={wallet} disabled={isReordering} />)}</List>
+          <List gap="sm">{wallets.map((wallet) => <SortableWalletRow key={wallet.id} wallet={wallet} disabled={isReordering} onSelect={onSelect} />)}</List>
         </SortableContext>
       </DndContext>
     </section>

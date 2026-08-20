@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { mockWalletsApi } from './wallets'
 
 export const testUser = {
   id: 'user-1',
@@ -60,6 +61,7 @@ export async function signIn(page: Page) {
 
 export async function openSignedInApp(page: Page) {
   await mockAuthAndApi(page)
+  await mockWalletsApi(page)
   await page.goto('/')
   await signIn(page)
 }

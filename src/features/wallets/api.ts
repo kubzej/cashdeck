@@ -37,3 +37,14 @@ export async function reorderWallets(walletIds: string[]) {
     body: JSON.stringify({ walletIds }),
   })
 }
+
+export async function updateWallet(walletId: string, input: CreateWalletInput) {
+  return apiRequest<Wallet>(`/wallets/${walletId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function deleteWallet(walletId: string) {
+  await apiRequest<void>(`/wallets/${walletId}`, { method: 'DELETE' })
+}

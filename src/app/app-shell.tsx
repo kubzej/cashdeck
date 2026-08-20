@@ -3,12 +3,14 @@ import { BarChart3, LogOut, Plus, ReceiptText, Settings2, WalletCards } from 'lu
 import { useAuth } from '../auth/auth-context'
 import { Button } from '../components/ui/button'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../components/ui/empty-state'
+import { type Wallet } from '../features/wallets/api'
+import { WalletDetailScreen } from '../features/wallets/wallet-detail-screen'
 import { WalletFormScreen } from '../features/wallets/wallet-form-screen'
 import { WalletsScreen } from '../features/wallets/wallets-screen'
 
 type NavKey = 'transactions' | 'wallets' | 'overview' | 'settings'
 type NavItem = { key: NavKey; label: string; icon: ComponentType<{ 'aria-hidden'?: boolean }> }
-type WalletView = 'list' | 'new'
+type WalletView = 'list' | 'new' | 'detail' | 'edit'
 
 const navItems: NavItem[] = [
   { key: 'transactions', label: 'Transakce', icon: ReceiptText },
@@ -26,12 +28,16 @@ export function AppShell() {
   const { session, status, signOut } = useAuth()
   const [activeNav, setActiveNav] = useState<NavKey>('transactions')
   const [walletView, setWalletView] = useState<WalletView>('list')
+  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null)
   const activeItem = navItems.find((item) => item.key === activeNav)
-  const isWalletForm = activeNav === 'wallets' && walletView === 'new'
+  const isWalletDetail = activeNav === 'wallets' && walletView !== 'list'
 
   function selectNavigation(key: NavKey) {
     setActiveNav(key)
-    if (key !== 'wallets') setWalletView('list')
+    if (key !== 'wallets') {
+      setWalletView('list')
+      setSelectedWallet(null)
+    }
   }
 
   if (status !== 'signed-in') return null
@@ -39,16 +45,19 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <div className="app-main">
-        <main className={`app-content${isWalletForm ? ' app-content--form' : ''}`}>
-          {isWalletForm ? <WalletFormScreen onCancel={() => setWalletView('list')} onCreated={() => setWalletView('list')} /> : <>
+        <main className={`app-content${isWalletDetail ? ' app-content--form' : ''}`}>
+          {walletView === 'new' ? <WalletFormScreen onCancel={() => setWalletView('list')} onSaved={() => setWalletView('list')} /> : null}
+          {walletView === 'detail' && selectedWallet ? <WalletDetailScreen wallet={selectedWallet} onBack={() => setWalletView('list')} onEdit={() => setWalletView('edit')} /> : null}
+          {walletView === 'edit' && selectedWallet ? <WalletFormScreen wallet={selectedWallet} onCancel={() => setWalletView('detail')} onSaved={() => setWalletView('list')} onDeleted={() => { setSelectedWallet(null); setWalletView('list') }} /> : null}
+          {!isWalletDetail ? <>
             <div className={`screen-heading${activeNav === 'wallets' ? ' screen-heading--action' : ''}`}>
               <h1>{activeItem?.label}</h1>
               {activeNav === 'wallets' ? <Button variant="ghost" size="icon" aria-label="Přidat peněženku" onClick={() => setWalletView('new')}><Plus aria-hidden="true" /></Button> : null}
             </div>
-            {activeNav === 'settings' ? <SettingsScreen email={session?.user.email ?? ''} onSignOut={signOut} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} /> : activeItem ? <PlaceholderScreen item={activeItem} /> : null}
-          </>}
+            {activeNav === 'settings' ? <SettingsScreen email={session?.user.email ?? ''} onSignOut={signOut} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setSelectedWallet(wallet); setWalletView('detail') }} /> : activeItem ? <PlaceholderScreen item={activeItem} /> : null}
+          </> : null}
         </main>
-        {!isWalletForm ? <nav className="bottom-nav" aria-label="Hlavní navigace">{navItems.map(({ key, label, icon: Icon }) => <Button key={key} variant="ghost" size="sm" className={`bottom-nav__item${key === activeNav ? ' bottom-nav__item--active' : ''}`} aria-current={key === activeNav ? 'page' : undefined} onClick={() => selectNavigation(key)}><Icon aria-hidden={true} /><span>{label}</span></Button>)}</nav> : null}
+        {!isWalletDetail ? <nav className="bottom-nav" aria-label="Hlavní navigace">{navItems.map(({ key, label, icon: Icon }) => <Button key={key} variant="ghost" size="sm" className={`bottom-nav__item${key === activeNav ? ' bottom-nav__item--active' : ''}`} aria-current={key === activeNav ? 'page' : undefined} onClick={() => selectNavigation(key)}><Icon aria-hidden={true} /><span>{label}</span></Button>)}</nav> : null}
       </div>
     </div>
   )

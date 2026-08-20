@@ -108,7 +108,7 @@ const walletSelect = `
     w.name,
     w.color_key,
     w.opening_balance_czk,
-    w.opening_balance_date,
+    to_char(w.opening_balance_date, 'YYYY-MM-DD') as opening_balance_date,
     w.sort_order,
     w.is_hidden,
     exists (
@@ -225,7 +225,9 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
          insert into wallets (user_id, name, color_key, opening_balance_czk, opening_balance_date, sort_order)
          select $1, $2, $3, $4, $5, next_order.sort_order
          from next_order
-         returning id, name, color_key, opening_balance_czk, opening_balance_date, sort_order, is_hidden, false as opening_balance_locked`,
+         returning id, name, color_key, opening_balance_czk,
+           to_char(opening_balance_date, 'YYYY-MM-DD') as opening_balance_date,
+           sort_order, is_hidden, false as opening_balance_locked`,
         [userId, input.name, input.colorKey, input.openingBalanceCzk, input.openingBalanceDate],
       )
 

@@ -103,6 +103,97 @@ test('normalizes category and label writes before they reach the repository', as
   await app.close()
 })
 
+test('validates and scopes wallet writes to the verified user', async () => {
+  const { app, repository } = await createTestApp()
+  repository.createWallet.mockResolvedValueOnce({ id: walletId, name: 'AirBank' })
+  repository.updateWallet.mockResolvedValueOnce({ id: walletId, name: 'AirBank' })
+  repository.deleteWallet.mockResolvedValueOnce(true)
+
+  const created = await app.inject({
+    method: 'POST',
+    url: '/api/wallets',
+    headers: { authorization: 'Bearer test-token' },
+    payload: {
+      name: '  AirBank  ',
+      colorKey: 'teal',
+      openingBalanceCzk: 150000,
+      openingBalanceDate: '2022-01-15',
+    },
+  })
+  expect(created.statusCode).toBe(201)
+  expect(repository.createWallet).toHaveBeenCalledWith(userId, {
+    name: 'AirBank',
+    colorKey: 'teal',
+    openingBalanceCzk: 150000,
+    openingBalanceDate: '2022-01-15',
+  })
+
+  const updated = await app.inject({
+    method: 'PATCH',
+    url: `/api/wallets/${walletId}`,
+    headers: { authorization: 'Bearer test-token' },
+    payload: {
+      name: '  Rezerva  ',
+      colorKey: 'red',
+      openingBalanceCzk: 250000,
+      openingBalanceDate: '2022-02-01',
+    },
+  })
+  expect(updated.statusCode).toBe(200)
+  expect(repository.updateWallet).toHaveBeenCalledWith(userId, walletId, {
+    name: 'Rezerva',
+    colorKey: 'red',
+    openingBalanceCzk: 250000,
+    openingBalanceDate: '2022-02-01',
+  })
+
+  const reordered = await app.inject({
+    method: 'PUT',
+    url: '/api/wallets/order',
+    headers: { authorization: 'Bearer test-token' },
+    payload: { walletIds: [walletId] },
+  })
+  expect(reordered.statusCode).toBe(204)
+  expect(repository.reorderWallets).toHaveBeenCalledWith(userId, [walletId])
+
+  const deleted = await app.inject({
+    method: 'DELETE',
+    url: `/api/wallets/${walletId}`,
+    headers: { authorization: 'Bearer test-token' },
+  })
+  expect(deleted.statusCode).toBe(204)
+  expect(repository.deleteWallet).toHaveBeenCalledWith(userId, walletId)
+  await app.close()
+})
+
+test('rejects invalid wallet payloads before they reach the repository', async () => {
+  const { app, repository } = await createTestApp()
+
+  const invalidAmount = await app.inject({
+    method: 'POST',
+    url: '/api/wallets',
+    headers: { authorization: 'Bearer test-token' },
+    payload: {
+      name: 'Rezerva',
+      colorKey: 'teal',
+      openingBalanceCzk: 1500.5,
+      openingBalanceDate: '2022-01-15',
+    },
+  })
+  expect(invalidAmount.statusCode).toBe(400)
+
+  const invalidDate = await app.inject({
+    method: 'PATCH',
+    url: `/api/wallets/${walletId}`,
+    headers: { authorization: 'Bearer test-token' },
+    payload: { openingBalanceDate: '15.01.2022' },
+  })
+  expect(invalidDate.statusCode).toBe(400)
+  expect(repository.createWallet).not.toHaveBeenCalled()
+  expect(repository.updateWallet).not.toHaveBeenCalled()
+  await app.close()
+})
+
 test('rejects category direction changes and maps lifecycle conflicts', async () => {
   const { app, repository } = await createTestApp()
 
