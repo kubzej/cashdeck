@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { mockAuthAndApi, signIn } from '../support/auth'
 import { mockTransactionsApi } from '../support/transactions'
+import { mockTransfersApi } from '../support/transfers'
 
 test('loads the next page of transactions on demand', async ({ page }) => {
   await mockAuthAndApi(page)
@@ -18,6 +19,7 @@ test('loads the next page of transactions on demand', async ({ page }) => {
     note: null,
     labels: [],
   })))
+  await mockTransfersApi(page)
   await page.goto('/')
   await signIn(page)
 

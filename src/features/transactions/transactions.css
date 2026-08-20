@@ -14,6 +14,9 @@
 .transaction-row__amount { font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .transaction-row__amount--income { color: var(--color-positive); }
 .transaction-row__amount--expense { color: var(--color-negative); }
+.transfer-row__icon { width: 2.5rem; height: 2.5rem; align-self: center; margin-top: 0; background: color-mix(in oklab, var(--color-primary) 10%, var(--color-card)); color: var(--color-primary); }
+.transfer-row__icon svg { width: 1.2rem; height: 1.2rem; }
+.transfer-row__amount { color: var(--color-foreground); font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .transaction-row__labels { display: flex; min-width: 0; align-items: center; gap: 0.3125rem; overflow: hidden; }
 .transaction-row__label { flex: 0 0 auto; border: 1px solid color-mix(in oklab, var(--color-border) 90%, var(--color-foreground)); border-radius: 999px; padding: 0 0.3125rem; font-size: 0.625rem; line-height: 1rem; }
 .transaction-row__note { overflow: hidden; margin: 0; color: var(--color-muted-foreground); font-size: 0.6875rem; line-height: 1rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -78,3 +81,10 @@
 .transaction-date-picker { max-width: none; }
 .transaction-form-submit { width: 100%; margin-top: 0.25rem; }
 .transaction-form-hint { margin: -0.625rem 0 0; color: var(--color-muted-foreground); font-size: 0.875rem; line-height: 1.4; }
+.transfer-amount-panel { gap: 0.75rem; }
+.transfer-amount-panel__heading { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--color-muted-foreground); font-size: 0.875rem; font-weight: 650; }
+.transfer-amount-panel__heading svg { width: 1rem; height: 1rem; }
+.transfer-wallet-pickers .transaction-primary-picker-button > svg:first-child { width: 2rem; height: 2rem; }
+.activity-add-dialog__actions { display: grid; gap: 0.625rem; }
+.activity-add-dialog__action { min-height: 4.5rem; justify-content: flex-start; gap: 0.875rem; font-size: 1rem; font-weight: 650; }
+.activity-add-dialog__action > svg { width: 1.35rem; height: 1.35rem; color: var(--color-primary); }

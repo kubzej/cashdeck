@@ -8,21 +8,25 @@ import { createManagementRepository, type ManagementRepository } from './managem
 import { createManagementRoutes } from './routes/management.js'
 import { createSessionRoutes } from './routes/session.js'
 import { createTransactionRoutes } from './routes/transactions.js'
+import { createTransferRoutes } from './routes/transfers.js'
 import { createTransactionRepository, type TransactionRepository } from './transactions/repository.js'
+import { createTransferRepository, type TransferRepository } from './transfers/repository.js'
 
 type AppDependencies = {
   config: ServerConfig
   database: Pool
   managementRepository?: ManagementRepository
   transactionRepository?: TransactionRepository
+  transferRepository?: TransferRepository
   requireAuth?: AuthGuard
 }
 
-export async function createApp({ config, database, managementRepository, transactionRepository, requireAuth }: AppDependencies) {
+export async function createApp({ config, database, managementRepository, transactionRepository, transferRepository, requireAuth }: AppDependencies) {
   const app = Fastify({ logger: true })
   const authGuard = requireAuth ?? createAuthGuard(config.neonAuthUrl)
   const repository = managementRepository ?? createManagementRepository(database)
   const transactions = transactionRepository ?? createTransactionRepository(database)
+  const transfers = transferRepository ?? createTransferRepository(database)
 
   await app.register(cors, {
     origin: config.frontendOrigin,
@@ -47,6 +51,7 @@ export async function createApp({ config, database, managementRepository, transa
   await app.register(createSessionRoutes(authGuard))
   await app.register(createManagementRoutes(repository, authGuard))
   await app.register(createTransactionRoutes(transactions, authGuard))
+  await app.register(createTransferRoutes(transfers, authGuard))
 
   app.addHook('onClose', async () => {
     await database.end()

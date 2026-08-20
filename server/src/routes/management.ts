@@ -18,6 +18,7 @@ import {
 import type {
   CreateCategoryInput,
   CreateWalletInput,
+  LabelListSort,
   ManagementRepository,
   UpdateCategoryInput,
   UpdateWalletInput,
@@ -184,7 +185,12 @@ function parseLabel(body: unknown) {
   return normalizeLabelName(value.name)
 }
 
-function parseLabelListQuery(value: unknown) {
+function parseLabelListQuery(value: unknown): {
+  query: string | null
+  cursor: string | null
+  limit: number
+  sort: LabelListSort
+} {
   const query = asRecord(value)
   assertOnlyKeys(query, ['q', 'cursor', 'limit', 'sort'])
   const search = query.q === undefined ? null : normalizeSearch(query.q)

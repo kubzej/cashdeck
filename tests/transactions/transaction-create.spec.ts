@@ -3,6 +3,7 @@ import { mockAuthAndApi, signIn } from '../support/auth'
 import { mockCategoriesApi } from '../support/categories'
 import { mockLabelsApi } from '../support/labels'
 import { mockTransactionsApi } from '../support/transactions'
+import { mockTransfersApi } from '../support/transfers'
 import { mockWalletsApi } from '../support/wallets'
 
 test('validates, creates a label inline, and retries a failed transaction creation', async ({ page }) => {
@@ -11,10 +12,12 @@ test('validates, creates a label inline, and retries a failed transaction creati
   await mockCategoriesApi(page, [expenseCategory])
   const labelsApi = await mockLabelsApi(page, [{ id: 'label-1', name: 'oběd' }])
   const transactionsApi = await mockTransactionsApi(page)
+  await mockTransfersApi(page)
   await page.goto('/')
   await signIn(page)
 
-  await page.getByRole('button', { name: 'Přidat transakci' }).click()
+  await page.getByRole('button', { name: 'Přidat záznam' }).click()
+  await page.getByRole('button', { name: 'Transakce', exact: true }).click()
   await page.getByRole('button', { name: 'Uložit transakci' }).click()
   await expect(page.getByText('Vyber kategorii.', { exact: true })).toBeVisible()
   await expect(page.getByText('Zadej celý počet korun větší než nula.', { exact: true })).toBeVisible()

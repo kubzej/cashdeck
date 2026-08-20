@@ -3,6 +3,7 @@ import { mockAuthAndApi, signIn } from '../support/auth'
 import { mockCategoriesApi } from '../support/categories'
 import { mockLabelsApi } from '../support/labels'
 import { mockTransactionsApi } from '../support/transactions'
+import { mockTransfersApi } from '../support/transfers'
 import { mockWalletsApi } from '../support/wallets'
 
 test('new and edit transaction forms keep the same layout and load their data once', async ({ page }) => {
@@ -11,6 +12,7 @@ test('new and edit transaction forms keep the same layout and load their data on
   await mockCategoriesApi(page, [{ id: 'category-1', name: 'Jídlo', direction: 'expense', iconKey: 'utensils', colorKey: 'orange', sortOrder: 0 }])
   await mockLabelsApi(page, [{ id: 'label-1', name: 'oběd' }])
   await mockTransactionsApi(page, [{ id: 'transaction-1', walletId: 'wallet-1', walletName: 'Běžný účet', categoryId: 'category-1', categoryName: 'Jídlo', categoryIconKey: 'utensils', categoryColorKey: 'orange', direction: 'expense', amountCzk: 230, transactionDate: '2026-08-20', note: null, labels: [{ id: 'label-1', name: 'oběd' }] }])
+  await mockTransfersApi(page)
 
   const formDataRequests = new Map<string, number>()
   page.on('request', (request) => {
@@ -21,7 +23,7 @@ test('new and edit transaction forms keep the same layout and load their data on
   await page.goto('/')
   await signIn(page)
 
-  const transactionFab = page.getByRole('button', { name: 'Přidat transakci' })
+  const transactionFab = page.getByRole('button', { name: 'Přidat záznam' })
   await expect(transactionFab).toBeVisible()
   await expect(transactionFab).toHaveClass(/transaction-fab/)
   const fabBounds = await transactionFab.boundingBox()
@@ -31,6 +33,7 @@ test('new and edit transaction forms keep the same layout and load their data on
   expect(fabBounds!.y + fabBounds!.height).toBeLessThan(navBounds!.y)
 
   await transactionFab.click()
+  await page.getByRole('button', { name: 'Transakce', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Nová transakce' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Běžný účet' })).toBeVisible()
   const newLayout = await formLayout(page)

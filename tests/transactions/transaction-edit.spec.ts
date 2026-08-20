@@ -3,6 +3,7 @@ import { mockAuthAndApi, signIn } from '../support/auth'
 import { mockCategoriesApi } from '../support/categories'
 import { mockLabelsApi } from '../support/labels'
 import { mockTransactionsApi, type TransactionApiMock } from '../support/transactions'
+import { mockTransfersApi } from '../support/transfers'
 import { mockWalletsApi } from '../support/wallets'
 
 const wallet = { id: 'wallet-1', name: 'Běžný účet', colorKey: 'teal', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 0, isHidden: false, openingBalanceLocked: false }
@@ -63,6 +64,7 @@ async function openTransactionEdit(page: Parameters<typeof mockAuthAndApi>[0]): 
   await mockCategoriesApi(page, categories)
   await mockLabelsApi(page, [{ id: 'label-1', name: 'oběd' }])
   const transactionsApi = await mockTransactionsApi(page, [{ id: 'transaction-1', walletId: wallet.id, walletName: wallet.name, categoryId: 'category-1', categoryName: 'Jídlo', categoryIconKey: 'utensils', categoryColorKey: 'orange', direction: 'expense', amountCzk: 230, transactionDate: '2026-08-20', note: 'Původní poznámka', labels: [{ id: 'label-1', name: 'oběd' }] }])
+  await mockTransfersApi(page)
   await page.goto('/')
   await signIn(page)
   await page.getByRole('listitem').filter({ hasText: 'Jídlo' }).click()

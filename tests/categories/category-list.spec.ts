@@ -5,7 +5,7 @@ import { mockCategoriesApi, type CategoryFixture } from '../support/categories'
 test('shows the empty state after retrying a failed category load', async ({ page }) => {
   await mockAuthAndApi(page)
   const categoryApi = await mockCategoriesApi(page)
-  categoryApi.failTimes('GET', 2, { message: 'Dočasně nedostupné.' })
+  categoryApi.failNext('GET', { message: 'Dočasně nedostupné.' })
   await page.goto('/')
   await signIn(page)
   await openCategories(page)
