@@ -100,6 +100,25 @@ test('normalizes category and label writes before they reach the repository', as
   })
   expect(labelResponse.statusCode).toBe(201)
   expect(repository.createLabel).toHaveBeenCalledWith(userId, 'foundationgalaxy')
+
+  repository.updateLabel.mockResolvedValueOnce({ id: labelId, name: 'globus' })
+  const updatedLabel = await app.inject({
+    method: 'PATCH',
+    url: `/api/labels/${labelId}`,
+    headers: { authorization: 'Bearer test-token' },
+    payload: { name: '  Globus ' },
+  })
+  expect(updatedLabel.statusCode).toBe(200)
+  expect(repository.updateLabel).toHaveBeenCalledWith(userId, labelId, 'globus')
+
+  repository.deleteLabel.mockResolvedValueOnce(true)
+  const deletedLabel = await app.inject({
+    method: 'DELETE',
+    url: `/api/labels/${labelId}`,
+    headers: { authorization: 'Bearer test-token' },
+  })
+  expect(deletedLabel.statusCode).toBe(204)
+  expect(repository.deleteLabel).toHaveBeenCalledWith(userId, labelId)
   await app.close()
 })
 

@@ -6,6 +6,7 @@ Playwright tests are grouped by the user-facing area they cover:
 - `shell/` contains app-wide navigation and protected-shell behavior.
 - `settings/` contains settings-specific behavior.
 - `categories/` contains kategorie seznam, formuláře, řazení a destruktivní akce.
+- `labels/` contains štítky seznam, vyhledávání, formuláře a destruktivní akce.
 - `wallets/` contains peněženky seznam, formuláře, řazení a destruktivní akce.
 - `support/` contains shared Neon Auth/API mocks and helpers, without product
   assertions.

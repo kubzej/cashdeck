@@ -1,4 +1,4 @@
-import { ChevronRight, FolderCog, LogOut, UserRound } from 'lucide-react'
+import { ChevronRight, FolderCog, LogOut, Tags, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/auth-context'
 import { Button } from '../../components/ui/button'
 import {
@@ -11,7 +11,7 @@ import {
 } from '../../components/ui/list'
 import './settings.css'
 
-export function SettingsScreen({ onOpenCategories }: { onOpenCategories: () => void }) {
+export function SettingsScreen({ onOpenCategories, onOpenLabels }: { onOpenCategories: () => void; onOpenLabels: () => void }) {
   const { session, signOut } = useAuth()
 
   return (
@@ -36,6 +36,14 @@ export function SettingsScreen({ onOpenCategories }: { onOpenCategories: () => v
             <ListItemContent>
               <ListItemTitle>Kategorie</ListItemTitle>
               <ListItemDescription>Výdaje a příjmy</ListItemDescription>
+            </ListItemContent>
+            <ListItemActions><ChevronRight aria-hidden="true" /></ListItemActions>
+          </ListItem>
+          <ListItem render={<button type="button" onClick={onOpenLabels} />} interactive variant="quiet" size="spacious" className="surface-row settings-navigation-row">
+            <Tags className="settings-row-icon settings-row-icon--primary" aria-hidden="true" />
+            <ListItemContent>
+              <ListItemTitle>Štítky</ListItemTitle>
+              <ListItemDescription>Vyhledávání a správa</ListItemDescription>
             </ListItemContent>
             <ListItemActions><ChevronRight aria-hidden="true" /></ListItemActions>
           </ListItem>
