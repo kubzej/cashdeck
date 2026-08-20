@@ -37,6 +37,20 @@
   --border: #d8e6e3;
   --input: #c7dad6;
   --ring: #14b8a6;
+  --wallet-color-slate: #64748b;
+  --wallet-color-red: #ef4444;
+  --wallet-color-orange: #f97316;
+  --wallet-color-amber: #f59e0b;
+  --wallet-color-lime: #84cc16;
+  --wallet-color-green: #22c55e;
+  --wallet-color-teal: #14b8a6;
+  --wallet-color-cyan: #06b6d4;
+  --wallet-color-sky: #0ea5e9;
+  --wallet-color-blue: #3b82f6;
+  --wallet-color-indigo: #6366f1;
+  --wallet-color-violet: #8b5cf6;
+  --wallet-color-pink: #ec4899;
+  --wallet-color-rose: #f43f5e;
 }
 
 @theme inline {

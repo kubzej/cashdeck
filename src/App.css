@@ -116,6 +116,10 @@
   padding: 1.5rem 1rem 7.5rem;
 }
 
+.app-content--form {
+  padding: 0 1rem calc(1.5rem + env(safe-area-inset-bottom));
+}
+
 .screen-heading {
   display: grid;
   gap: 0.2rem;
@@ -127,6 +131,11 @@
   font-weight: 650;
   line-height: 1.1;
   letter-spacing: 0;
+}
+
+.screen-heading--action {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 
 .screen-placeholder {

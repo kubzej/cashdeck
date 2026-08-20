@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthSession, type AuthStatus } from './auth-context'
 import { authClient, isNeonAuthConfigured } from '../lib/auth-client'
-import { verifyBackendSession } from '../data/api-client'
+import { verifyBackendSession } from '../lib/api-client'
 
 type AuthErrorResponse = { code?: string; message?: string }
 

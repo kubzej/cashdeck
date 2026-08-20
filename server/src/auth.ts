@@ -7,6 +7,8 @@ declare module 'fastify' {
   }
 }
 
+export type AuthGuard = (request: FastifyRequest, reply: FastifyReply) => Promise<unknown>
+
 export function getBearerToken(header: string | undefined) {
   const match = header?.match(/^Bearer\s+([^\s]+)$/i)
   return match?.[1] ?? null
