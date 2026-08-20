@@ -15,8 +15,12 @@ test('browses months in both directions without loading the complete history', a
   const viewport = page.getByLabel('Obsah období')
   await expect(viewport).toBeVisible()
 
-  await swipePeriod(page, viewport, 'left')
+  const firstSwipe = await startSwipe(page, viewport, 'left')
+  await expect(viewport).toHaveAttribute('data-preview', 'previous')
+  await expect(page.locator('.feed-period-pager__preview')).toContainText('červenec 2026')
+  await firstSwipe.release()
   await expect.poll(() => feedApi.requests().length).toBe(2)
+  await expect(page.locator('.feed-period-pager__page')).toHaveAttribute('data-motion', 'from-right')
   const previousMonth = feedApi.requests()[1]
   expect(previousMonth.searchParams.get('dateFrom')).not.toBe(currentMonth.searchParams.get('dateFrom'))
   expect(previousMonth.searchParams.get('dateTo')! < currentMonth.searchParams.get('dateFrom')!).toBe(true)
@@ -24,6 +28,7 @@ test('browses months in both directions without loading the complete history', a
 
   await swipePeriod(page, viewport, 'right')
   await expect.poll(() => feedApi.requests().length).toBe(3)
+  await expect(page.locator('.feed-period-pager__page')).toHaveAttribute('data-motion', 'from-left')
   const currentMonthAgain = feedApi.requests()[2]
   expect(currentMonthAgain.searchParams.get('dateFrom')).toBe(currentMonth.searchParams.get('dateFrom'))
   await expect(title).toHaveText(titleBeforeScroll ?? '')
@@ -35,6 +40,11 @@ test('browses months in both directions without loading the complete history', a
 })
 
 async function swipePeriod(page: import('@playwright/test').Page, viewport: import('@playwright/test').Locator, direction: 'left' | 'right') {
+  const swipe = await startSwipe(page, viewport, direction)
+  await swipe.release()
+}
+
+async function startSwipe(page: import('@playwright/test').Page, viewport: import('@playwright/test').Locator, direction: 'left' | 'right') {
   const box = await viewport.boundingBox()
   if (!box) throw new Error('Period viewport is not visible')
   const startX = direction === 'left' ? box.x + box.width * 0.75 : box.x + box.width * 0.25
@@ -43,5 +53,5 @@ async function swipePeriod(page: import('@playwright/test').Page, viewport: impo
   await page.mouse.move(startX, y)
   await page.mouse.down()
   await page.mouse.move(endX, y, { steps: 8 })
-  await page.mouse.up()
+  return { release: () => page.mouse.up() }
 }
