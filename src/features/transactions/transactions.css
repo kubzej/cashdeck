@@ -1,6 +1,16 @@
 .transactions-screen { display: grid; gap: 1.125rem; }
 .transactions-loading, .transaction-form-loading { display: grid; gap: 0.75rem; }
 .transactions-feedback { margin-block: auto; }
+.feed-period-pager { display: grid; gap: 0.75rem; min-width: 0; }
+.feed-period-pager__heading { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem; align-items: center; }
+.feed-period-pager__title { margin: 0; color: var(--color-foreground); font-size: 1rem; font-weight: 650; text-align: center; }
+.feed-period-pager__nav { display: inline-grid; width: 2.25rem; height: 2.25rem; place-items: center; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--color-primary); cursor: pointer; }
+.feed-period-pager__nav:hover { background: color-mix(in oklab, var(--color-primary) 8%, transparent); }
+.feed-period-pager__nav:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.feed-period-pager__nav:disabled { color: var(--color-muted-foreground); opacity: 0.28; cursor: default; }
+.feed-period-pager__nav svg { width: 1.25rem; height: 1.25rem; }
+.feed-period-pager__viewport { min-width: 0; touch-action: pan-y; }
+.feed-period-pager__page { min-width: 0; }
 .transaction-day { display: grid; gap: 0.5rem; }
 .transaction-day h2 { margin: 0; color: var(--color-muted-foreground); font-size: 0.875rem; font-weight: 650; }
 .transaction-row { min-height: 0; gap: 0.625rem; padding: 0.625rem 0.75rem; border-color: color-mix(in oklab, var(--color-border) 85%, var(--color-foreground)); }

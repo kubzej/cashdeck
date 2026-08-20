@@ -9,6 +9,8 @@ export type FeedListInput = {
   limit: number
 }
 
+export type FeedBoundsInput = Pick<FeedListInput, 'walletIds'>
+
 export function calculateTransferImpactCzk({ amountCzk, sourceWalletId, destinationWalletId, selectedWalletIds }: { amountCzk: number; sourceWalletId: string; destinationWalletId: string; selectedWalletIds: string[] | null }) {
   if (!selectedWalletIds) return 0
   const selected = new Set(selectedWalletIds)
@@ -34,6 +36,12 @@ export function parseFeedListQuery(value: unknown): FeedListInput {
     cursor: query.cursor === undefined ? null : parseCursor(query.cursor),
     limit: query.limit === undefined ? 50 : parseLimit(query.limit),
   }
+}
+
+export function parseFeedBoundsQuery(value: unknown): FeedBoundsInput {
+  const query = asRecord(value)
+  assertOnlyKeys(query, ['walletIds'])
+  return { walletIds: query.walletIds === undefined ? null : parseWalletIds(query.walletIds) }
 }
 
 function parseWalletIds(value: unknown) {

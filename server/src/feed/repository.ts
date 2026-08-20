@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer'
 import type { Pool } from 'pg'
 import { DomainError } from '../management/domain.js'
-import { calculateTransferImpactCzk, type FeedListInput } from './domain.js'
+import { calculateTransferImpactCzk, type FeedBoundsInput, type FeedListInput } from './domain.js'
 
 export type FeedLabel = { id: string; name: string }
 
@@ -37,7 +37,8 @@ export type FeedTransfer = {
 
 export type FeedItem = FeedTransaction | FeedTransfer
 export type FeedPage = { items: FeedItem[]; nextCursor: string | null }
-export type FeedRepository = { listFeed(userId: string, input: FeedListInput): Promise<FeedPage> }
+export type FeedBounds = { earliestActivityDate: string | null }
+export type FeedRepository = { listFeed(userId: string, input: FeedListInput): Promise<FeedPage>; getBounds(userId: string, input: FeedBoundsInput): Promise<FeedBounds> }
 
 type FeedCursor = { activityDate: string; createdAt: string; kind: 'transaction' | 'transfer'; id: string }
 type FeedRow = {
@@ -128,6 +129,19 @@ export function createFeedRepository(pool: Pool): FeedRepository {
       const last = rows.at(-1)
       return { items: rows.map((row) => toFeedItem(row, input.walletIds)), nextCursor: result.rows.length > input.limit && last ? encodeCursor(last) : null }
     },
+    async getBounds(userId, input) {
+      const values: unknown[] = [userId]
+      const transactionFilters = ['t.user_id = $1', 'not transaction_wallet.is_hidden']
+      const transferFilters = ['tr.user_id = $1', 'not source_wallet_filter.is_hidden', 'not destination_wallet_filter.is_hidden']
+      if (input.walletIds) {
+        values.push(input.walletIds)
+        const parameter = `$${values.length}::uuid[]`
+        transactionFilters.push(`t.wallet_id = any(${parameter})`)
+        transferFilters.push(`(tr.source_wallet_id = any(${parameter}) or tr.destination_wallet_id = any(${parameter}))`)
+      }
+      const result = await pool.query<{ earliest_activity_date: string | null }>(feedBoundsSelect(transactionFilters.join(' and '), transferFilters.join(' and ')), values)
+      return { earliestActivityDate: result.rows[0]?.earliest_activity_date ?? null }
+    },
   }
 }
 
@@ -185,6 +199,23 @@ function feedSelect(transactionFilters: string, transferFilters: string, cursorF
     page.wallet_id, wallet.name, page.category_id, category.name, category.icon_key, category.color_key, category.direction,
     page.source_wallet_id, source_wallet.name, page.destination_wallet_id, destination_wallet.name
   order by page.activity_date desc, page.created_at desc, page.kind desc, page.id desc`
+}
+
+function feedBoundsSelect(transactionFilters: string, transferFilters: string) {
+  return `with activity_dates as (
+    select t.transaction_date as activity_date
+    from transactions t
+    join wallets transaction_wallet on transaction_wallet.user_id = t.user_id and transaction_wallet.id = t.wallet_id
+    where ${transactionFilters}
+    union all
+    select tr.transfer_date as activity_date
+    from transfers tr
+    join wallets source_wallet_filter on source_wallet_filter.user_id = tr.user_id and source_wallet_filter.id = tr.source_wallet_id
+    join wallets destination_wallet_filter on destination_wallet_filter.user_id = tr.user_id and destination_wallet_filter.id = tr.destination_wallet_id
+    where ${transferFilters}
+  )
+  select to_char(min(activity_date), 'YYYY-MM-DD') as earliest_activity_date
+  from activity_dates`
 }
 
 function toFeedItem(row: FeedRow, selectedWalletIds: string[] | null): FeedItem {

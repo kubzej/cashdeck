@@ -17,6 +17,7 @@ function createRepository(): FeedRepository {
       items: [{ kind: 'transaction', id: 'c00f7a6a-d0c1-4f08-9bd4-643415bef124', walletId, walletName: 'AirBank', categoryId: 'c00f7a6a-d0c1-4f08-9bd4-643415bef125', categoryName: 'Jídlo', categoryIconKey: 'utensils', categoryColorKey: 'orange', direction: 'expense', amountCzk: 250, transactionDate: '2026-08-20', note: null, labels: [] }],
       nextCursor: null,
     }),
+    getBounds: vi.fn().mockResolvedValue({ earliestActivityDate: '2020-01-01' }),
   }
 }
 
@@ -50,5 +51,14 @@ test('rejects invalid filters and anonymous feed reads', async () => {
 
   const anonymous = await app.inject({ method: 'GET', url: '/api/feed' })
   expect(anonymous.statusCode).toBe(401)
+  await app.close()
+})
+
+test('reads the earliest visible activity for the selected wallets', async () => {
+  const { app, repository } = await createTestApp()
+  const response = await app.inject({ method: 'GET', url: `/api/feed/bounds?walletIds=${walletId}`, headers: { authorization: 'Bearer test-token' } })
+  expect(response.statusCode).toBe(200)
+  expect(response.json()).toEqual({ earliestActivityDate: '2020-01-01' })
+  expect(repository.getBounds).toHaveBeenCalledWith(userId, { walletIds: [walletId] })
   await app.close()
 })

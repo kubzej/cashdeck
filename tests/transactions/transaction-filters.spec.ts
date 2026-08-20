@@ -27,7 +27,7 @@ test('scopes the feed by the current month, selected visible wallets, period, an
   await expect.poll(() => feedApi.requests().length).toBe(2)
   expect(feedApi.requests()[1].searchParams.get('walletIds')).toBe('wallet-1')
 
-  await page.getByRole('button', { name: 'Filtrovat období: Tento měsíc' }).click()
+  await page.getByRole('button', { name: 'Filtrovat období: Po měsících' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Celá historie', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Použít filtr' }).click()
   await expect.poll(() => feedApi.requests().length).toBe(3)

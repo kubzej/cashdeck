@@ -6,8 +6,9 @@ import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStat
 import { List, ListItem, ListItemActions, ListItemContent, ListItemLeading, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
 import { CategoryIcon } from '../categories/category-icon'
-import { listFeed, type FeedItem, type FeedTransfer } from '../feed/api'
-import { createDefaultFeedFilters, FeedFilters, resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
+import { getFeedBounds, listFeed, type FeedItem, type FeedTransfer } from '../feed/api'
+import { createDefaultFeedFilters, FeedFilters, isNavigablePeriod, resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
+import { FeedPeriodPager } from '../feed/feed-period-pager'
 import type { Transaction } from './api'
 import type { Transfer } from '../transfers/api'
 import { listWallets, type Wallet } from '../wallets/api'
@@ -19,6 +20,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, init
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [wallets, setWallets] = useState<Wallet[]>([])
+  const [earliestActivityDate, setEarliestActivityDate] = useState<string | null>(null)
   const [filters, setFilters] = useState<FeedFilterValue>(() => ({ ...createDefaultFeedFilters(), walletIds: initialWalletId ? [initialWalletId] : [] }))
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search)
   const [reloadToken, setReloadToken] = useState(0)
@@ -32,6 +34,18 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, init
   useEffect(() => {
     void listWallets().then((result) => setWallets(result.items)).catch(() => setWallets([]))
   }, [])
+
+  const walletFilterKey = filters.walletIds.join(',')
+  useEffect(() => {
+    const controller = new AbortController()
+    setEarliestActivityDate(null)
+    void getFeedBounds({ walletIds: filters.walletIds, signal: controller.signal }).then((bounds) => {
+      if (!controller.signal.aborted) setEarliestActivityDate(bounds.earliestActivityDate)
+    }).catch((error: unknown) => {
+      if (!controller.signal.aborted && !isAbortError(error)) setEarliestActivityDate(null)
+    })
+    return () => controller.abort()
+  }, [walletFilterKey])
 
   const range = resolveFeedDateRange(filters)
   const filterKey = JSON.stringify({ walletIds: filters.walletIds, ...range, search: debouncedSearch, reloadToken })
@@ -70,13 +84,17 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, init
     }
   }
 
-  return <section className="transactions-screen" aria-label="Seznam transakcí">
-    <FeedFilters wallets={wallets} value={filters} onChange={setFilters} />
+  const content = <>
     {status === 'loading' ? <div className="transactions-loading" aria-label="Načítání transakcí"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : null}
     {status === 'error' ? <FeedbackState status="error" layout="panel" className="transactions-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Transakce se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState> : null}
     {status === 'ready' && activities.length === 0 ? <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><ReceiptText aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Zatím bez transakcí</EmptyStateTitle><EmptyStateDescription>Přidej první příjem nebo výdaj.</EmptyStateDescription></EmptyState> : null}
     {status === 'ready' ? <>{groupActivities(activities).map(([date, items]) => <div className="transaction-day" key={date}><h2>{formatDate(date)}</h2><List gap="sm">{items.map((activity) => activity.kind === 'transaction' ? <TransactionRow key={activity.id} transaction={activity} onSelect={onSelectTransaction} /> : <TransferRow key={activity.id} transfer={activity} onSelect={onSelectTransfer} />)}</List></div>)}
     {nextCursor ? <Button variant="outline" className="transactions-load-more" loading={isLoadingMore} onClick={() => void loadMore()}>Načíst další</Button> : null}</> : null}
+  </>
+
+  return <section className="transactions-screen" aria-label="Seznam transakcí">
+    <FeedFilters wallets={wallets} value={filters} onChange={setFilters} />
+    {isNavigablePeriod(filters.period) ? <FeedPeriodPager period={filters.period} periodAnchor={filters.periodAnchor} earliestActivityDate={earliestActivityDate} onNavigate={(periodAnchor) => setFilters((current) => ({ ...current, periodAnchor }))}>{content}</FeedPeriodPager> : content}
   </section>
 }
 

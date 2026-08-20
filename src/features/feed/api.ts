@@ -11,6 +11,8 @@ export type FeedPage = {
   nextCursor: string | null
 }
 
+export type FeedBounds = { earliestActivityDate: string | null }
+
 export async function listFeed({ walletIds, dateFrom, dateTo, search, cursor, limit = 50, signal }: { walletIds?: string[]; dateFrom?: string; dateTo?: string; search?: string; cursor?: string; limit?: number; signal?: AbortSignal } = {}) {
   const query = new URLSearchParams({ limit: String(limit) })
   if (walletIds?.length) query.set('walletIds', walletIds.join(','))
@@ -19,4 +21,11 @@ export async function listFeed({ walletIds, dateFrom, dateTo, search, cursor, li
   if (search) query.set('search', search)
   if (cursor) query.set('cursor', cursor)
   return apiRequest<FeedPage>(`/feed?${query.toString()}`, { signal })
+}
+
+export async function getFeedBounds({ walletIds, signal }: { walletIds?: string[]; signal?: AbortSignal } = {}) {
+  const query = new URLSearchParams()
+  if (walletIds?.length) query.set('walletIds', walletIds.join(','))
+  const suffix = query.size ? `?${query.toString()}` : ''
+  return apiRequest<FeedBounds>(`/feed/bounds${suffix}`, { signal })
 }
