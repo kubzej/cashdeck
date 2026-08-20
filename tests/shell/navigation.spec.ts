@@ -12,9 +12,10 @@ test('switches between all signed-in destinations', async ({ page }) => {
   ] as const
 
   for (const [label, placeholder] of destinations) {
-    await page.getByRole('button', { name: label }).click()
+    const navigationItem = page.locator('.bottom-nav').getByRole('button', { name: label, exact: true })
+    await navigationItem.click()
     await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: label })).toHaveAttribute('aria-current', 'page')
+    await expect(navigationItem).toHaveAttribute('aria-current', 'page')
 
     if (placeholder) {
       await expect(page.getByText(placeholder, { exact: true })).toBeVisible()

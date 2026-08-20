@@ -1,0 +1,22 @@
+.recurring-screen { display: grid; flex: 1; align-content: start; gap: 1.25rem; padding-top: 0.75rem; }
+.recurring-header { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; align-items: center; }
+.recurring-header h1 { margin: 0; color: var(--color-foreground); font-size: 1.25rem; font-weight: 650; line-height: 1.2; text-align: center; }
+.recurring-header > span { width: 2.75rem; height: 2.75rem; }
+.recurring-loading, .recurring-list { display: grid; gap: 0.5rem; }
+.recurring-feedback, .recurring-empty { margin-block: auto; }
+.recurring-empty { min-height: 16rem; }
+.recurring-row { min-height: 4.5rem; }
+.recurring-row__icon { display: grid; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; place-items: center; border-radius: var(--radius-md); background: color-mix(in oklab, var(--color-key-value) 14%, var(--color-card)); color: var(--color-key-value); }
+.recurring-row__icon--transfer { background: color-mix(in oklab, var(--color-primary) 10%, var(--color-card)); color: var(--color-primary); }
+.recurring-row__icon svg { width: 1.2rem; height: 1.2rem; }
+.recurring-row [data-slot='list-item-content'] { align-self: center; gap: 0.125rem; min-width: 0; }
+.recurring-row [data-slot='list-item-title'], .recurring-row [data-slot='list-item-description'] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recurring-row__amount { font-size: 0.875rem; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.recurring-row__amount--income { color: var(--color-positive); }
+.recurring-row__amount--expense { color: var(--color-negative); }
+.recurring-row__amount--transfer { color: var(--color-foreground); }
+.recurring-row__labels { display: flex; min-width: 0; align-items: center; gap: 0.3125rem; overflow: hidden; }
+.recurring-row__label { flex: 0 0 auto; border: 1px solid color-mix(in oklab, var(--color-border) 90%, var(--color-foreground)); border-radius: 999px; padding: 0 0.3125rem; color: var(--color-muted-foreground); font-size: 0.625rem; line-height: 1rem; }
+.recurring-row__end { color: var(--color-muted-foreground); font-size: 0.6875rem; line-height: 1rem; }
+.recurring-row__note { font-size: 0.6875rem; line-height: 1rem; }
+.recurring-custom-interval { margin-top: 0.5rem; }

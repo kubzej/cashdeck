@@ -19,6 +19,7 @@ type QueuedWalletApiFailure = WalletApiFailure & { remaining: number }
 export type WalletApiMock = {
   failNext: (method: WalletRequestMethod, failure?: Partial<WalletApiFailure>) => void
   failTimes: (method: WalletRequestMethod, times: number, failure?: Partial<WalletApiFailure>) => void
+  requestCount: (method: WalletRequestMethod) => number
   wallets: () => WalletFixture[]
 }
 
@@ -26,11 +27,14 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
   let wallets = [...initialWallets]
   let nextId = wallets.length + 1
   const failures = new Map<WalletRequestMethod, QueuedWalletApiFailure>()
+  const requestCounts = new Map<WalletRequestMethod, number>()
 
   await page.route('http://api.test/api/wallets**', async (route) => {
     expect(route.request().headers().authorization).toBe('Bearer token-1')
 
     const request = route.request()
+    const method = request.method() as WalletRequestMethod
+    requestCounts.set(method, (requestCounts.get(method) ?? 0) + 1)
     const url = new URL(request.url())
     const pathname = url.pathname
 
@@ -95,6 +99,9 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
         status: failure.status ?? 500,
         message: failure.message ?? 'Požadavek se nepodařilo dokončit.',
       })
+    },
+    requestCount(method) {
+      return requestCounts.get(method) ?? 0
     },
     wallets: () => wallets.map((wallet) => ({ ...wallet })),
   } satisfies WalletApiMock

@@ -9,6 +9,7 @@ export type ServerConfig = {
   host: string
   neonAuthUrl: string
   port: number
+  recurringJobSecret?: string
 }
 
 export function loadConfig(): ServerConfig {
@@ -46,5 +47,12 @@ export function loadConfig(): ServerConfig {
     host: process.env.HOST ?? '127.0.0.1',
     neonAuthUrl,
     port,
+    recurringJobSecret: parseRecurringJobSecret(process.env.RECURRING_JOB_SECRET),
   }
+}
+
+function parseRecurringJobSecret(value: string | undefined) {
+  if (value === undefined || value === '') return undefined
+  if (value.length < 32) throw new Error('RECURRING_JOB_SECRET must contain at least 32 characters.')
+  return value
 }

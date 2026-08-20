@@ -8,8 +8,9 @@ test('shows the empty state after retrying a failed wallet load', async ({ page 
   await page.goto('/')
   await signIn(page)
 
+  await expect.poll(() => walletApi.requestCount('GET')).toBe(1)
   walletApi.failNext('GET', { message: 'Dočasně nedostupné.' })
-  await page.getByRole('button', { name: 'Peněženky' }).click()
+  await page.getByRole('button', { name: 'Peněženky', exact: true }).click()
   await expect(page.getByText('Peněženky se nepodařilo načíst', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Zkusit znovu' }).click()
 

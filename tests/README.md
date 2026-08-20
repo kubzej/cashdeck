@@ -8,6 +8,7 @@ Playwright tests are grouped by the user-facing area they cover:
 - `categories/` contains kategorie seznam, formuláře, řazení a destruktivní akce.
 - `labels/` contains štítky seznam, vyhledávání, formuláře a destruktivní akce.
 - `wallets/` contains peněženky seznam, formuláře, řazení a destruktivní akce.
+- `recurring/` contains opakování: vytvoření, úpravy, převody, ukončení a destruktivní akce.
 - `support/` contains shared Neon Auth/API mocks and helpers, without product
   assertions.
 

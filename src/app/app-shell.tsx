@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../components/ui/empty-state'
 import { CategoriesScreen } from '../features/categories/categories-screen'
 import { LabelsScreen } from '../features/labels/labels-screen'
+import { RecurringRulesScreen } from '../features/recurring/recurring-rules-screen'
 import { SettingsScreen } from '../features/settings/settings-screen'
 import { TransactionFormScreen } from '../features/transactions/transaction-form-screen'
 import { AddActivityDialog } from '../features/transactions/add-activity-dialog'
@@ -19,7 +20,7 @@ import { WalletsScreen } from '../features/wallets/wallets-screen'
 type NavKey = 'transactions' | 'wallets' | 'overview' | 'settings'
 type NavItem = { key: NavKey; label: string; icon: ComponentType<{ 'aria-hidden'?: boolean }> }
 type WalletView = 'list' | 'new' | 'edit'
-type SettingsView = 'index' | 'categories' | 'labels'
+type SettingsView = 'index' | 'categories' | 'labels' | 'recurring'
 type TransactionView = 'list' | 'new' | 'edit'
 type TransferView = 'list' | 'new' | 'edit'
 
@@ -79,12 +80,13 @@ export function AppShell() {
           {transferView === 'edit' && selectedTransfer ? <TransferFormScreen transfer={selectedTransfer} onCancel={() => setTransferView('list')} onSaved={() => { setSelectedTransfer(null); setTransferView('list') }} onDeleted={() => { setSelectedTransfer(null); setTransferView('list') }} /> : null}
           {activeNav === 'settings' && settingsView === 'categories' ? <CategoriesScreen onBack={() => setSettingsView('index')} /> : null}
           {activeNav === 'settings' && settingsView === 'labels' ? <LabelsScreen onBack={() => setSettingsView('index')} /> : null}
+          {activeNav === 'settings' && settingsView === 'recurring' ? <RecurringRulesScreen onBack={() => setSettingsView('index')} /> : null}
           {!isDetailScreen ? <>
             <div className={`screen-heading${activeNav === 'wallets' ? ' screen-heading--action' : ''}`}>
               <h1>{activeItem?.label}</h1>
               {activeNav === 'wallets' ? <Button variant="ghost" size="icon" aria-label="Přidat peněženku" onClick={() => setWalletView('new')}><Plus aria-hidden="true" /></Button> : null}
             </div>
-            {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransferView('edit') }} /> : activeItem ? <PlaceholderScreen item={activeItem} /> : null}
+            {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} onOpenRecurring={() => setSettingsView('recurring')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransferView('edit') }} /> : activeItem ? <PlaceholderScreen item={activeItem} /> : null}
           </> : null}
         </main>
         {!isDetailScreen && activeNav === 'transactions' ? <Button size="icon" className="transaction-fab" aria-label="Přidat záznam" onClick={() => setIsAddActivityOpen(true)}><Plus aria-hidden="true" /></Button> : null}
