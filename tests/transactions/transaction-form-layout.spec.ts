@@ -24,6 +24,8 @@ test('new and edit transaction forms keep the same layout and load their data on
 
   await page.goto('/')
   await signIn(page)
+  await expect.poll(() => formRequestCount(formDataRequests)).toBe(1)
+  const countBeforeNewForm = formRequestCount(formDataRequests)
 
   const transactionFab = page.getByRole('button', { name: 'Přidat záznam' })
   await expect(transactionFab).toBeVisible()
@@ -39,7 +41,7 @@ test('new and edit transaction forms keep the same layout and load their data on
   await expect(page.getByRole('heading', { name: 'Nová transakce' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Běžný účet' })).toBeVisible()
   const newLayout = await formLayout(page)
-  await expect.poll(() => formRequestCount(formDataRequests)).toBe(3)
+  await expect.poll(() => formRequestCount(formDataRequests) - countBeforeNewForm).toBe(3)
 
   await page.getByRole('button', { name: 'Zpět na transakce' }).click()
   await expect(page.getByRole('listitem').filter({ hasText: 'Jídlo' })).toBeVisible()

@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer'
 import type { Pool } from 'pg'
 import { DomainError } from '../management/domain.js'
-import type { FeedListInput } from './domain.js'
+import { calculateTransferImpactCzk, type FeedListInput } from './domain.js'
 
 export type FeedLabel = { id: string; name: string }
 
@@ -29,6 +29,7 @@ export type FeedTransfer = {
   destinationWalletId: string
   destinationWalletName: string
   amountCzk: number
+  impactCzk: number
   transferDate: string
   note: string | null
   labels: FeedLabel[]
@@ -68,11 +69,14 @@ export function createFeedRepository(pool: Pool): FeedRepository {
       const transactionFilters = ['t.user_id = $1']
       const transferFilters = ['tr.user_id = $1']
 
-      if (input.walletId) {
-        values.push(input.walletId)
-        const parameter = `$${values.length}::uuid`
-        transactionFilters.push(`t.wallet_id = ${parameter}`)
-        transferFilters.push(`(tr.source_wallet_id = ${parameter} or tr.destination_wallet_id = ${parameter})`)
+      transactionFilters.push('not transaction_wallet.is_hidden')
+      transferFilters.push('not source_wallet_filter.is_hidden', 'not destination_wallet_filter.is_hidden')
+
+      if (input.walletIds) {
+        values.push(input.walletIds)
+        const parameter = `$${values.length}::uuid[]`
+        transactionFilters.push(`t.wallet_id = any(${parameter})`)
+        transferFilters.push(`(tr.source_wallet_id = any(${parameter}) or tr.destination_wallet_id = any(${parameter}))`)
       }
       if (input.dateFrom) {
         values.push(input.dateFrom)
@@ -86,13 +90,43 @@ export function createFeedRepository(pool: Pool): FeedRepository {
         transactionFilters.push(`t.transaction_date <= ${parameter}`)
         transferFilters.push(`tr.transfer_date <= ${parameter}`)
       }
+      if (input.search) {
+        values.push(input.search)
+        const parameter = `$${values.length}`
+        transactionFilters.push(`(
+          transaction_category.name ilike '%' || ${parameter} || '%'
+          or transaction_wallet.name ilike '%' || ${parameter} || '%'
+          or coalesce(t.note, '') ilike '%' || ${parameter} || '%'
+          or exists (
+            select 1
+            from transaction_labels search_transaction_label
+            join labels search_label on search_label.user_id = $1 and search_label.id = search_transaction_label.label_id
+            where search_transaction_label.user_id = $1
+              and search_transaction_label.transaction_id = t.id
+              and search_label.name ilike '%' || ${parameter} || '%'
+          )
+        )`)
+        transferFilters.push(`(
+          source_wallet_filter.name ilike '%' || ${parameter} || '%'
+          or destination_wallet_filter.name ilike '%' || ${parameter} || '%'
+          or coalesce(tr.note, '') ilike '%' || ${parameter} || '%'
+          or exists (
+            select 1
+            from transfer_labels search_transfer_label
+            join labels search_label on search_label.user_id = $1 and search_label.id = search_transfer_label.label_id
+            where search_transfer_label.user_id = $1
+              and search_transfer_label.transfer_id = tr.id
+              and search_label.name ilike '%' || ${parameter} || '%'
+          )
+        )`)
+      }
 
       const cursorFilter = cursor ? addCursorFilter(values, cursor) : ''
       values.push(input.limit + 1)
       const result = await pool.query<FeedRow>(feedSelect(transactionFilters.join(' and '), transferFilters.join(' and '), cursorFilter, `$${values.length}`), values)
       const rows = result.rows.slice(0, input.limit)
       const last = rows.at(-1)
-      return { items: rows.map(toFeedItem), nextCursor: result.rows.length > input.limit && last ? encodeCursor(last) : null }
+      return { items: rows.map((row) => toFeedItem(row, input.walletIds)), nextCursor: result.rows.length > input.limit && last ? encodeCursor(last) : null }
     },
   }
 }
@@ -109,12 +143,16 @@ function feedSelect(transactionFilters: string, transferFilters: string, cursorF
       t.amount_czk, t.note, t.wallet_id, t.category_id,
       null::uuid as source_wallet_id, null::uuid as destination_wallet_id
     from transactions t
+    join wallets transaction_wallet on transaction_wallet.user_id = t.user_id and transaction_wallet.id = t.wallet_id
+    join categories transaction_category on transaction_category.user_id = t.user_id and transaction_category.id = t.category_id
     where ${transactionFilters}
     union all
     select 'transfer'::text as kind, tr.id, tr.transfer_date as activity_date, tr.created_at,
       tr.amount_czk, tr.note, null::uuid as wallet_id, null::uuid as category_id,
       tr.source_wallet_id, tr.destination_wallet_id
     from transfers tr
+    join wallets source_wallet_filter on source_wallet_filter.user_id = tr.user_id and source_wallet_filter.id = tr.source_wallet_id
+    join wallets destination_wallet_filter on destination_wallet_filter.user_id = tr.user_id and destination_wallet_filter.id = tr.destination_wallet_id
     where ${transferFilters}
   ), page as (
     select * from activity_rows
@@ -149,14 +187,15 @@ function feedSelect(transactionFilters: string, transferFilters: string, cursorF
   order by page.activity_date desc, page.created_at desc, page.kind desc, page.id desc`
 }
 
-function toFeedItem(row: FeedRow): FeedItem {
+function toFeedItem(row: FeedRow, selectedWalletIds: string[] | null): FeedItem {
   const labels = parseLabels(row.labels)
   if (row.kind === 'transaction') {
     if (!row.wallet_id || !row.wallet_name || !row.category_id || !row.category_name || !row.category_icon_key || !row.category_color_key || !row.direction) throw new Error('Neúplný řádek transakce ve feedu.')
     return { kind: 'transaction', id: row.id, walletId: row.wallet_id, walletName: row.wallet_name, categoryId: row.category_id, categoryName: row.category_name, categoryIconKey: row.category_icon_key, categoryColorKey: row.category_color_key, direction: row.direction, amountCzk: Number(row.amount_czk), transactionDate: row.activity_date, note: row.note, labels }
   }
   if (!row.source_wallet_id || !row.source_wallet_name || !row.destination_wallet_id || !row.destination_wallet_name) throw new Error('Neúplný řádek převodu ve feedu.')
-  return { kind: 'transfer', id: row.id, sourceWalletId: row.source_wallet_id, sourceWalletName: row.source_wallet_name, destinationWalletId: row.destination_wallet_id, destinationWalletName: row.destination_wallet_name, amountCzk: Number(row.amount_czk), transferDate: row.activity_date, note: row.note, labels }
+  const amountCzk = Number(row.amount_czk)
+  return { kind: 'transfer', id: row.id, sourceWalletId: row.source_wallet_id, sourceWalletName: row.source_wallet_name, destinationWalletId: row.destination_wallet_id, destinationWalletName: row.destination_wallet_name, amountCzk, impactCzk: calculateTransferImpactCzk({ amountCzk, sourceWalletId: row.source_wallet_id, destinationWalletId: row.destination_wallet_id, selectedWalletIds }), transferDate: row.activity_date, note: row.note, labels }
 }
 
 function parseLabels(value: unknown): FeedLabel[] {

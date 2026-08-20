@@ -32,10 +32,10 @@ async function createTestApp(repository = createRepository()) {
 
 test('reads one paginated feed scoped to the verified user', async () => {
   const { app, repository } = await createTestApp()
-  const response = await app.inject({ method: 'GET', url: `/api/feed?walletId=${walletId}&dateFrom=2026-08-01&dateTo=2026-08-31&limit=25`, headers: { authorization: 'Bearer test-token' } })
+  const response = await app.inject({ method: 'GET', url: `/api/feed?walletIds=${walletId}&dateFrom=2026-08-01&dateTo=2026-08-31&search=%20J%C3%ADdlo%20&limit=25`, headers: { authorization: 'Bearer test-token' } })
   expect(response.statusCode).toBe(200)
   expect(response.json().items[0]).toMatchObject({ kind: 'transaction', categoryName: 'Jídlo' })
-  expect(repository.listFeed).toHaveBeenCalledWith(userId, { walletId, dateFrom: '2026-08-01', dateTo: '2026-08-31', cursor: null, limit: 25 })
+  expect(repository.listFeed).toHaveBeenCalledWith(userId, { walletIds: [walletId], dateFrom: '2026-08-01', dateTo: '2026-08-31', search: 'Jídlo', cursor: null, limit: 25 })
   await app.close()
 })
 
@@ -44,6 +44,9 @@ test('rejects invalid filters and anonymous feed reads', async () => {
   const invalid = await app.inject({ method: 'GET', url: '/api/feed?dateFrom=2026-08-31&dateTo=2026-08-01', headers: { authorization: 'Bearer test-token' } })
   expect(invalid.statusCode).toBe(400)
   expect(repository.listFeed).not.toHaveBeenCalled()
+
+  const duplicateWallet = await app.inject({ method: 'GET', url: `/api/feed?walletIds=${walletId},${walletId}`, headers: { authorization: 'Bearer test-token' } })
+  expect(duplicateWallet.statusCode).toBe(400)
 
   const anonymous = await app.inject({ method: 'GET', url: '/api/feed' })
   expect(anonymous.statusCode).toBe(401)

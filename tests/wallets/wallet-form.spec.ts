@@ -43,8 +43,7 @@ test('edits every wallet field and preserves the updated opening-balance date', 
   await signIn(page)
 
   await page.getByRole('button', { name: 'Peněženky' }).click()
-  await page.getByRole('listitem').filter({ hasText: 'Rezerva' }).click()
-  await page.getByRole('button', { name: 'Upravit peněženku' }).click()
+  await page.getByRole('button', { name: 'Spravovat peněženku Rezerva' }).click()
   await expect(page.getByRole('button', { name: '15. 1. 2022' })).toBeVisible()
 
   await page.getByLabel('Název').fill('Nouzová rezerva')
@@ -65,7 +64,6 @@ test('edits every wallet field and preserves the updated opening-balance date', 
     openingBalanceDate: '2022-02-01',
   })
 
-  await page.getByRole('listitem').filter({ hasText: 'Nouzová rezerva' }).click()
-  await page.getByRole('button', { name: 'Upravit peněženku' }).click()
+  await page.getByRole('button', { name: 'Spravovat peněženku Nouzová rezerva' }).click()
   await expect(page.getByRole('button', { name: '1. 2. 2022' })).toBeVisible()
 })

@@ -4,7 +4,7 @@ import { mockFeedApi } from '../support/feed'
 
 test('shows a transfer in the shared timeline and opens its edit screen', async ({ page }) => {
   await mockAuthAndApi(page)
-  await mockFeedApi(page, [{ kind: 'transfer', id: 'transfer-1', sourceWalletId: 'wallet-1', sourceWalletName: 'Běžný účet', destinationWalletId: 'wallet-2', destinationWalletName: 'Spoření', amountCzk: 1200, transferDate: '2026-08-20', note: 'Měsíční rezerva', labels: [{ id: 'label-1', name: 'rezerva' }] }])
+  await mockFeedApi(page, [{ kind: 'transfer', id: 'transfer-1', sourceWalletId: 'wallet-1', sourceWalletName: 'Běžný účet', destinationWalletId: 'wallet-2', destinationWalletName: 'Spoření', amountCzk: 1200, impactCzk: 0, transferDate: '2026-08-20', note: 'Měsíční rezerva', labels: [{ id: 'label-1', name: 'rezerva' }] }])
   await page.goto('/')
   await signIn(page)
 

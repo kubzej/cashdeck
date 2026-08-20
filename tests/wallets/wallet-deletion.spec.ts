@@ -43,7 +43,6 @@ async function openWalletEdit(page: Parameters<typeof mockAuthAndApi>[0]) {
   await page.goto('/')
   await signIn(page)
   await page.getByRole('button', { name: 'Peněženky' }).click()
-  await page.getByRole('listitem').filter({ hasText: wallet.name }).click()
-  await page.getByRole('button', { name: 'Upravit peněženku' }).click()
+  await page.getByRole('button', { name: `Spravovat peněženku ${wallet.name}` }).click()
   return walletApi
 }

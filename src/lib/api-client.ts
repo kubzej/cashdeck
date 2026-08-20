@@ -26,7 +26,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}) {
     throw new Error('Nelze získat přístupový token.')
   }
 
-  if ((init.method ?? 'GET').toUpperCase() !== 'GET' || init.body) return sendRequest<T>(`${apiUrl}${path}`, token, init)
+  if ((init.method ?? 'GET').toUpperCase() !== 'GET' || init.body || init.signal) return sendRequest<T>(`${apiUrl}${path}`, token, init)
 
   const requestKey = `${token}:${path}`
   const pendingRequest = pendingGetRequests.get(requestKey) as Promise<T> | undefined

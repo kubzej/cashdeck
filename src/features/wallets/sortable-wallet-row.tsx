@@ -1,11 +1,11 @@
 import { type CSSProperties } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
-import { GripVertical, WalletCards } from 'lucide-react'
+import { GripVertical, Pencil, WalletCards } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { ListItem, ListItemActions, ListItemContent, ListItemTitle } from '../../components/ui/list'
 import { type Wallet } from './api'
 
-export function SortableWalletRow({ wallet, disabled, onSelect }: { wallet: Wallet; disabled: boolean; onSelect: (wallet: Wallet) => void }) {
+export function SortableWalletRow({ wallet, disabled, onSelect, onManage }: { wallet: Wallet; disabled: boolean; onSelect: (wallet: Wallet) => void; onManage: (wallet: Wallet) => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: wallet.id, disabled })
   const style: CSSProperties = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -21,6 +21,18 @@ export function SortableWalletRow({ wallet, disabled, onSelect }: { wallet: Wall
       </ListItemContent>
       <ListItemActions>
         <span className="wallet-balance">{formatCzk(wallet.openingBalanceCzk)}</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Spravovat peněženku ${wallet.name}`}
+          disabled={disabled}
+          onClick={(event) => {
+            event.stopPropagation()
+            onManage(wallet)
+          }}
+        >
+          <Pencil aria-hidden="true" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"

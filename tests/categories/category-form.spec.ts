@@ -14,7 +14,7 @@ test('validates required category data and retries a failed creation', async ({ 
   await expect(page.getByText('Zadej název kategorie.', { exact: true })).toBeVisible()
 
   await page.getByLabel('Název').fill('Volný čas')
-  await page.getByLabel('Pizza').click()
+  await page.getByLabel('Jídlo').click()
   await page.getByLabel('Tmavě hnědá').click()
   categoryApi.failNext('POST', { message: 'Uložení je dočasně nedostupné.' })
   await page.getByRole('button', { name: 'Uložit kategorii' }).click()
