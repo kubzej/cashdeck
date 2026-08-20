@@ -33,11 +33,14 @@
 - Neon Auth owns email/password sessions. The Cashdeck API on Railway is the
   only application data gateway; the browser must never call Neon Data API or
   PostgreSQL directly.
-- The API verifies the Neon Auth JWT and forwards it through the official Neon
-  serverless driver to Neon RLS. Never expose database connection strings,
-  service roles, or secrets to the client.
-- Every user-owned database row is protected by RLS and `auth.user_id()`.
-  Keep SQL scopes explicit even when RLS already enforces ownership.
+- The API verifies each Neon Auth JWT against the project's JWKS and canonical
+  issuer, then scopes every parameterized database query to the verified user
+  id. Never expose database connection strings, service roles, or secrets to
+  the client.
+- The API uses the restricted `cashdeck_app` PostgreSQL role. Schema changes
+  are versioned SQL files applied manually in Neon Console by a schema owner;
+  do not add browser-to-database access, RLS/Data API dependencies, migration
+  runners, or database-mutating CI jobs.
 - Financial writes must be server-confirmed. Do not add optimistic financial
   rows without an explicit product decision.
 
