@@ -10,10 +10,11 @@ export type LabelPage = {
   nextCursor: string | null
 }
 
-export async function listLabels({ query, cursor, limit = 50 }: { query?: string; cursor?: string; limit?: number } = {}) {
+export async function listLabels({ query, cursor, limit = 50, sort = 'alphabetical' }: { query?: string; cursor?: string; limit?: number; sort?: 'alphabetical' | 'recent' } = {}) {
   const search = new URLSearchParams({ limit: String(limit) })
   if (query) search.set('q', query)
   if (cursor) search.set('cursor', cursor)
+  if (sort !== 'alphabetical') search.set('sort', sort)
   return apiRequest<LabelPage>(`/labels?${search.toString()}`)
 }
 

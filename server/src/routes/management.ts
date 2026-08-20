@@ -96,8 +96,8 @@ export function createManagementRoutes(repository: ManagementRepository, require
     })
 
     app.get('/api/labels', { preHandler: requireAuth }, async (request) => {
-      const { query, cursor, limit } = parseLabelListQuery(request.query)
-      return repository.listLabels(request.authUser.id, query, cursor, limit)
+      const { query, cursor, limit, sort } = parseLabelListQuery(request.query)
+      return repository.listLabels(request.authUser.id, query, cursor, limit, sort)
     })
 
     app.post('/api/labels', { preHandler: requireAuth }, async (request, reply) => {
@@ -186,11 +186,18 @@ function parseLabel(body: unknown) {
 
 function parseLabelListQuery(value: unknown) {
   const query = asRecord(value)
-  assertOnlyKeys(query, ['q', 'cursor', 'limit'])
+  assertOnlyKeys(query, ['q', 'cursor', 'limit', 'sort'])
   const search = query.q === undefined ? null : normalizeSearch(query.q)
   const cursor = query.cursor === undefined ? null : readQueryString(query.cursor, 'cursor')
   const limit = query.limit === undefined ? 50 : parseLimit(query.limit)
-  return { query: search, cursor, limit }
+  const sort = query.sort === undefined ? 'alphabetical' : parseLabelSort(query.sort)
+  if (sort === 'recent' && cursor) throw new DomainError(400, 'Kurzór nelze použít pro poslední štítky.')
+  return { query: search, cursor, limit, sort }
+}
+
+function parseLabelSort(value: unknown) {
+  if (value === 'alphabetical' || value === 'recent') return value
+  throw new DomainError(400, 'Řazení štítků není podporované.')
 }
 
 function normalizeSearch(value: unknown) {

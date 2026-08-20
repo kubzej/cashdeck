@@ -10,16 +10,13 @@ test('validates required wallet fields and retries a failed creation', async ({ 
 
   await page.getByRole('button', { name: 'Peněženky' }).click()
   await page.locator('[data-slot="empty-state"]').getByRole('button', { name: 'Přidat peněženku' }).click()
-  await page.getByLabel('Datum počátečního zůstatku').fill('')
   await page.getByRole('button', { name: 'Uložit peněženku' }).click()
 
   await expect(page.getByText('Zadej název peněženky.', { exact: true })).toBeVisible()
   await expect(page.getByText('Zadej celý počet korun.', { exact: true })).toBeVisible()
-  await expect(page.getByText('Vyber datum.', { exact: true })).toBeVisible()
 
   await page.getByLabel('Název').fill('Rezerva')
   await page.getByLabel('Počáteční zůstatek').fill('150000')
-  await page.getByLabel('Datum počátečního zůstatku').fill('2022-01-15')
   walletApi.failNext('POST', { message: 'Uložení je dočasně nedostupné.' })
   await page.getByRole('button', { name: 'Uložit peněženku' }).click()
   await expect(page.getByText('Peněženku se nepodařilo uložit', { exact: true })).toBeVisible()
@@ -48,12 +45,14 @@ test('edits every wallet field and preserves the updated opening-balance date', 
   await page.getByRole('button', { name: 'Peněženky' }).click()
   await page.getByRole('listitem').filter({ hasText: 'Rezerva' }).click()
   await page.getByRole('button', { name: 'Upravit peněženku' }).click()
-  await expect(page.getByLabel('Datum počátečního zůstatku')).toHaveValue('2022-01-15')
+  await expect(page.getByRole('button', { name: '15. 1. 2022' })).toBeVisible()
 
   await page.getByLabel('Název').fill('Nouzová rezerva')
   await page.getByLabel('Červená', { exact: true }).click()
   await page.getByLabel('Počáteční zůstatek').fill('250000')
-  await page.getByLabel('Datum počátečního zůstatku').fill('2022-02-01')
+  await page.getByRole('button', { name: '15. 1. 2022' }).click()
+  await page.getByRole('button', { name: 'Next month' }).click()
+  await page.getByRole('button', { name: '1. 2. 2022', exact: true }).click()
   walletApi.failNext('PATCH', { message: 'Změny se nepodařilo uložit.' })
   await page.getByRole('button', { name: 'Uložit změny' }).click()
   await expect(page.getByText('Peněženku se nepodařilo uložit', { exact: true })).toBeVisible()
@@ -68,5 +67,5 @@ test('edits every wallet field and preserves the updated opening-balance date', 
 
   await page.getByRole('listitem').filter({ hasText: 'Nouzová rezerva' }).click()
   await page.getByRole('button', { name: 'Upravit peněženku' }).click()
-  await expect(page.getByLabel('Datum počátečního zůstatku')).toHaveValue('2022-02-01')
+  await expect(page.getByRole('button', { name: '1. 2. 2022' })).toBeVisible()
 })

@@ -71,7 +71,7 @@ export function CategoryFormScreen({ category, direction, onCancel, onSaved, onD
       <header className="category-form-header">
         <Button variant="ghost" size="icon" aria-label="Zpět na kategorie" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
         <h1 id="category-form-title">{title}</h1>
-        <span aria-hidden="true" />
+        {category ? <DeleteConfirmationDialog title="Smazat kategorii?" description={`Kategorie „${category.name}“ bude trvale smazána.`} triggerLabel="Smazat kategorii" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : <span aria-hidden="true" />}
       </header>
       <form className="category-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Kategorii se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
@@ -91,10 +91,7 @@ export function CategoryFormScreen({ category, direction, onCancel, onSaved, onD
           <ColorPicker value={values.colorKey} ariaLabel="Barva kategorie" onValueChange={(colorKey) => setValues((current) => ({ ...current, colorKey: colorKey as CategoryColorKey }))} />
         </fieldset>
         <Button type="submit" size="lg" className="category-form-submit" loading={isSubmitting}>{category ? 'Uložit změny' : 'Uložit kategorii'}</Button>
-        {category ? <div className="category-form-danger-zone">
-          {deleteError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Kategorii se nepodařilo smazat</FeedbackStateTitle><FeedbackStateDescription>{deleteError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
-          <DeleteConfirmationDialog title="Smazat kategorii?" description={`Kategorie „${category.name}“ bude trvale smazána.`} triggerLabel="Smazat kategorii" triggerClassName="category-form-delete" isDeleting={isDeleting} onConfirm={() => void handleDelete()} />
-        </div> : null}
+        {category && deleteError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Kategorii se nepodařilo smazat</FeedbackStateTitle><FeedbackStateDescription>{deleteError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
       </form>
     </section>
   )

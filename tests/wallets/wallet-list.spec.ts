@@ -5,7 +5,7 @@ import { mockWalletsApi, type WalletFixture } from '../support/wallets'
 test('shows the empty state after retrying a failed wallet load', async ({ page }) => {
   await mockAuthAndApi(page)
   const walletApi = await mockWalletsApi(page)
-  walletApi.failTimes('GET', 2, { message: 'Dočasně nedostupné.' })
+  walletApi.failNext('GET', { message: 'Dočasně nedostupné.' })
   await page.goto('/')
   await signIn(page)
 

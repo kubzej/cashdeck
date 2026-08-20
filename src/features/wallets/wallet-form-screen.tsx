@@ -3,6 +3,7 @@ import { ArrowLeft, CircleAlert } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { ColorPicker } from '../../components/color-picker'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
+import { DatePicker } from '../../components/ui/calendar'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
@@ -21,7 +22,7 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
     name: wallet?.name ?? '',
     colorKey: wallet?.colorKey ?? 'teal',
     openingBalanceCzk: wallet ? String(wallet.openingBalanceCzk) : '',
-    openingBalanceDate: wallet ? dateInputValue(wallet.openingBalanceDate) : getPragueToday(),
+    openingBalanceDate: wallet ? wallet.openingBalanceDate.slice(0, 10) : getPragueToday(),
   })
   const [errors, setErrors] = useState<Partial<Record<keyof WalletFormValues, string>>>({})
   const [submissionError, setSubmissionError] = useState<string | null>(null)
@@ -72,7 +73,7 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
       <header className="wallet-form-header">
         <Button variant="ghost" size="icon" aria-label="Zpět na peněženky" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
         <h1 id="wallet-form-title">{wallet ? 'Upravit peněženku' : 'Nová peněženka'}</h1>
-        <span aria-hidden="true" />
+        {wallet ? <DeleteConfirmationDialog title="Smazat peněženku?" description={`Peněženka „${wallet.name}“ bude trvale smazána.`} triggerLabel="Smazat peněženku" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : <span aria-hidden="true" />}
       </header>
       <form className="wallet-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Peněženku se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
@@ -92,21 +93,11 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
         </Field>
         <Field invalid={Boolean(errors.openingBalanceDate)}>
           <FieldLabel>Datum počátečního zůstatku</FieldLabel>
-          <Input type="date" value={values.openingBalanceDate} onChange={(event) => { const openingBalanceDate = event.currentTarget.value; setValues((current) => ({ ...current, openingBalanceDate })) }} />
+          <DatePicker value={parseIsoDate(values.openingBalanceDate)} onValueChange={(date) => setValues((current) => ({ ...current, openingBalanceDate: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} />
           <FieldError match={Boolean(errors.openingBalanceDate)}>{errors.openingBalanceDate}</FieldError>
         </Field>
         <Button type="submit" size="lg" className="wallet-form-submit" loading={isSubmitting}>{wallet ? 'Uložit změny' : 'Uložit peněženku'}</Button>
-        {wallet ? <div className="wallet-form-danger-zone">
-          {deleteError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Peněženku se nepodařilo smazat</FeedbackStateTitle><FeedbackStateDescription>{deleteError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
-          <DeleteConfirmationDialog
-            title="Smazat peněženku?"
-            description={`Peněženka „${wallet.name}“ bude trvale smazána.`}
-            triggerLabel="Smazat peněženku"
-            triggerClassName="wallet-form-delete"
-            isDeleting={isDeleting}
-            onConfirm={() => void handleDelete()}
-          />
-        </div> : null}
+        {wallet && deleteError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Peněženku se nepodařilo smazat</FeedbackStateTitle><FeedbackStateDescription>{deleteError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
       </form>
     </section>
   )
@@ -125,6 +116,5 @@ function getPragueToday() {
   return `${values.year}-${values.month}-${values.day}`
 }
 
-function dateInputValue(value: string) {
-  return value.slice(0, 10)
-}
+function parseIsoDate(value: string) { const [year, month, day] = value.slice(0, 10).split('-').map(Number); return new Date(year, month - 1, day) }
+function formatIsoDate(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}` }

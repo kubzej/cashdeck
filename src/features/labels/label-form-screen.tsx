@@ -57,7 +57,7 @@ export function LabelFormScreen({ label, onCancel, onSaved, onDeleted }: { label
       <header className="label-form-header">
         <Button variant="ghost" size="icon" aria-label="Zpět na štítky" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
         <h1 id="label-form-title">{label ? 'Upravit štítek' : 'Nový štítek'}</h1>
-        <span aria-hidden="true" />
+        {label ? <DeleteConfirmationDialog title="Smazat štítek?" description={`Štítek „${label.name}“ bude trvale smazán.`} triggerLabel="Smazat štítek" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : <span aria-hidden="true" />}
       </header>
       <form className="label-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Štítek se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
@@ -67,10 +67,7 @@ export function LabelFormScreen({ label, onCancel, onSaved, onDeleted }: { label
           <FieldError match={Boolean(nameError)}>{nameError}</FieldError>
         </Field>
         <Button type="submit" size="lg" className="label-form-submit" loading={isSubmitting}>{label ? 'Uložit změny' : 'Uložit štítek'}</Button>
-        {label ? <div className="label-form-danger-zone">
-          {deleteError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Štítek se nepodařilo smazat</FeedbackStateTitle><FeedbackStateDescription>{deleteError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
-          <DeleteConfirmationDialog title="Smazat štítek?" description={`Štítek „${label.name}“ bude trvale smazán.`} triggerLabel="Smazat štítek" triggerClassName="label-form-delete" isDeleting={isDeleting} onConfirm={() => void handleDelete()} />
-        </div> : null}
+        {label && deleteError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Štítek se nepodařilo smazat</FeedbackStateTitle><FeedbackStateDescription>{deleteError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
       </form>
     </section>
   )

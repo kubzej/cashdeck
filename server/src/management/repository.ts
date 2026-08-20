@@ -32,6 +32,8 @@ export type LabelPage = {
   nextCursor: string | null
 }
 
+export type LabelListSort = 'alphabetical' | 'recent'
+
 export type CreateWalletInput = {
   name: string
   colorKey: ColorKey
@@ -70,7 +72,7 @@ export type ManagementRepository = {
   updateCategory(userId: string, categoryId: string, input: UpdateCategoryInput): Promise<Category | null>
   reorderCategories(userId: string, direction: CategoryDirection, categoryIds: string[]): Promise<void>
   deleteCategory(userId: string, categoryId: string): Promise<boolean>
-  listLabels(userId: string, query: string | null, cursor: string | null, limit: number): Promise<LabelPage>
+  listLabels(userId: string, query: string | null, cursor: string | null, limit: number, sort: LabelListSort): Promise<LabelPage>
   createLabel(userId: string, name: string): Promise<Label>
   updateLabel(userId: string, labelId: string, name: string): Promise<Label | null>
   deleteLabel(userId: string, labelId: string): Promise<boolean>
@@ -356,7 +358,34 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
       return Boolean(result.rows[0])
     },
 
-    async listLabels(userId, query, cursor, limit) {
+    async listLabels(userId, query, cursor, limit, sort) {
+      if (sort === 'recent') {
+        const values: unknown[] = [userId]
+        const filters = ['l.user_id = $1']
+        if (query) {
+          values.push(`%${query}%`)
+          filters.push(`l.normalized_name like $${values.length}`)
+        }
+        values.push(limit)
+        const result = await pool.query<LabelRow>(
+          `with recently_used as (
+             select tl.label_id, max(t.created_at) as last_used_at
+             from transaction_labels tl
+             join transactions t on t.user_id = tl.user_id and t.id = tl.transaction_id
+             where tl.user_id = $1
+             group by tl.label_id
+           )
+           select l.id, l.name, l.normalized_name
+           from labels l
+           join recently_used ru on ru.label_id = l.id
+           where ${filters.join(' and ')}
+           order by ru.last_used_at desc, l.normalized_name asc, l.id asc
+           limit $${values.length}`,
+          values,
+        )
+        return { items: result.rows.map(toLabel), nextCursor: null }
+      }
+
       const decodedCursor = cursor ? decodeCursor(cursor) : null
       const values: unknown[] = [userId]
       const filters = ['user_id = $1']

@@ -1,6 +1,7 @@
 import { getAuthToken } from './auth-client'
 
 const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
+const pendingGetRequests = new Map<string, Promise<unknown>>()
 
 export class ApiError extends Error {
   readonly status: number
@@ -25,7 +26,23 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}) {
     throw new Error('Nelze získat přístupový token.')
   }
 
-  const response = await fetch(`${apiUrl}${path}`, {
+  if ((init.method ?? 'GET').toUpperCase() !== 'GET' || init.body) return sendRequest<T>(`${apiUrl}${path}`, token, init)
+
+  const requestKey = `${token}:${path}`
+  const pendingRequest = pendingGetRequests.get(requestKey) as Promise<T> | undefined
+  if (pendingRequest) return pendingRequest
+
+  const request = sendRequest<T>(`${apiUrl}${path}`, token, init)
+  pendingGetRequests.set(requestKey, request)
+  try {
+    return await request
+  } finally {
+    pendingGetRequests.delete(requestKey)
+  }
+}
+
+async function sendRequest<T>(url: string, token: string, init: RequestInit) {
+  const response = await fetch(url, {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,

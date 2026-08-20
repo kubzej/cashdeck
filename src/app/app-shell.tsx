@@ -6,6 +6,9 @@ import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } fr
 import { CategoriesScreen } from '../features/categories/categories-screen'
 import { LabelsScreen } from '../features/labels/labels-screen'
 import { SettingsScreen } from '../features/settings/settings-screen'
+import { TransactionFormScreen } from '../features/transactions/transaction-form-screen'
+import { type Transaction } from '../features/transactions/api'
+import { TransactionsScreen } from '../features/transactions/transactions-screen'
 import { type Wallet } from '../features/wallets/api'
 import { WalletDetailScreen } from '../features/wallets/wallet-detail-screen'
 import { WalletFormScreen } from '../features/wallets/wallet-form-screen'
@@ -15,6 +18,7 @@ type NavKey = 'transactions' | 'wallets' | 'overview' | 'settings'
 type NavItem = { key: NavKey; label: string; icon: ComponentType<{ 'aria-hidden'?: boolean }> }
 type WalletView = 'list' | 'new' | 'detail' | 'edit'
 type SettingsView = 'index' | 'categories' | 'labels'
+type TransactionView = 'list' | 'new' | 'edit'
 
 const navItems: NavItem[] = [
   { key: 'transactions', label: 'Transakce', icon: ReceiptText },
@@ -24,7 +28,6 @@ const navItems: NavItem[] = [
 ]
 
 const placeholders = {
-  transactions: { title: 'Zatím bez transakcí', description: 'První záznamy se zobrazí tady.' },
   overview: { title: 'Zatím bez přehledu', description: 'Přehled se zobrazí po přidání prvních záznamů.' },
 }
 
@@ -32,16 +35,22 @@ export function AppShell() {
   const { status } = useAuth()
   const [activeNav, setActiveNav] = useState<NavKey>('transactions')
   const [walletView, setWalletView] = useState<WalletView>('list')
+  const [transactionView, setTransactionView] = useState<TransactionView>('list')
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null)
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [settingsView, setSettingsView] = useState<SettingsView>('index')
   const activeItem = navItems.find((item) => item.key === activeNav)
-  const isDetailScreen = (activeNav === 'wallets' && walletView !== 'list') || (activeNav === 'settings' && settingsView !== 'index')
+  const isDetailScreen = (activeNav === 'wallets' && walletView !== 'list') || (activeNav === 'transactions' && transactionView !== 'list') || (activeNav === 'settings' && settingsView !== 'index')
 
   function selectNavigation(key: NavKey) {
     setActiveNav(key)
     if (key !== 'wallets') {
       setWalletView('list')
       setSelectedWallet(null)
+    }
+    if (key !== 'transactions') {
+      setTransactionView('list')
+      setSelectedTransaction(null)
     }
     if (key !== 'settings') setSettingsView('index')
   }
@@ -51,10 +60,12 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <div className="app-main">
-        <main className={`app-content${isDetailScreen ? ' app-content--form' : ''}`}>
+        <main className={`app-content${isDetailScreen ? ' app-content--form' : ''}${!isDetailScreen && activeNav === 'transactions' ? ' app-content--transaction-fab' : ''}`}>
           {walletView === 'new' ? <WalletFormScreen onCancel={() => setWalletView('list')} onSaved={() => setWalletView('list')} /> : null}
           {walletView === 'detail' && selectedWallet ? <WalletDetailScreen wallet={selectedWallet} onBack={() => setWalletView('list')} onEdit={() => setWalletView('edit')} /> : null}
           {walletView === 'edit' && selectedWallet ? <WalletFormScreen wallet={selectedWallet} onCancel={() => setWalletView('detail')} onSaved={() => setWalletView('list')} onDeleted={() => { setSelectedWallet(null); setWalletView('list') }} /> : null}
+          {transactionView === 'new' ? <TransactionFormScreen onCancel={() => setTransactionView('list')} onSaved={() => setTransactionView('list')} /> : null}
+          {transactionView === 'edit' && selectedTransaction ? <TransactionFormScreen transaction={selectedTransaction} onCancel={() => setTransactionView('list')} onSaved={() => { setSelectedTransaction(null); setTransactionView('list') }} onDeleted={() => { setSelectedTransaction(null); setTransactionView('list') }} /> : null}
           {activeNav === 'settings' && settingsView === 'categories' ? <CategoriesScreen onBack={() => setSettingsView('index')} /> : null}
           {activeNav === 'settings' && settingsView === 'labels' ? <LabelsScreen onBack={() => setSettingsView('index')} /> : null}
           {!isDetailScreen ? <>
@@ -62,9 +73,10 @@ export function AppShell() {
               <h1>{activeItem?.label}</h1>
               {activeNav === 'wallets' ? <Button variant="ghost" size="icon" aria-label="Přidat peněženku" onClick={() => setWalletView('new')}><Plus aria-hidden="true" /></Button> : null}
             </div>
-            {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setSelectedWallet(wallet); setWalletView('detail') }} /> : activeItem ? <PlaceholderScreen item={activeItem} /> : null}
+            {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setSelectedWallet(wallet); setWalletView('detail') }} /> : activeNav === 'transactions' ? <TransactionsScreen onSelect={(transaction) => { setSelectedTransaction(transaction); setTransactionView('edit') }} /> : activeItem ? <PlaceholderScreen item={activeItem} /> : null}
           </> : null}
         </main>
+        {!isDetailScreen && activeNav === 'transactions' ? <Button size="icon" className="transaction-fab" aria-label="Přidat transakci" onClick={() => setTransactionView('new')}><Plus aria-hidden="true" /></Button> : null}
         {!isDetailScreen ? <nav className="bottom-nav" aria-label="Hlavní navigace">{navItems.map(({ key, label, icon: Icon }) => <Button key={key} variant="ghost" size="sm" className={`bottom-nav__item${key === activeNav ? ' bottom-nav__item--active' : ''}`} aria-current={key === activeNav ? 'page' : undefined} onClick={() => selectNavigation(key)}><Icon aria-hidden={true} /><span>{label}</span></Button>)}</nav> : null}
       </div>
     </div>

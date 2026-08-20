@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from './ui/dialog'
+import './delete-confirmation-dialog.css'
 
 type DeleteConfirmationDialogProps = {
   title: string
@@ -30,9 +31,8 @@ export function DeleteConfirmationDialog({
 }: DeleteConfirmationDialogProps) {
   return (
     <AlertDialog>
-      <AlertDialogTrigger render={<Button variant="destructive" size="lg" className={triggerClassName} />}>
+      <AlertDialogTrigger render={<Button variant="ghost" size="icon" className={`delete-confirmation-trigger ${triggerClassName ?? ''}`.trim()} aria-label={triggerLabel} title={triggerLabel} />}>
         <Trash2 aria-hidden="true" />
-        {triggerLabel}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader className="pb-4">

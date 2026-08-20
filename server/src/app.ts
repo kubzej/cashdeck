@@ -7,18 +7,22 @@ import { DomainError } from './management/domain.js'
 import { createManagementRepository, type ManagementRepository } from './management/repository.js'
 import { createManagementRoutes } from './routes/management.js'
 import { createSessionRoutes } from './routes/session.js'
+import { createTransactionRoutes } from './routes/transactions.js'
+import { createTransactionRepository, type TransactionRepository } from './transactions/repository.js'
 
 type AppDependencies = {
   config: ServerConfig
   database: Pool
   managementRepository?: ManagementRepository
+  transactionRepository?: TransactionRepository
   requireAuth?: AuthGuard
 }
 
-export async function createApp({ config, database, managementRepository, requireAuth }: AppDependencies) {
+export async function createApp({ config, database, managementRepository, transactionRepository, requireAuth }: AppDependencies) {
   const app = Fastify({ logger: true })
   const authGuard = requireAuth ?? createAuthGuard(config.neonAuthUrl)
   const repository = managementRepository ?? createManagementRepository(database)
+  const transactions = transactionRepository ?? createTransactionRepository(database)
 
   await app.register(cors, {
     origin: config.frontendOrigin,
@@ -42,6 +46,7 @@ export async function createApp({ config, database, managementRepository, requir
   app.get('/health', async () => ({ status: 'ok' }))
   await app.register(createSessionRoutes(authGuard))
   await app.register(createManagementRoutes(repository, authGuard))
+  await app.register(createTransactionRoutes(transactions, authGuard))
 
   app.addHook('onClose', async () => {
     await database.end()

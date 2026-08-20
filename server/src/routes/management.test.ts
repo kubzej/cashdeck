@@ -246,6 +246,20 @@ test('uses bounded label search and pagination inputs', async () => {
   })
 
   expect(response.statusCode).toBe(200)
-  expect(repository.listLabels).toHaveBeenCalledWith(userId, 'globus', null, 25)
+  expect(repository.listLabels).toHaveBeenCalledWith(userId, 'globus', null, 25, 'alphabetical')
+  await app.close()
+})
+
+test('can list recently used labels for a transaction form', async () => {
+  const { app, repository } = await createTestApp()
+
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/labels?sort=recent&limit=8',
+    headers: { authorization: 'Bearer test-token' },
+  })
+
+  expect(response.statusCode).toBe(200)
+  expect(repository.listLabels).toHaveBeenCalledWith(userId, null, null, 8, 'recent')
   await app.close()
 })
