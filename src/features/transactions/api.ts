@@ -21,11 +21,6 @@ export type Transaction = {
   labels: TransactionLabel[]
 }
 
-export type TransactionPage = {
-  items: Transaction[]
-  nextCursor: string | null
-}
-
 export type CreateTransactionInput = {
   walletId: string
   categoryId: string
@@ -33,15 +28,6 @@ export type CreateTransactionInput = {
   transactionDate: string
   note: string | null
   labelIds: string[]
-}
-
-export async function listTransactions({ walletId, dateFrom, dateTo, cursor, limit = 50 }: { walletId?: string; dateFrom?: string; dateTo?: string; cursor?: string; limit?: number } = {}) {
-  const search = new URLSearchParams({ limit: String(limit) })
-  if (walletId) search.set('walletId', walletId)
-  if (dateFrom) search.set('dateFrom', dateFrom)
-  if (dateTo) search.set('dateTo', dateTo)
-  if (cursor) search.set('cursor', cursor)
-  return apiRequest<TransactionPage>(`/transactions?${search.toString()}`)
 }
 
 export async function createTransaction(input: CreateTransactionInput) {

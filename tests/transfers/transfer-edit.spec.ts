@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { mockAuthAndApi, signIn } from '../support/auth'
+import { feedItems, mockFeedApi } from '../support/feed'
 import { mockLabelsApi } from '../support/labels'
 import { mockTransactionsApi } from '../support/transactions'
 import { mockTransfersApi, type TransferApiMock } from '../support/transfers'
@@ -46,8 +47,9 @@ async function openTransferEdit(page: Parameters<typeof mockAuthAndApi>[0]): Pro
   await mockAuthAndApi(page)
   await mockWalletsApi(page, wallets)
   await mockLabelsApi(page, [{ id: 'label-1', name: 'spoření' }])
-  await mockTransactionsApi(page)
+  const transactionsApi = await mockTransactionsApi(page)
   const transfersApi = await mockTransfersApi(page, [{ id: 'transfer-1', sourceWalletId: 'wallet-1', sourceWalletName: 'Běžný účet', destinationWalletId: 'wallet-2', destinationWalletName: 'Spoření', amountCzk: 15000, transferDate: '2026-08-20', note: 'Původní poznámka', labels: [{ id: 'label-1', name: 'spoření' }] }])
+  await mockFeedApi(page, () => feedItems(transactionsApi.transactions(), transfersApi.transfers()))
   await page.goto('/')
   await signIn(page)
   await page.getByRole('listitem').filter({ hasText: 'Převod' }).click()

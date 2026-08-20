@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { mockAuthAndApi, signIn } from '../support/auth'
-import { mockTransactionsApi } from '../support/transactions'
-import { mockTransfersApi } from '../support/transfers'
+import { mockFeedApi } from '../support/feed'
 
 test('loads the next page of transactions on demand', async ({ page }) => {
   await mockAuthAndApi(page)
-  await mockTransactionsApi(page, Array.from({ length: 51 }, (_, index) => ({
+  await mockFeedApi(page, Array.from({ length: 51 }, (_, index) => ({
+    kind: 'transaction' as const,
     id: `transaction-${index + 1}`,
     walletId: 'wallet-1',
     walletName: 'Běžný účet',
@@ -19,7 +19,6 @@ test('loads the next page of transactions on demand', async ({ page }) => {
     note: null,
     labels: [],
   })))
-  await mockTransfersApi(page)
   await page.goto('/')
   await signIn(page)
 

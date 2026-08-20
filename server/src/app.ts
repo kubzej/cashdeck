@@ -3,9 +3,11 @@ import Fastify from 'fastify'
 import type { Pool } from 'pg'
 import { createAuthGuard, type AuthGuard } from './auth.js'
 import type { ServerConfig } from './config.js'
+import { createFeedRepository, type FeedRepository } from './feed/repository.js'
 import { DomainError } from './management/domain.js'
 import { createManagementRepository, type ManagementRepository } from './management/repository.js'
 import { createManagementRoutes } from './routes/management.js'
+import { createFeedRoutes } from './routes/feed.js'
 import { createSessionRoutes } from './routes/session.js'
 import { createTransactionRoutes } from './routes/transactions.js'
 import { createTransferRoutes } from './routes/transfers.js'
@@ -16,15 +18,17 @@ type AppDependencies = {
   config: ServerConfig
   database: Pool
   managementRepository?: ManagementRepository
+  feedRepository?: FeedRepository
   transactionRepository?: TransactionRepository
   transferRepository?: TransferRepository
   requireAuth?: AuthGuard
 }
 
-export async function createApp({ config, database, managementRepository, transactionRepository, transferRepository, requireAuth }: AppDependencies) {
+export async function createApp({ config, database, managementRepository, feedRepository, transactionRepository, transferRepository, requireAuth }: AppDependencies) {
   const app = Fastify({ logger: true })
   const authGuard = requireAuth ?? createAuthGuard(config.neonAuthUrl)
   const repository = managementRepository ?? createManagementRepository(database)
+  const feed = feedRepository ?? createFeedRepository(database)
   const transactions = transactionRepository ?? createTransactionRepository(database)
   const transfers = transferRepository ?? createTransferRepository(database)
 
@@ -50,6 +54,7 @@ export async function createApp({ config, database, managementRepository, transa
   app.get('/health', async () => ({ status: 'ok' }))
   await app.register(createSessionRoutes(authGuard))
   await app.register(createManagementRoutes(repository, authGuard))
+  await app.register(createFeedRoutes(feed, authGuard))
   await app.register(createTransactionRoutes(transactions, authGuard))
   await app.register(createTransferRoutes(transfers, authGuard))
 

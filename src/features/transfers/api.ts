@@ -17,11 +17,6 @@ export type Transfer = {
   labels: TransferLabel[]
 }
 
-export type TransferPage = {
-  items: Transfer[]
-  nextCursor: string | null
-}
-
 export type TransferInput = {
   sourceWalletId: string
   destinationWalletId: string
@@ -29,15 +24,6 @@ export type TransferInput = {
   transferDate: string
   note: string | null
   labelIds: string[]
-}
-
-export async function listTransfers({ walletId, dateFrom, dateTo, cursor, limit = 50 }: { walletId?: string; dateFrom?: string; dateTo?: string; cursor?: string; limit?: number } = {}) {
-  const search = new URLSearchParams({ limit: String(limit) })
-  if (walletId) search.set('walletId', walletId)
-  if (dateFrom) search.set('dateFrom', dateFrom)
-  if (dateTo) search.set('dateTo', dateTo)
-  if (cursor) search.set('cursor', cursor)
-  return apiRequest<TransferPage>(`/transfers?${search.toString()}`)
 }
 
 export function createTransfer(input: TransferInput) {

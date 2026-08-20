@@ -6,36 +6,24 @@ import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStat
 import { List, ListItem, ListItemActions, ListItemContent, ListItemLeading, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
 import { CategoryIcon } from '../categories/category-icon'
-import { listTransactions, type Transaction } from './api'
-import { listTransfers, type Transfer } from '../transfers/api'
+import { listFeed, type FeedItem } from '../feed/api'
+import type { Transaction } from './api'
+import type { Transfer } from '../transfers/api'
 import './transactions.css'
-
-type Activity = { kind: 'transaction'; item: Transaction } | { kind: 'transfer'; item: Transfer }
 
 export function TransactionsScreen({ onSelectTransaction, onSelectTransfer }: { onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [transfers, setTransfers] = useState<Transfer[]>([])
-  const [nextTransactionCursor, setNextTransactionCursor] = useState<string | null>(null)
-  const [nextTransferCursor, setNextTransferCursor] = useState<string | null>(null)
+  const [activities, setActivities] = useState<FeedItem[]>([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   async function loadActivities(loadMore = false) {
     if (loadMore) setIsLoadingMore(true)
     else setStatus('loading')
     try {
-      const [transactionPage, transferPage] = await Promise.all([
-        loadMore && !nextTransactionCursor ? null : listTransactions({ cursor: loadMore ? nextTransactionCursor ?? undefined : undefined }),
-        loadMore && !nextTransferCursor ? null : listTransfers({ cursor: loadMore ? nextTransferCursor ?? undefined : undefined }),
-      ])
-      if (transactionPage) {
-        setTransactions((current) => loadMore ? [...current, ...transactionPage.items] : transactionPage.items)
-        setNextTransactionCursor(transactionPage.nextCursor)
-      }
-      if (transferPage) {
-        setTransfers((current) => loadMore ? [...current, ...transferPage.items] : transferPage.items)
-        setNextTransferCursor(transferPage.nextCursor)
-      }
+      const page = await listFeed({ cursor: loadMore ? nextCursor ?? undefined : undefined })
+      setActivities((current) => loadMore ? [...current, ...page.items] : page.items)
+      setNextCursor(page.nextCursor)
       setStatus('ready')
     } catch {
       if (!loadMore) setStatus('error')
@@ -54,15 +42,13 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer }: { 
     return <FeedbackState status="error" layout="panel" className="transactions-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Transakce se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => void loadActivities()}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState>
   }
 
-  const activities = sortActivities(transactions, transfers)
-
   if (activities.length === 0) {
     return <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><ReceiptText aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Zatím bez transakcí</EmptyStateTitle><EmptyStateDescription>Přidej první příjem nebo výdaj.</EmptyStateDescription></EmptyState>
   }
 
   return <section className="transactions-screen" aria-label="Seznam transakcí">
-    {groupActivities(activities).map(([date, items]) => <div className="transaction-day" key={date}><h2>{formatDate(date)}</h2><List gap="sm">{items.map((activity) => activity.kind === 'transaction' ? <TransactionRow key={activity.item.id} transaction={activity.item} onSelect={onSelectTransaction} /> : <TransferRow key={activity.item.id} transfer={activity.item} onSelect={onSelectTransfer} />)}</List></div>)}
-    {nextTransactionCursor || nextTransferCursor ? <Button variant="outline" className="transactions-load-more" loading={isLoadingMore} onClick={() => void loadActivities(true)}>Načíst další</Button> : null}
+    {groupActivities(activities).map(([date, items]) => <div className="transaction-day" key={date}><h2>{formatDate(date)}</h2><List gap="sm">{items.map((activity) => activity.kind === 'transaction' ? <TransactionRow key={activity.id} transaction={activity} onSelect={onSelectTransaction} /> : <TransferRow key={activity.id} transfer={activity} onSelect={onSelectTransfer} />)}</List></div>)}
+    {nextCursor ? <Button variant="outline" className="transactions-load-more" loading={isLoadingMore} onClick={() => void loadActivities(true)}>Načíst další</Button> : null}
   </section>
 }
 
@@ -76,12 +62,8 @@ function TransferRow({ transfer, onSelect }: { transfer: Transfer; onSelect: (tr
   return <ListItem variant="quiet" size="default" interactive className="transaction-row transfer-row surface-row" onClick={() => onSelect(transfer)}><ListItemLeading className="transfer-row__icon"><ArrowRightLeft aria-hidden="true" /></ListItemLeading><ListItemContent><ListItemTitle><span>Převod</span><span className="transaction-row__wallet">z {transfer.sourceWalletName} do {transfer.destinationWalletName}</span></ListItemTitle>{transfer.labels.length > 0 ? <div className="transaction-row__labels">{transfer.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transfer.note ? <p className="transaction-row__note">{transfer.note}</p> : null}</ListItemContent><ListItemActions><strong className="transfer-row__amount">{amount} Kč</strong></ListItemActions></ListItem>
 }
 
-function sortActivities(transactions: Transaction[], transfers: Transfer[]) {
-  return [...transactions.map((item) => ({ kind: 'transaction' as const, item })), ...transfers.map((item) => ({ kind: 'transfer' as const, item }))].sort((left, right) => activityDate(right).localeCompare(activityDate(left)))
-}
-
-function groupActivities(activities: Activity[]) {
-  const groups = new Map<string, Activity[]>()
+function groupActivities(activities: FeedItem[]) {
+  const groups = new Map<string, FeedItem[]>()
   for (const activity of activities) {
     const date = activityDate(activity)
     const group = groups.get(date) ?? []
@@ -91,7 +73,7 @@ function groupActivities(activities: Activity[]) {
   return [...groups.entries()]
 }
 
-function activityDate(activity: Activity) { return activity.kind === 'transaction' ? activity.item.transactionDate : activity.item.transferDate }
+function activityDate(activity: FeedItem) { return activity.kind === 'transaction' ? activity.transactionDate : activity.transferDate }
 
 function formatDate(value: string) {
   const [year, month, day] = value.split('-').map(Number)

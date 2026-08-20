@@ -1,7 +1,6 @@
 import { expect, type Page } from '@playwright/test'
+import { mockFeedApi } from './feed'
 import { mockWalletsApi } from './wallets'
-import { mockTransfersApi } from './transfers'
-import { mockTransactionsApi } from './transactions'
 
 export const testUser = {
   id: 'user-1',
@@ -52,6 +51,8 @@ export async function mockAuthAndApi(page: Page, { signedIn = false }: AuthMockO
       body: JSON.stringify({ userId: testUser.id }),
     })
   })
+
+  await mockFeedApi(page)
 }
 
 export async function signIn(page: Page) {
@@ -64,8 +65,6 @@ export async function signIn(page: Page) {
 export async function openSignedInApp(page: Page) {
   await mockAuthAndApi(page)
   await mockWalletsApi(page)
-  await mockTransactionsApi(page)
-  await mockTransfersApi(page)
   await page.goto('/')
   await signIn(page)
 }

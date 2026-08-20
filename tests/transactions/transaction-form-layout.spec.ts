@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mockAuthAndApi, signIn } from '../support/auth'
+import { mockFeedApi } from '../support/feed'
 import { mockCategoriesApi } from '../support/categories'
 import { mockLabelsApi } from '../support/labels'
 import { mockTransactionsApi } from '../support/transactions'
@@ -13,6 +14,7 @@ test('new and edit transaction forms keep the same layout and load their data on
   await mockLabelsApi(page, [{ id: 'label-1', name: 'oběd' }])
   await mockTransactionsApi(page, [{ id: 'transaction-1', walletId: 'wallet-1', walletName: 'Běžný účet', categoryId: 'category-1', categoryName: 'Jídlo', categoryIconKey: 'utensils', categoryColorKey: 'orange', direction: 'expense', amountCzk: 230, transactionDate: '2026-08-20', note: null, labels: [{ id: 'label-1', name: 'oběd' }] }])
   await mockTransfersApi(page)
+  await mockFeedApi(page, [{ kind: 'transaction', id: 'transaction-1', walletId: 'wallet-1', walletName: 'Běžný účet', categoryId: 'category-1', categoryName: 'Jídlo', categoryIconKey: 'utensils', categoryColorKey: 'orange', direction: 'expense', amountCzk: 230, transactionDate: '2026-08-20', note: null, labels: [{ id: 'label-1', name: 'oběd' }] }])
 
   const formDataRequests = new Map<string, number>()
   page.on('request', (request) => {

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { mockAuthAndApi, signIn } from '../support/auth'
+import { feedItems, mockFeedApi } from '../support/feed'
 import { mockCategoriesApi } from '../support/categories'
 import { mockLabelsApi } from '../support/labels'
 import { mockTransactionsApi, type TransactionApiMock } from '../support/transactions'
@@ -64,7 +65,8 @@ async function openTransactionEdit(page: Parameters<typeof mockAuthAndApi>[0]): 
   await mockCategoriesApi(page, categories)
   await mockLabelsApi(page, [{ id: 'label-1', name: 'oběd' }])
   const transactionsApi = await mockTransactionsApi(page, [{ id: 'transaction-1', walletId: wallet.id, walletName: wallet.name, categoryId: 'category-1', categoryName: 'Jídlo', categoryIconKey: 'utensils', categoryColorKey: 'orange', direction: 'expense', amountCzk: 230, transactionDate: '2026-08-20', note: 'Původní poznámka', labels: [{ id: 'label-1', name: 'oběd' }] }])
-  await mockTransfersApi(page)
+  const transfersApi = await mockTransfersApi(page)
+  await mockFeedApi(page, () => feedItems(transactionsApi.transactions(), transfersApi.transfers()))
   await page.goto('/')
   await signIn(page)
   await page.getByRole('listitem').filter({ hasText: 'Jídlo' }).click()
