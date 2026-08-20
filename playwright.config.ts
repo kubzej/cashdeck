@@ -14,6 +14,7 @@ export default defineConfig({
     reuseExistingServer: true,
     env: {
       VITE_NEON_AUTH_URL: 'http://neon.test/auth',
+      VITE_API_URL: 'http://api.test/api',
     },
   },
   projects: [

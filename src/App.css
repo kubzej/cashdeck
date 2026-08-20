@@ -84,8 +84,7 @@
   padding-left: 2.5rem;
 }
 
-.auth-submit,
-.auth-mode-toggle {
+.auth-submit {
   width: 100%;
 }
 

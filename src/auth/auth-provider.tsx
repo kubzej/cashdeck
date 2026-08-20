@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthSession, type AuthStatus } from './auth-context'
 import { authClient, isNeonAuthConfigured } from '../lib/auth-client'
+import { verifyBackendSession } from '../data/api-client'
 
 type AuthErrorResponse = { code?: string; message?: string }
 
@@ -46,12 +47,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const nextSession = response.data?.user ? response.data : null
+      if (nextSession) {
+        await verifyBackendSession()
+      }
       setSession(nextSession)
       setStatus(nextSession ? 'signed-in' : 'signed-out')
-    } catch {
+    } catch (error) {
       setStatus('error')
       setSession(null)
-      setErrorMessage('Připojení k účtu se nepodařilo. Zkontroluj připojení a zkus to znovu.')
+      setErrorMessage(error instanceof Error ? error.message : 'Připojení k účtu se nepodařilo.')
     }
   }, [])
 
@@ -82,29 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshSession])
 
-  const signUp = useCallback(async (name: string, email: string, password: string) => {
-    const client = authClient
-    if (!client) return 'Neon Auth není pro toto prostředí nastavený.'
-
-    try {
-      const response = await client.signUp.email({ name, email, password })
-      if (response.error) {
-        const message = getAuthErrorMessage(response.error)
-        setStatus('signed-out')
-        setErrorMessage(message)
-        return message
-      }
-
-      await refreshSession()
-      return null
-    } catch (error) {
-      const message = getAuthErrorMessage(error)
-      setStatus('signed-out')
-      setErrorMessage(message)
-      return message
-    }
-  }, [refreshSession])
-
   const signOut = useCallback(async () => {
     const client = authClient
     if (client) await client.signOut()
@@ -114,8 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ status, session, errorMessage, refreshSession, signIn, signUp, signOut }),
-    [errorMessage, refreshSession, session, signIn, signOut, signUp, status],
+    () => ({ status, session, errorMessage, refreshSession, signIn, signOut }),
+    [errorMessage, refreshSession, session, signIn, signOut, status],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -5,7 +5,9 @@ const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 
 export type ServerConfig = {
   databaseUrl: string
+  frontendOrigin: string
   host: string
+  neonAuthUrl: string
   port: number
 }
 
@@ -23,6 +25,16 @@ export function loadConfig(): ServerConfig {
     throw new Error('DATABASE_URL is required in server/.env.local.')
   }
 
+  const neonAuthUrl = process.env.NEON_AUTH_URL?.replace(/\/+$/, '')
+  if (!neonAuthUrl) {
+    throw new Error('NEON_AUTH_URL is required in server/.env.local.')
+  }
+
+  const frontendOrigin = process.env.FRONTEND_ORIGIN
+  if (!frontendOrigin) {
+    throw new Error('FRONTEND_ORIGIN is required in server/.env.local.')
+  }
+
   const port = Number(process.env.PORT ?? 8000)
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error('PORT must be a valid TCP port.')
@@ -30,7 +42,9 @@ export function loadConfig(): ServerConfig {
 
   return {
     databaseUrl,
+    frontendOrigin,
     host: process.env.HOST ?? '127.0.0.1',
+    neonAuthUrl,
     port,
   }
 }

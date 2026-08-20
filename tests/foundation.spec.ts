@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('creates the first account, protects the shell, and signs out', async ({ page }) => {
+test('signs in, protects the shell, and signs out', async ({ page }) => {
   let isAuthenticated = false
   const user = { id: 'user-1', email: 'jakub@example.com', name: 'Jakub' }
 
@@ -10,12 +10,15 @@ test('creates the first account, protects the shell, and signs out', async ({ pa
     if (pathname.endsWith('/get-session')) {
       await route.fulfill({
         contentType: 'application/json',
-        body: JSON.stringify({ session: isAuthenticated ? { id: 'session-1', userId: user.id } : null, user: isAuthenticated ? user : null }),
+        body: JSON.stringify({
+          session: isAuthenticated ? { id: 'session-1', userId: user.id, token: 'token-1' } : null,
+          user: isAuthenticated ? user : null,
+        }),
       })
       return
     }
 
-    if (pathname.endsWith('/sign-up/email')) {
+    if (pathname.endsWith('/sign-in/email')) {
       isAuthenticated = true
       await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ user }) })
       return
@@ -30,14 +33,20 @@ test('creates the first account, protects the shell, and signs out', async ({ pa
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({}) })
   })
 
+  await page.route('http://api.test/api/session', async (route) => {
+    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ userId: user.id }),
+    })
+  })
+
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Přihlášení' })).toBeVisible()
-  await page.getByRole('button', { name: 'Vytvořit první účet' }).click()
-  await page.getByLabel('Jméno').fill('Jakub')
   await page.getByLabel('Email').fill('jakub@example.com')
   await page.getByLabel('Heslo').fill('secure-password')
-  await page.getByRole('button', { name: 'Vytvořit účet' }).click()
+  await page.getByRole('button', { name: 'Přihlásit se' }).click()
 
   await expect(page.getByRole('heading', { name: 'Transakce', exact: true })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Hlavní navigace' })).toBeVisible()

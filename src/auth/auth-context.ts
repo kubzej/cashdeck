@@ -10,7 +10,6 @@ export type AuthContextValue = {
   errorMessage: string | null
   refreshSession: () => Promise<void>
   signIn: (email: string, password: string) => Promise<string | null>
-  signUp: (name: string, email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
 }
 
