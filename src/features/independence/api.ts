@@ -1,4 +1,5 @@
 import { apiRequest } from '../../lib/api-client'
+import type { WalletType } from '../wallets/api'
 
 export type IndependenceSettings = {
   withdrawalRatePercent: number
@@ -36,6 +37,8 @@ export type IndependenceProgress = {
   yearsToTotal: number | null
   yearsToAvailable: number | null
   futureAnnualExpensesCzk: number | null
+  wealthByType: Array<{ walletType: WalletType; amountCzk: number }>
+  returnSensitivity: Array<{ realReturnPercent: number; yearsToTotal: number | null; yearsToAvailable: number | null }>
 }
 
 export async function getIndependenceSettings() {

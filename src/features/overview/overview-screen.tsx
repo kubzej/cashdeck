@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
-import { BarChart3, CircleAlert, Landmark, RefreshCw, Tags } from 'lucide-react'
+import { BarChart3, CircleAlert, RefreshCw, Tags } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { EmptyState, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
@@ -93,19 +93,19 @@ function OverviewContent({ metrics, mode, onModeChange, onOpenTransactions }: { 
       {mode === 'total' ? <WealthChart points={metrics.wealthSeries} /> : <FlowChart points={metrics.flowSeries} mode={mode} />}
     </section>
 
-    <BreakdownSection title={categoryTitle} emptyText="V tomto období nejsou žádné kategorie." icon={<Landmark aria-hidden="true" />}>
+    <BreakdownSection title={categoryTitle} emptyText="V tomto období nejsou žádné kategorie.">
       {categories.length ? <CategoryBreakdown categories={categories} mode={mode} onOpenTransactions={onOpenTransactions} /> : null}
     </BreakdownSection>
 
-    <BreakdownSection title={labelTitle} emptyText="V tomto období nejsou žádné štítky." icon={<Tags aria-hidden="true" />}>
+    <BreakdownSection title={labelTitle} emptyText="V tomto období nejsou žádné štítky.">
       {labels.length ? <LabelBreakdown labels={labels} onOpenTransactions={onOpenTransactions} /> : null}
     </BreakdownSection>
   </div>
 }
 
-function BreakdownSection({ title, emptyText, icon, children }: { title: string; emptyText: string; icon: ReactNode; children: ReactNode }) {
+function BreakdownSection({ title, emptyText, children }: { title: string; emptyText: string; children: ReactNode }) {
   const hasChildren = Boolean(children)
-  return <section className="overview-breakdown" aria-label={title}><div className="overview-section-heading"><div><h2>{title}</h2></div><span className="overview-section-heading__icon">{icon}</span></div>{hasChildren ? children : <EmptyState variant="quiet" size="sm" className="overview-empty"><EmptyStateTitle>{emptyText}</EmptyStateTitle></EmptyState>}</section>
+  return <section className="overview-breakdown" aria-label={title}><div className="overview-section-heading"><div><h2>{title}</h2></div></div>{hasChildren ? children : <EmptyState variant="quiet" size="sm" className="overview-empty"><EmptyStateTitle>{emptyText}</EmptyStateTitle></EmptyState>}</section>
 }
 
 function CategoryBreakdown({ categories, mode, onOpenTransactions }: { categories: OverviewCategory[]; mode: OverviewMode; onOpenTransactions: (selection: OverviewSelection) => void }) {

@@ -7,23 +7,26 @@ import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStat
 import { Skeleton } from '../../components/ui/skeleton'
 import { formatCzk } from '../../lib/format-czk'
 import { parseIsoDate } from '../../lib/prague-date'
-import { getIndependenceProgress, getIndependenceWealthSeries, type IndependenceProgress } from './api'
+import { WalletTypeIcon, walletTypeLabel } from '../wallets/wallet-type-icon'
+import { getIndependenceProgress, getIndependenceSettings, getIndependenceWealthSeries, type IndependenceProgress } from './api'
 import './independence.css'
 
 export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [progress, setProgress] = useState<IndependenceProgress | null>(null)
   const [series, setSeries] = useState<Array<{ date: string; amountCzk: number }>>([])
+  const [ownReturnPercent, setOwnReturnPercent] = useState<number | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
     setStatus('loading')
-    Promise.all([getIndependenceProgress(), getIndependenceWealthSeries()])
-      .then(([progressResult, seriesResult]) => {
+    Promise.all([getIndependenceProgress(), getIndependenceWealthSeries(), getIndependenceSettings()])
+      .then(([progressResult, seriesResult, settingsResult]) => {
         if (controller.signal.aborted) return
         setProgress(progressResult)
         setSeries(seriesResult.points)
+        setOwnReturnPercent(settingsResult.settings?.expectedRealReturnPercent ?? null)
         setStatus('ready')
       })
       .catch(() => { if (!controller.signal.aborted) setStatus('error') })
@@ -67,6 +70,20 @@ export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => v
             </span>
           </section>
 
+          {progress.wealthByType.length > 0 ? (
+            <section className="independence-wealth-by-type" aria-label="Rozložení podle typu peněženky">
+              <h2>Rozložení podle typu</h2>
+              <WealthByTypeList entries={progress.wealthByType} totalCzk={progress.totalWealthCzk} />
+            </section>
+          ) : null}
+
+          {progress.returnSensitivity.length > 0 ? (
+            <section className="independence-sensitivity" aria-label="Citlivost cíle na očekávaný výnos">
+              <h2>Citlivost na výnos</h2>
+              <ReturnSensitivityList entries={progress.returnSensitivity} ownReturnPercent={ownReturnPercent} />
+            </section>
+          ) : null}
+
           {series.length > 1 ? (
             <section className="independence-wealth-trend" aria-label="Vývoj investičního jmění za posledních 12 měsíců">
               <h2>Vývoj investičního jmění</h2>
@@ -79,6 +96,40 @@ export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => v
   )
 }
 
+function WealthByTypeList({ entries, totalCzk }: { entries: IndependenceProgress['wealthByType']; totalCzk: number }) {
+  return (
+    <ul className="independence-wealth-by-type__list">
+      {entries.map((entry) => {
+        const percent = totalCzk > 0 ? (entry.amountCzk / totalCzk) * 100 : 0
+        return (
+          <li key={entry.walletType} className="independence-wealth-by-type__item">
+            <WalletTypeIcon walletType={entry.walletType} className="independence-wealth-by-type__icon" />
+            <span className="independence-wealth-by-type__label">{walletTypeLabel(entry.walletType)}</span>
+            <span className="independence-wealth-by-type__amount">{formatCzk(entry.amountCzk)}</span>
+            <span className="independence-wealth-by-type__percent">{formatPercent(percent)}</span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function ReturnSensitivityList({ entries, ownReturnPercent }: { entries: IndependenceProgress['returnSensitivity']; ownReturnPercent: number | null }) {
+  return (
+    <ul className="independence-sensitivity__list">
+      {entries.map((entry) => {
+        const isOwn = ownReturnPercent !== null && entry.realReturnPercent === ownReturnPercent
+        return (
+          <li key={entry.realReturnPercent} className={`independence-sensitivity__item${isOwn ? ' independence-sensitivity__item--own' : ''}`}>
+            <span className="independence-sensitivity__rate">{entry.realReturnPercent} %{isOwn ? <span className="independence-sensitivity__own-tag">tvoje nastavení</span> : null}</span>
+            <span className="independence-sensitivity__years">{entry.yearsToTotal === null ? 'bez projekce' : entry.yearsToTotal === 0 ? 'už teď' : formatYears(entry.yearsToTotal)}</span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 function ProgressCard({ label, amountCzk, percent, years }: { label: string; amountCzk: number; percent: number; years: number | null }) {
   const clampedPercent = Math.max(0, Math.min(100, percent))
   return (
@@ -87,7 +138,7 @@ function ProgressCard({ label, amountCzk, percent, years }: { label: string; amo
       <strong className="independence-progress-card__amount">{formatCzk(amountCzk)}</strong>
       <div className="independence-progress-card__bar"><i style={{ '--independence-progress-size': `${clampedPercent}%` } as CSSProperties} /></div>
       <span className="independence-progress-card__percent">{formatPercent(percent)}</span>
-      <span className="independence-progress-card__years">{years === null ? 'bez projekce' : years === 0 ? 'už teď' : `za ${formatYears(years)}`}</span>
+      <span className="independence-progress-card__years">{years === null ? 'bez projekce' : years === 0 ? 'už teď' : `za ${formatYears(years)} (cca ${targetYear(years)})`}</span>
     </section>
   )
 }
@@ -162,4 +213,8 @@ function formatYears(years: number) {
 
 function formatMonth(value: string) {
   return new Intl.DateTimeFormat('cs-CZ', { month: 'short', year: 'numeric' }).format(parseIsoDate(value))
+}
+
+function targetYear(years: number) {
+  return new Date().getFullYear() + Math.round(years)
 }

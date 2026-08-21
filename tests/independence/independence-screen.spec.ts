@@ -47,6 +47,15 @@ test('shows total and available progress as two distinct figures against the sam
       yearsToTotal: 12.4,
       yearsToAvailable: 14.1,
       futureAnnualExpensesCzk: 630_000,
+      wealthByType: [
+        { walletType: 'investment', amountCzk: 1_500_000 },
+        { walletType: 'crypto', amountCzk: 500_000 },
+      ],
+      returnSensitivity: [
+        { realReturnPercent: 4, yearsToTotal: 12.4, yearsToAvailable: 14.1 },
+        { realReturnPercent: 6, yearsToTotal: 10.2, yearsToAvailable: 11.5 },
+        { realReturnPercent: 8, yearsToTotal: 8.7, yearsToAvailable: 9.8 },
+      ],
     },
   })
   await page.goto('/')
@@ -55,6 +64,12 @@ test('shows total and available progress as two distinct figures against the sam
   await page.getByRole('button', { name: 'Nezávislost', exact: true }).click()
 
   await expect(page.getByText('11 300 000 Kč', { exact: true })).toBeVisible()
+  await expect(page.getByText('Investice', { exact: true })).toBeVisible()
+  await expect(page.getByText('Kryptoměny', { exact: true })).toBeVisible()
+  const ownRateItem = page.locator('.independence-sensitivity__item--own')
+  await expect(ownRateItem).toContainText('4 %')
+  await expect(ownRateItem).toContainText('tvoje nastavení')
+  await expect(ownRateItem).toContainText('12,4 let')
   const totalCard = page.locator('.independence-progress-card').filter({ hasText: 'Celkem' })
   const availableCard = page.locator('.independence-progress-card').filter({ hasText: 'Dostupné' })
   await expect(totalCard).toContainText('2 000 000 Kč')
@@ -94,6 +109,8 @@ test('shows a wealth trend chart with a tooltip on the last point', async ({ pag
       yearsToTotal: 12.4,
       yearsToAvailable: 14.1,
       futureAnnualExpensesCzk: 630_000,
+      wealthByType: [],
+      returnSensitivity: [],
     },
     wealthSeries: [
       { date: '2025-09-01', amountCzk: 1_600_000 },
@@ -146,6 +163,8 @@ test('opens independence settings from the header gear icon once already configu
       yearsToTotal: null,
       yearsToAvailable: null,
       futureAnnualExpensesCzk: null,
+      wealthByType: [],
+      returnSensitivity: [],
     },
   })
   await page.goto('/')

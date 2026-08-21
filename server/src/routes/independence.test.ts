@@ -22,7 +22,7 @@ function createRepository(): IndependenceRepository {
     createIrregularExpense: vi.fn().mockResolvedValue({ id: 'irregular-1', name: 'Auto', amountCzk: 400_000, frequencyYears: 8, sortOrder: 0 }),
     updateIrregularExpense: vi.fn().mockResolvedValue({ id: 'irregular-1', name: 'Auto', amountCzk: 450_000, frequencyYears: 8, sortOrder: 0 }),
     deleteIrregularExpense: vi.fn().mockResolvedValue(true),
-    getProgress: vi.fn().mockResolvedValue({ hasSettings: false, annualExpensesCzk: 0, independenceNumberCzk: 0, totalWealthCzk: 0, availableWealthCzk: 0, totalProgressPercent: 0, availableProgressPercent: 0, yearsToTotal: null, yearsToAvailable: null, futureAnnualExpensesCzk: null }),
+    getProgress: vi.fn().mockResolvedValue({ hasSettings: false, annualExpensesCzk: 0, independenceNumberCzk: 0, totalWealthCzk: 0, availableWealthCzk: 0, totalProgressPercent: 0, availableProgressPercent: 0, yearsToTotal: null, yearsToAvailable: null, futureAnnualExpensesCzk: null, wealthByType: [], returnSensitivity: [] }),
     getWealthSeries: vi.fn().mockResolvedValue([{ date: '2026-08-01', amountCzk: 100_000 }]),
   }
 }
@@ -40,7 +40,7 @@ test('protects independence routes and scopes them to the verified user', async 
 
   const response = await app.inject({ method: 'GET', url: '/api/independence/progress', headers: { authorization: 'Bearer test-token' } })
   expect(response.statusCode).toBe(200)
-  expect(response.json()).toEqual({ hasSettings: false, annualExpensesCzk: 0, independenceNumberCzk: 0, totalWealthCzk: 0, availableWealthCzk: 0, totalProgressPercent: 0, availableProgressPercent: 0, yearsToTotal: null, yearsToAvailable: null, futureAnnualExpensesCzk: null })
+  expect(response.json()).toEqual({ hasSettings: false, annualExpensesCzk: 0, independenceNumberCzk: 0, totalWealthCzk: 0, availableWealthCzk: 0, totalProgressPercent: 0, availableProgressPercent: 0, yearsToTotal: null, yearsToAvailable: null, futureAnnualExpensesCzk: null, wealthByType: [], returnSensitivity: [] })
   expect(repository.getProgress).toHaveBeenCalledWith(userId)
   await app.close()
 })

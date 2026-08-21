@@ -12,6 +12,8 @@ const defaultProgress: IndependenceProgress = {
   yearsToTotal: null,
   yearsToAvailable: null,
   futureAnnualExpensesCzk: null,
+  wealthByType: [],
+  returnSensitivity: [],
 }
 
 export type IndependenceApiMock = {

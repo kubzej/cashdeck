@@ -1,5 +1,5 @@
 import type { Pool } from 'pg'
-import { DomainError } from '../management/domain.js'
+import { DomainError, type WalletType } from '../management/domain.js'
 import { withWealthCache } from '../wealth-cache.js'
 import type { IndependenceSettingsInput, IrregularExpenseInput } from './domain.js'
 
@@ -37,6 +37,8 @@ export type IndependenceProgress = {
   yearsToTotal: number | null
   yearsToAvailable: number | null
   futureAnnualExpensesCzk: number | null
+  wealthByType: Array<{ walletType: WalletType; amountCzk: number }>
+  returnSensitivity: Array<{ realReturnPercent: number; yearsToTotal: number | null; yearsToAvailable: number | null }>
 }
 
 export type WealthSeriesPoint = { date: string; amountCzk: number }
@@ -73,6 +75,31 @@ type IrregularExpenseRow = {
   amount_czk: string
   frequency_years: number
   sort_order: number
+}
+
+type WalletBalanceRow = {
+  wallet_type: WalletType
+  available_now: boolean
+  current_balance_czk: string
+}
+
+function toWealthByType(rows: WalletBalanceRow[]) {
+  const byType = new Map<WalletType, number>()
+  for (const row of rows) byType.set(row.wallet_type, (byType.get(row.wallet_type) ?? 0) + Number(row.current_balance_czk))
+  return [...byType.entries()]
+    .map(([walletType, amountCzk]) => ({ walletType, amountCzk }))
+    .sort((a, b) => b.amountCzk - a.amountCzk)
+}
+
+// Fixed reference points for the "what if the real return were different" comparison — always
+// includes the user's own configured rate so their actual assumption shows up in the same list,
+// even if it doesn't land on one of the round numbers.
+const sensitivityBaseRates = [6, 8, 10, 12]
+
+function sensitivityRatesIncluding(ownRatePercent: number) {
+  return sensitivityBaseRates.includes(ownRatePercent)
+    ? sensitivityBaseRates
+    : [...sensitivityBaseRates, ownRatePercent].sort((a, b) => a - b)
 }
 
 function toSettings(row: SettingsRow): IndependenceSettings {
@@ -198,16 +225,14 @@ const walletBalancesSql = `
   wallet_balances as (
     select
       w.id,
-      w.counts_toward_independence,
+      w.wallet_type,
       w.available_now,
       (w.opening_balance_czk + coalesce(wallet_deltas.delta_czk, 0))::bigint as current_balance_czk
     from wallets w
     left join wallet_deltas on wallet_deltas.wallet_id = w.id
-    where w.user_id = $1
+    where w.user_id = $1 and w.counts_toward_independence
   )
-  select
-    coalesce(sum(current_balance_czk) filter (where counts_toward_independence), 0)::text as total_wealth_czk,
-    coalesce(sum(current_balance_czk) filter (where counts_toward_independence and available_now), 0)::text as available_wealth_czk
+  select wallet_type, available_now, current_balance_czk::text as current_balance_czk
   from wallet_balances
 `
 
@@ -364,12 +389,14 @@ export function createIndependenceRepository(pool: Pool): IndependenceRepository
       const [settingsResult, irregularExpenses, walletBalancesResult] = await Promise.all([
         pool.query<SettingsRow>('select * from independence_settings where user_id = $1', [userId]),
         this.listIrregularExpenses(userId),
-        withWealthCache(`independence:wallet-balances:${userId}`, () => pool.query<{ total_wealth_czk: string; available_wealth_czk: string }>(walletBalancesSql, [userId])),
+        withWealthCache(`independence:wallet-balances:${userId}`, () => pool.query<WalletBalanceRow>(walletBalancesSql, [userId])),
       ])
 
       const settings = settingsResult.rows[0] ? toSettings(settingsResult.rows[0]) : null
-      const totalWealthCzk = Number(walletBalancesResult.rows[0]?.total_wealth_czk ?? '0')
-      const availableWealthCzk = Number(walletBalancesResult.rows[0]?.available_wealth_czk ?? '0')
+      const balances = walletBalancesResult.rows
+      const totalWealthCzk = balances.reduce((sum, row) => sum + Number(row.current_balance_czk), 0)
+      const availableWealthCzk = balances.filter((row) => row.available_now).reduce((sum, row) => sum + Number(row.current_balance_czk), 0)
+      const wealthByType = toWealthByType(balances)
 
       if (!settings) {
         return {
@@ -383,6 +410,8 @@ export function createIndependenceRepository(pool: Pool): IndependenceRepository
           yearsToTotal: null,
           yearsToAvailable: null,
           futureAnnualExpensesCzk: null,
+          wealthByType,
+          returnSensitivity: [],
         }
       }
 
@@ -391,13 +420,17 @@ export function createIndependenceRepository(pool: Pool): IndependenceRepository
       const totalProgressPercent = independenceNumberCzk > 0 ? (totalWealthCzk / independenceNumberCzk) * 100 : 0
       const availableProgressPercent = independenceNumberCzk > 0 ? (availableWealthCzk / independenceNumberCzk) * 100 : 0
 
-      const realReturn = settings.expectedRealReturnPercent / 100
       const annualContributionCzk = settings.monthlyContributionCzk * 12
-      const yearsToTotal = solveYearsToTarget(totalWealthCzk, independenceNumberCzk, annualContributionCzk, realReturn)
-      const yearsToAvailable = solveYearsToTarget(availableWealthCzk, independenceNumberCzk, annualContributionCzk, realReturn)
+      const yearsToTotal = solveYearsToTarget(totalWealthCzk, independenceNumberCzk, annualContributionCzk, settings.expectedRealReturnPercent / 100)
+      const yearsToAvailable = solveYearsToTarget(availableWealthCzk, independenceNumberCzk, annualContributionCzk, settings.expectedRealReturnPercent / 100)
       const futureAnnualExpensesCzk = yearsToAvailable !== null
         ? Math.round(annualExpensesCzk * Math.pow(1 + settings.inflationRatePercent / 100, yearsToAvailable))
         : null
+      const returnSensitivity = sensitivityRatesIncluding(settings.expectedRealReturnPercent).map((realReturnPercent) => ({
+        realReturnPercent,
+        yearsToTotal: solveYearsToTarget(totalWealthCzk, independenceNumberCzk, annualContributionCzk, realReturnPercent / 100),
+        yearsToAvailable: solveYearsToTarget(availableWealthCzk, independenceNumberCzk, annualContributionCzk, realReturnPercent / 100),
+      }))
 
       return {
         hasSettings: true,
@@ -410,6 +443,8 @@ export function createIndependenceRepository(pool: Pool): IndependenceRepository
         yearsToTotal,
         yearsToAvailable,
         futureAnnualExpensesCzk,
+        wealthByType,
+        returnSensitivity,
       }
     },
 

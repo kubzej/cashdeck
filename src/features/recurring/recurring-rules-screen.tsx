@@ -7,6 +7,7 @@ import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } fr
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
+import { RecurringCostSummary } from './recurring-cost-summary'
 import { RecurringRuleFormScreen } from './recurring-rule-form-screen'
 import { SortableRecurringRuleRow } from './sortable-recurring-rule-row'
 import { listRecurringRules, reorderRecurringRules, type RecurringRule } from './api'
@@ -81,6 +82,7 @@ export function RecurringRulesScreen({ onBack }: { onBack: () => void }) {
       <h1 id="recurring-title">Opakování</h1>
       <Button variant="ghost" size="icon" aria-label="Přidat opakování" onClick={() => setView('new')}><Plus aria-hidden="true" /></Button>
     </header>
+    {status === 'ready' ? <RecurringCostSummary rules={rules} /> : null}
     {reorderError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Pořadí se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{reorderError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
     <RecurringRulePanel
       rules={rules}

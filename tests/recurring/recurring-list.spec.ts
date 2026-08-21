@@ -52,14 +52,45 @@ test('reorders recurring rules with the drag handle and saves the new order', as
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 12 })
   await page.mouse.up()
 
-  await expect(page.getByRole('listitem').first()).toContainText('Spoření')
+  const ruleList = page.locator('.recurring-list')
+  await expect(ruleList.getByRole('listitem').first()).toContainText('Spoření')
   await expect.poll(() => recurringApi.rules().map((rule) => rule.id)).toEqual(['rule-transfer', 'rule-transaction'])
 
   await page.reload()
   await page.getByRole('button', { name: 'Nastavení', exact: true }).click()
   await page.getByRole('button', { name: /Opakování/ }).click()
-  await expect(page.getByRole('listitem').first()).toContainText('Spoření')
-  await expect(page.getByRole('listitem').nth(1)).toContainText('Nájem')
+  await expect(ruleList.getByRole('listitem').first()).toContainText('Spoření')
+  await expect(ruleList.getByRole('listitem').nth(1)).toContainText('Nájem')
+})
+
+test('summarizes recurring expenses, income, and cashflow by category, normalized to monthly or yearly, excluding transfers and ended rules', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page, wallets)
+  await mockRecurringRulesApi(page, [
+    { ...transactionRule, id: 'rule-rent', name: 'Nájem', amountCzk: 1000, frequency: 'monthly', categoryId: 'category-home', categoryName: 'Domov' },
+    { ...transactionRule, id: 'rule-yearly', name: 'Roční předplatné', amountCzk: 1200, frequency: 'yearly', categoryId: 'category-sub', categoryName: 'Předplatné', categoryIconKey: 'tags', categoryColorKey: 'blue' },
+    { ...transactionRule, id: 'rule-salary', name: 'Výplata', amountCzk: 5000, frequency: 'monthly', categoryDirection: 'income', categoryId: 'category-pay', categoryName: 'Výplata', categoryIconKey: 'banknote-arrow-up', categoryColorKey: 'green' },
+    { ...transactionRule, id: 'rule-ended', name: 'Staré opakování', amountCzk: 9999, frequency: 'monthly', status: 'ended' },
+    transferRule,
+  ])
+  await page.goto('/')
+  await signIn(page)
+  await page.getByRole('button', { name: 'Nastavení', exact: true }).click()
+  await page.getByRole('button', { name: /Opakování/ }).click()
+
+  const summary = page.locator('.recurring-cost-summary')
+  const totals = summary.locator('.recurring-cost-summary__totals')
+  await expect(totals.getByText('1 100 Kč', { exact: true })).toBeVisible()
+  await expect(totals.getByText('5 000 Kč', { exact: true })).toBeVisible()
+  await expect(totals.getByText('+3 900 Kč', { exact: true })).toBeVisible()
+  await expect(summary.getByText('Domov', { exact: true })).toBeVisible()
+  await expect(summary.getByText('Předplatné', { exact: true })).toBeVisible()
+  await expect(summary.getByText('Výplata', { exact: true })).toBeVisible()
+
+  await summary.getByRole('button', { name: 'Ročně', exact: true }).click()
+  await expect(totals.getByText('13 200 Kč', { exact: true })).toBeVisible()
+  await expect(totals.getByText('60 000 Kč', { exact: true })).toBeVisible()
+  await expect(totals.getByText('+46 800 Kč', { exact: true })).toBeVisible()
 })
 
 const wallets = [
