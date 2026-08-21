@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarRange, Check, Search, WalletCards } from 'lucide-react'
+import { CalendarRange, Check, Search, WalletCards, X } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { DatePicker } from '../../components/ui/calendar'
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
@@ -35,7 +35,7 @@ export function resolveFeedDateRange(value: FeedFilterValue): FeedDateRange {
   return getMonthRange(value.periodAnchor)
 }
 
-export function FeedFilters({ wallets, value, onChange, showSearch = true, ariaLabel = 'Filtry transakcí' }: { wallets: Wallet[]; value: FeedFilterValue; onChange: (value: FeedFilterValue) => void; showSearch?: boolean; ariaLabel?: string }) {
+export function FeedFilters({ wallets, value, onChange, showSearch = true, ariaLabel = 'Filtry transakcí', showReset = false, onReset }: { wallets: Wallet[]; value: FeedFilterValue; onChange: (value: FeedFilterValue) => void; showSearch?: boolean; ariaLabel?: string; showReset?: boolean; onReset?: () => void }) {
   const visibleWallets = useMemo(() => wallets.filter((wallet) => !wallet.isHidden), [wallets])
   const walletLabel = getWalletLabel(value.walletIds, visibleWallets)
   const dateRange = resolveFeedDateRange(value)
@@ -48,6 +48,7 @@ export function FeedFilters({ wallets, value, onChange, showSearch = true, ariaL
     <div className="feed-filters__controls">
       <WalletFilterDialog wallets={visibleWallets} selectedWalletIds={value.walletIds} label={walletLabel} onApply={(walletIds) => onChange({ ...value, walletIds })} />
       <PeriodFilterDialog value={value} label={getPeriodLabel(value.period, dateRange)} onApply={(next) => onChange({ ...value, ...next, periodAnchor: next.period !== value.period && isNavigablePeriod(next.period) ? getFeedToday() : value.periodAnchor })} />
+      {showReset && onReset ? <Button variant="ghost" size="icon" className="feed-filter-reset" aria-label="Zrušit všechny filtry" onClick={onReset}><X aria-hidden="true" /></Button> : null}
     </div>
   </section>
 }

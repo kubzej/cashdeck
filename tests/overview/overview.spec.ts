@@ -30,7 +30,7 @@ test('opens an exact category filter in the transaction list', async ({ page }) 
   await expect(page.getByText('Zatím bez transakcí', { exact: true })).toBeVisible()
 })
 
-test('keeps an overview label filter exact in both actual and planned activity', async ({ page }) => {
+test('keeps an overview label filter exact in both actual and planned activity, then resets it completely', async ({ page }) => {
   await mockAuthAndApi(page)
   const feedApi = await mockFeedApi(page)
   const plannedApi = await mockPlannedApi(page, [])
@@ -45,6 +45,14 @@ test('keeps an overview label filter exact in both actual and planned activity',
   await expect.poll(() => feedApi.requests().some((request) => request.searchParams.get('labelId') === labelId)).toBe(true)
   await expect.poll(() => feedApi.boundsRequests().some((request) => request.searchParams.get('labelId') === labelId)).toBe(true)
   await expect.poll(() => plannedApi.requests().some((request) => request.searchParams.get('labelId') === labelId)).toBe(true)
+
+  await page.getByRole('button', { name: 'Zrušit všechny filtry' }).click()
+
+  await expect(page.locator('.transaction-fixed-selection')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Zrušit všechny filtry' })).toHaveCount(0)
+  await expect.poll(() => feedApi.requests().at(-1)?.searchParams.get('labelId')).toBeNull()
+  await expect.poll(() => feedApi.boundsRequests().at(-1)?.searchParams.get('labelId')).toBeNull()
+  await expect.poll(() => plannedApi.requests().at(-1)?.searchParams.get('labelId')).toBeNull()
 })
 
 test('uses actual wealth terminology and keeps edge tooltips inside the flow chart', async ({ page }) => {

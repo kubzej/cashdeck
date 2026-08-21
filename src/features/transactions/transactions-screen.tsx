@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw, Tags, X } from 'lucide-react'
+import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw, Tags } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
@@ -16,7 +16,7 @@ import { listWallets, type Wallet } from '../wallets/api'
 import type { OverviewSelection } from '../overview/overview-screen'
 import './transactions.css'
 
-export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOpenPlanned, initialWalletId, initialFilters, fixedSelection, onClearFixedSelection }: { onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void; onOpenPlanned: (filters: FeedFilterValue) => void; initialWalletId?: string; initialFilters?: FeedFilterValue; fixedSelection?: OverviewSelection; onClearFixedSelection?: () => void }) {
+export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOpenPlanned, initialWalletId, initialFilters, fixedSelection, onResetFilters }: { onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void; onOpenPlanned: (filters: FeedFilterValue) => void; initialWalletId?: string; initialFilters?: FeedFilterValue; fixedSelection?: OverviewSelection; onResetFilters?: () => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activities, setActivities] = useState<FeedItem[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -86,6 +86,14 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
     }
   }
 
+  function resetAllFilters() {
+    setFilters(createDefaultFeedFilters())
+    setDebouncedSearch('')
+    onResetFilters?.()
+  }
+
+  const hasFiltersToClear = Boolean(fixedSelection) || !hasDefaultFilters(filters)
+
   const content = <>
     <PlannedSummaryCard filters={filters} selection={fixedSelection} onOpen={() => onOpenPlanned(filters)} />
     {status === 'loading' ? <div className="transactions-loading" aria-label="Načítání transakcí"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : null}
@@ -96,10 +104,20 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
   </>
 
   return <section className="transactions-screen" aria-label="Seznam transakcí">
-    <FeedFilters wallets={wallets} value={filters} onChange={setFilters} />
-    {fixedSelection ? <div className="transaction-fixed-selection"><Tags aria-hidden="true" /><span>{fixedSelection.type === 'category' ? 'Kategorie' : 'Štítek'}: <strong>{fixedSelection.name}</strong></span>{onClearFixedSelection ? <Button variant="ghost" size="icon" aria-label="Zrušit pevný filtr" onClick={onClearFixedSelection}><X aria-hidden="true" /></Button> : null}</div> : null}
+    <FeedFilters wallets={wallets} value={filters} onChange={setFilters} showReset={hasFiltersToClear} onReset={resetAllFilters} />
+    {fixedSelection ? <div className="transaction-fixed-selection"><Tags aria-hidden="true" /><span>{fixedSelection.type === 'category' ? 'Kategorie' : 'Štítek'}: <strong>{fixedSelection.name}</strong></span></div> : null}
     {isNavigablePeriod(filters.period) ? <FeedPeriodPager period={filters.period} periodAnchor={filters.periodAnchor} earliestActivityDate={earliestActivityDate} onNavigate={(periodAnchor) => setFilters((current) => ({ ...current, periodAnchor }))}>{content}</FeedPeriodPager> : content}
   </section>
+}
+
+function hasDefaultFilters(filters: FeedFilterValue) {
+  const defaults = createDefaultFeedFilters()
+  return filters.walletIds.length === 0
+    && filters.period === defaults.period
+    && filters.periodAnchor === defaults.periodAnchor
+    && filters.customDateFrom === defaults.customDateFrom
+    && filters.customDateTo === defaults.customDateTo
+    && filters.search.trim() === ''
 }
 
 function TransactionRow({ transaction, onSelect }: { transaction: Transaction; onSelect: (transaction: Transaction) => void }) {

@@ -5,6 +5,7 @@
 .feed-filters__search input:focus-visible { box-shadow: none; }
 .feed-filters__controls { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.125rem; }
 .feed-filter-button { flex: 0 0 auto; min-height: 2.5rem; border-radius: 999px; }
+.feed-filter-reset { flex: 0 0 auto; min-height: 2.5rem; border: 1px solid hsl(var(--border)); border-radius: 999px; }
 .feed-filter-dialog [data-slot='dialog-body'] { display: grid; gap: 1rem; }
 .feed-wallet-options, .feed-period-options { display: grid; gap: 0.375rem; }
 .feed-wallet-option, .feed-period-option { display: flex; min-height: 2.75rem; width: 100%; align-items: center; gap: 0.75rem; padding: 0.625rem 0.75rem; border-radius: 0.5rem; color: hsl(var(--foreground)); text-align: left; }
