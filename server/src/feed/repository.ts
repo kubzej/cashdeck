@@ -278,26 +278,43 @@ function feedSelect(transactionFilters: string, transferFilters: string, adjustm
   order by page.activity_date desc, page.created_at desc, page.kind desc, page.id desc`
 }
 
+// Each branch does its own `order by ... limit 1` instead of a bare `union all` + outer min() —
+// that lets Postgres answer it via an index-scan seek to the earliest row on the existing
+// (user_id, date desc, ...) indexes instead of scanning every matching row across all three
+// tables. See alethea-knowledge/.../plans/cashdeck/2026-08-21-performance-scaling/context.md
+// finding 2.
 function feedBoundsSelect(transactionFilters: string, transferFilters: string, adjustmentFilters: string) {
-  return `with activity_dates as (
+  return `with earliest_transaction as (
     select t.transaction_date as activity_date
     from transactions t
     join wallets transaction_wallet on transaction_wallet.user_id = t.user_id and transaction_wallet.id = t.wallet_id
     where ${transactionFilters}
-    union all
+    order by t.transaction_date asc
+    limit 1
+  ), earliest_transfer as (
     select tr.transfer_date as activity_date
     from transfers tr
     join wallets source_wallet_filter on source_wallet_filter.user_id = tr.user_id and source_wallet_filter.id = tr.source_wallet_id
     join wallets destination_wallet_filter on destination_wallet_filter.user_id = tr.user_id and destination_wallet_filter.id = tr.destination_wallet_id
     where ${transferFilters}
-    union all
+    order by tr.transfer_date asc
+    limit 1
+  ), earliest_adjustment as (
     select adjustment.adjustment_date as activity_date
     from balance_adjustments adjustment
     join wallets adjustment_wallet on adjustment_wallet.user_id = adjustment.user_id and adjustment_wallet.id = adjustment.wallet_id
     where ${adjustmentFilters}
+    order by adjustment.adjustment_date asc
+    limit 1
   )
   select to_char(min(activity_date), 'YYYY-MM-DD') as earliest_activity_date
-  from activity_dates`
+  from (
+    select activity_date from earliest_transaction
+    union all
+    select activity_date from earliest_transfer
+    union all
+    select activity_date from earliest_adjustment
+  ) as candidates`
 }
 
 function toFeedItem(row: FeedRow, selectedWalletIds: string[] | null): FeedItem {

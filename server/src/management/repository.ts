@@ -3,6 +3,7 @@ import type { Pool, PoolClient } from 'pg'
 import type { CategoryDirection, CategoryIconKey, ColorKey, WalletType } from './domain.js'
 import { DomainError } from './domain.js'
 import { getPragueToday } from '../recurring/schedule.js'
+import { invalidateWealthCache } from '../wealth-cache.js'
 
 export type Wallet = {
   id: string
@@ -303,6 +304,7 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
         [userId, input.name, input.colorKey, input.walletType ?? 'other', input.countsTowardIndependence ?? false, input.availableNow ?? false, input.openingBalanceCzk, input.openingBalanceDate],
       )
 
+      invalidateWealthCache()
       return toWallet(result.rows[0])
     },
 
@@ -336,6 +338,7 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
       )
 
       if (!result.rows[0]) return null
+      invalidateWealthCache()
       return this.getWallet(userId, walletId)
     },
 
@@ -355,6 +358,7 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
         `delete from wallets where user_id = $1 and id = $2 returning id`,
         [userId, walletId],
       )
+      if (result.rows[0]) invalidateWealthCache()
       return Boolean(result.rows[0])
     },
 
@@ -387,6 +391,7 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
           [userId, walletId, Math.abs(differenceCzk), differenceCzk > 0 ? 'add' : 'subtract', getPragueToday()],
         )
         const adjustment = result.rows[0]
+        invalidateWealthCache()
         return {
           adjustment: {
             id: adjustment.id,

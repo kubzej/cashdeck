@@ -2,6 +2,7 @@ import type { Pool, PoolClient } from 'pg'
 import { DomainError } from '../management/domain.js'
 import { assertForwardSchedule, type RecurringRuleInput, type RecurringRuleKind } from './domain.js'
 import { getNextOccurrenceDate, getPragueToday, isRecurringOccurrenceDue, isRecurringRuleEnded, type RecurringFrequency } from './schedule.js'
+import { invalidateWealthCache } from '../wealth-cache.js'
 
 export type RecurringRuleLabel = { id: string; name: string }
 
@@ -209,6 +210,7 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
           result.failedRuleIds.push(ruleId)
         }
       }
+      if (result.generatedTransactions > 0 || result.generatedTransfers > 0) invalidateWealthCache()
       return result
     },
   }

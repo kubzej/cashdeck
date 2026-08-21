@@ -1,7 +1,11 @@
 import type { Pool } from 'pg'
-import { expect, test, vi } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
+import { invalidateWealthCache } from '../wealth-cache.js'
 import type { RecurringRuleInput } from './domain.js'
 import { createRecurringRuleRepository } from './repository.js'
+
+vi.mock('../wealth-cache.js', () => ({ invalidateWealthCache: vi.fn() }))
+beforeEach(() => vi.mocked(invalidateWealthCache).mockClear())
 
 const baseInput: RecurringRuleInput = {
   name: 'Nájem',
@@ -139,4 +143,5 @@ test('generateDue processes each due rule in its own transaction, so one rule fa
   expect(clientB.query).not.toHaveBeenCalledWith('commit')
   expect(result.failedRuleIds).toEqual(['rule-b'])
   expect(result.processedRules).toBe(0)
+  expect(invalidateWealthCache).not.toHaveBeenCalled()
 })

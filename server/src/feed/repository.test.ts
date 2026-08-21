@@ -59,3 +59,26 @@ test('two records sharing the same activity date and timestamp are still paginat
 function encodeTestCursor() {
   return Buffer.from(JSON.stringify({ activityDate: '2026-08-21', createdAt: sameTimestamp.toISOString(), kind: 'transaction', id: rowA.id })).toString('base64url')
 }
+
+test('getBounds finds the earliest date per table via order-by-limit-1, not a union-all scan with an outer min()', async () => {
+  const query = vi.fn().mockResolvedValue({ rows: [{ earliest_activity_date: '2025-01-01' }] })
+  const repository = createFeedRepository({ query } as unknown as Pool)
+
+  await repository.getBounds('user-1', { walletIds: null, categoryId: null, labelId: null })
+
+  const [sql] = query.mock.calls[0]
+  const normalized = String(sql).replace(/\s+/g, ' ')
+  expect(normalized).toContain('order by t.transaction_date asc limit 1')
+  expect(normalized).toContain('order by tr.transfer_date asc limit 1')
+  expect(normalized).toContain('order by adjustment.adjustment_date asc limit 1')
+  expect(normalized).not.toMatch(/union all[\s\S]*select min\(/i)
+})
+
+test('getBounds returns a null earliestActivityDate when there is no matching activity at all', async () => {
+  const query = vi.fn().mockResolvedValue({ rows: [] })
+  const repository = createFeedRepository({ query } as unknown as Pool)
+
+  const result = await repository.getBounds('user-1', { walletIds: null, categoryId: null, labelId: null })
+
+  expect(result).toEqual({ earliestActivityDate: null })
+})
