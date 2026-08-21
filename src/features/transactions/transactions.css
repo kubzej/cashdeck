@@ -54,6 +54,7 @@
 .transaction-row__amount--expense { color: var(--color-negative); }
 .transfer-row__icon { width: 2.5rem; height: 2.5rem; align-self: center; margin-top: 0; background: color-mix(in oklab, var(--color-primary) 10%, var(--color-card)); color: var(--color-primary); }
 .transfer-row__icon svg { width: 1.2rem; height: 1.2rem; }
+.balance-adjustment-row__icon { width: 2.5rem; height: 2.5rem; align-self: center; margin-top: 0; background: var(--color-muted); color: var(--color-muted-foreground); }.balance-adjustment-row__icon svg { width: 1.2rem; height: 1.2rem; }
 .transfer-row__amount { color: var(--color-foreground); font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .transaction-row__labels { display: flex; min-width: 0; align-items: center; gap: 0.3125rem; overflow: hidden; }
 .transaction-row__label { flex: 0 0 auto; border: 1px solid color-mix(in oklab, var(--color-border) 90%, var(--color-foreground)); border-radius: 999px; padding: 0 0.3125rem; font-size: 0.625rem; line-height: 1rem; }

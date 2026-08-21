@@ -67,3 +67,38 @@ test('edits every wallet field and preserves the updated opening-balance date', 
   await page.getByRole('button', { name: 'Spravovat peněženku Nouzová rezerva' }).click()
   await expect(page.getByRole('button', { name: '1. 2. 2022' })).toBeVisible()
 })
+
+test('locks the opening balance and date after the wallet has activity', async ({ page }) => {
+  const wallet: WalletFixture = {
+    id: 'wallet-1',
+    name: 'Běžný účet',
+    colorKey: 'teal',
+    openingBalanceCzk: 150000,
+    currentBalanceCzk: 173400,
+    openingBalanceDate: '2022-01-15',
+    sortOrder: 0,
+    isHidden: false,
+    openingBalanceLocked: true,
+  }
+
+  await mockAuthAndApi(page)
+  const walletApi = await mockWalletsApi(page, [wallet])
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Peněženky' }).click()
+  await page.getByRole('button', { name: 'Spravovat peněženku Běžný účet' }).click()
+
+  await expect(page.getByLabel('Počáteční zůstatek')).toBeDisabled()
+  await expect(page.getByRole('button', { name: '15. 1. 2022' })).toBeDisabled()
+  await expect(page.getByText('Po první aktivitě peněženky jej nelze měnit.', { exact: true })).toBeVisible()
+
+  await page.getByLabel('Název').fill('Hlavní účet')
+  await page.getByRole('button', { name: 'Uložit změny' }).click()
+  await expect.poll(() => walletApi.lastRequestBody('PATCH')).toEqual({ name: 'Hlavní účet', colorKey: 'teal' })
+  await expect.poll(() => walletApi.wallets()[0]).toMatchObject({
+    name: 'Hlavní účet',
+    openingBalanceCzk: 150000,
+    openingBalanceDate: '2022-01-15',
+  })
+})

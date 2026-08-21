@@ -5,7 +5,7 @@ import { ColorPicker } from '../../components/color-picker'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { DatePicker } from '../../components/ui/calendar'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
-import { Field, FieldError, FieldLabel } from '../../components/ui/field'
+import { Field, FieldDescription, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { createWallet, deleteWallet, updateWallet, type Wallet, type WalletColorKey } from './api'
 import './wallets.css'
@@ -18,6 +18,7 @@ type WalletFormValues = {
 }
 
 export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wallet?: Wallet; onCancel: () => void; onSaved: () => void; onDeleted?: () => void }) {
+  const openingBalanceLocked = Boolean(wallet?.openingBalanceLocked)
   const [values, setValues] = useState<WalletFormValues>({
     name: wallet?.name ?? '',
     colorKey: wallet?.colorKey ?? 'teal',
@@ -35,17 +36,20 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
     const nextErrors: Partial<Record<keyof WalletFormValues, string>> = {}
     const openingBalanceCzk = parseWholeCzk(values.openingBalanceCzk)
     if (!values.name.trim()) nextErrors.name = 'Zadej název peněženky.'
-    if (openingBalanceCzk === null) nextErrors.openingBalanceCzk = 'Zadej celý počet korun.'
-    if (!values.openingBalanceDate) nextErrors.openingBalanceDate = 'Vyber datum.'
+    if (!openingBalanceLocked && openingBalanceCzk === null) nextErrors.openingBalanceCzk = 'Zadej celý počet korun.'
+    if (!openingBalanceLocked && !values.openingBalanceDate) nextErrors.openingBalanceDate = 'Vyber datum.'
     setErrors(nextErrors)
     setSubmissionError(null)
     if (Object.keys(nextErrors).length > 0 || openingBalanceCzk === null) return
 
     setIsSubmitting(true)
     try {
-      const input = { name: values.name.trim(), colorKey: values.colorKey, openingBalanceCzk, openingBalanceDate: values.openingBalanceDate }
-      if (wallet) await updateWallet(wallet.id, input)
-      else await createWallet(input)
+      const mutableInput = { name: values.name.trim(), colorKey: values.colorKey }
+      if (wallet) {
+        await updateWallet(wallet.id, openingBalanceLocked ? mutableInput : { ...mutableInput, openingBalanceCzk, openingBalanceDate: values.openingBalanceDate })
+      } else {
+        await createWallet({ ...mutableInput, openingBalanceCzk, openingBalanceDate: values.openingBalanceDate })
+      }
       onSaved()
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : 'Peněženku se nepodařilo uložit.')
@@ -88,12 +92,13 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
         </fieldset>
         <Field invalid={Boolean(errors.openingBalanceCzk)}>
           <FieldLabel>Počáteční zůstatek</FieldLabel>
-          <Input type="text" inputMode="numeric" value={values.openingBalanceCzk} placeholder="0" onChange={(event) => { const openingBalanceCzk = event.currentTarget.value; setValues((current) => ({ ...current, openingBalanceCzk })) }} />
+          <Input type="text" inputMode="numeric" value={values.openingBalanceCzk} placeholder="0" disabled={openingBalanceLocked} onChange={(event) => { const openingBalanceCzk = event.currentTarget.value; setValues((current) => ({ ...current, openingBalanceCzk })) }} />
+          {openingBalanceLocked ? <FieldDescription>Po první aktivitě peněženky jej nelze měnit.</FieldDescription> : null}
           <FieldError match={Boolean(errors.openingBalanceCzk)}>{errors.openingBalanceCzk}</FieldError>
         </Field>
         <Field invalid={Boolean(errors.openingBalanceDate)}>
           <FieldLabel>Datum počátečního zůstatku</FieldLabel>
-          <DatePicker value={parseIsoDate(values.openingBalanceDate)} onValueChange={(date) => setValues((current) => ({ ...current, openingBalanceDate: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} />
+          <DatePicker value={parseIsoDate(values.openingBalanceDate)} disabled={openingBalanceLocked} onValueChange={(date) => setValues((current) => ({ ...current, openingBalanceDate: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} />
           <FieldError match={Boolean(errors.openingBalanceDate)}>{errors.openingBalanceDate}</FieldError>
         </Field>
         <Button type="submit" size="lg" className="wallet-form-submit" loading={isSubmitting}>{wallet ? 'Uložit změny' : 'Uložit peněženku'}</Button>

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw, Tags } from 'lucide-react'
+import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw, Scale, Tags } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List, ListItem, ListItemActions, ListItemContent, ListItemLeading, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
 import { CategoryIcon } from '../categories/category-icon'
-import { getFeedBounds, listFeed, type FeedItem, type FeedTransfer } from '../feed/api'
+import { getFeedBounds, listFeed, type FeedBalanceAdjustment, type FeedItem, type FeedTransfer } from '../feed/api'
 import { createDefaultFeedFilters, FeedFilters, isNavigablePeriod, resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
 import { FeedPeriodPager } from '../feed/feed-period-pager'
 import { PlannedSummaryCard } from '../planned/planned-summary-card'
@@ -99,7 +99,11 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
     {status === 'loading' ? <div className="transactions-loading" aria-label="Načítání transakcí"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : null}
     {status === 'error' ? <FeedbackState status="error" layout="panel" className="transactions-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Transakce se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState> : null}
     {status === 'ready' && activities.length === 0 ? <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><ReceiptText aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Zatím bez transakcí</EmptyStateTitle><EmptyStateDescription>Přidej první příjem nebo výdaj.</EmptyStateDescription></EmptyState> : null}
-    {status === 'ready' ? <>{groupActivities(activities).map(([date, items]) => <div className="transaction-day" key={date}><h2>{formatDate(date)}</h2><List gap="sm">{items.map((activity) => activity.kind === 'transaction' ? <TransactionRow key={activity.id} transaction={activity} onSelect={onSelectTransaction} /> : <TransferRow key={activity.id} transfer={activity} onSelect={onSelectTransfer} />)}</List></div>)}
+    {status === 'ready' ? <>{groupActivities(activities).map(([date, items]) => <div className="transaction-day" key={date}><h2>{formatDate(date)}</h2><List gap="sm">{items.map((activity) => {
+      if (activity.kind === 'transaction') return <TransactionRow key={activity.id} transaction={activity} onSelect={onSelectTransaction} />
+      if (activity.kind === 'transfer') return <TransferRow key={activity.id} transfer={activity} onSelect={onSelectTransfer} />
+      return <BalanceAdjustmentRow key={activity.id} adjustment={activity} />
+    })}</List></div>)}
     {nextCursor ? <Button variant="outline" className="transactions-load-more" loading={isLoadingMore} onClick={() => void loadMore()}>Načíst další</Button> : null}</> : null}
   </>
 
@@ -133,6 +137,12 @@ function TransferRow({ transfer, onSelect }: { transfer: FeedTransfer; onSelect:
   return <ListItem variant="quiet" size="default" interactive className="transaction-row transfer-row surface-row" onClick={() => onSelect(transfer)}><ListItemLeading className="transfer-row__icon"><ArrowRightLeft aria-hidden="true" /></ListItemLeading><ListItemContent><ListItemTitle><span>Převod</span><span className="transaction-row__wallet">z {transfer.sourceWalletName} do {transfer.destinationWalletName}</span></ListItemTitle>{transfer.labels.length > 0 ? <div className="transaction-row__labels">{transfer.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transfer.note ? <p className="transaction-row__note">{transfer.note}</p> : null}</ListItemContent><ListItemActions><strong className={amountClass}>{amountPrefix}{amount} Kč</strong></ListItemActions></ListItem>
 }
 
+function BalanceAdjustmentRow({ adjustment }: { adjustment: FeedBalanceAdjustment }) {
+  const amount = new Intl.NumberFormat('cs-CZ').format(adjustment.amountCzk)
+  const isAddition = adjustment.operation === 'add'
+  return <ListItem variant="quiet" size="default" className="transaction-row balance-adjustment-row surface-row"><ListItemLeading className="balance-adjustment-row__icon"><Scale aria-hidden="true" /></ListItemLeading><ListItemContent><ListItemTitle><span>Vyrovnání zůstatku</span><span className="transaction-row__wallet">v {adjustment.walletName}</span></ListItemTitle>{adjustment.note ? <p className="transaction-row__note">{adjustment.note}</p> : null}</ListItemContent><ListItemActions><strong className={isAddition ? 'transaction-row__amount transaction-row__amount--income' : 'transaction-row__amount transaction-row__amount--expense'}>{isAddition ? '+' : '-'}{amount} Kč</strong></ListItemActions></ListItem>
+}
+
 function groupActivities(activities: FeedItem[]) {
   const groups = new Map<string, FeedItem[]>()
   for (const activity of activities) {
@@ -144,7 +154,7 @@ function groupActivities(activities: FeedItem[]) {
   return [...groups.entries()]
 }
 
-function activityDate(activity: FeedItem) { return activity.kind === 'transaction' ? activity.transactionDate : activity.transferDate }
+function activityDate(activity: FeedItem) { return activity.kind === 'transaction' ? activity.transactionDate : activity.kind === 'transfer' ? activity.transferDate : activity.adjustmentDate }
 
 function formatDate(value: string) {
   const [year, month, day] = value.split('-').map(Number)

@@ -87,7 +87,7 @@ export function WalletsScreen({ onCreate, onSelect, onManage }: { onCreate: () =
       {reorderError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Pořadí se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{reorderError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => void handleDragEnd(event)}>
         <SortableContext items={wallets.map((wallet) => wallet.id)} strategy={verticalListSortingStrategy}>
-          <List gap="sm">{wallets.map((wallet) => <SortableWalletRow key={wallet.id} wallet={wallet} disabled={isReordering} onSelect={onSelect} onManage={onManage} />)}</List>
+          <List gap="sm">{wallets.map((wallet) => <SortableWalletRow key={wallet.id} wallet={wallet} disabled={isReordering} onSelect={onSelect} onManage={onManage} onAdjusted={() => void loadWallets()} />)}</List>
         </SortableContext>
       </DndContext>
     </section>

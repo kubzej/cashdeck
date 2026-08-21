@@ -4,7 +4,17 @@ import type { Transfer } from '../transfers/api'
 
 export type FeedTransaction = Transaction & { kind: 'transaction' }
 export type FeedTransfer = Transfer & { kind: 'transfer'; impactCzk: number }
-export type FeedItem = FeedTransaction | FeedTransfer
+export type FeedBalanceAdjustment = {
+  kind: 'balance_adjustment'
+  id: string
+  walletId: string
+  walletName: string
+  amountCzk: number
+  operation: 'add' | 'subtract'
+  adjustmentDate: string
+  note: string | null
+}
+export type FeedItem = FeedTransaction | FeedTransfer | FeedBalanceAdjustment
 
 export type FeedPage = {
   items: FeedItem[]

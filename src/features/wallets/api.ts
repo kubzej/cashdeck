@@ -17,6 +17,18 @@ export type Wallet = {
 }
 
 export type CreateWalletInput = Pick<Wallet, 'name' | 'colorKey' | 'openingBalanceCzk' | 'openingBalanceDate'>
+export type UpdateWalletInput = Partial<CreateWalletInput>
+
+export type BalanceAdjustmentResult = {
+  adjustment: {
+    id: string
+    walletId: string
+    amountCzk: number
+    operation: 'add' | 'subtract'
+    adjustmentDate: string
+  } | null
+  currentBalanceCzk: number
+}
 
 export async function listWallets() {
   return apiRequest<{ items: Wallet[] }>('/wallets')
@@ -36,7 +48,7 @@ export async function reorderWallets(walletIds: string[]) {
   })
 }
 
-export async function updateWallet(walletId: string, input: CreateWalletInput) {
+export async function updateWallet(walletId: string, input: UpdateWalletInput) {
   return apiRequest<Wallet>(`/wallets/${walletId}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
@@ -45,4 +57,11 @@ export async function updateWallet(walletId: string, input: CreateWalletInput) {
 
 export async function deleteWallet(walletId: string) {
   await apiRequest<void>(`/wallets/${walletId}`, { method: 'DELETE' })
+}
+
+export async function createBalanceAdjustment(walletId: string, actualBalanceCzk: number) {
+  return apiRequest<BalanceAdjustmentResult>(`/wallets/${walletId}/balance-adjustments`, {
+    method: 'POST',
+    body: JSON.stringify({ actualBalanceCzk }),
+  })
 }

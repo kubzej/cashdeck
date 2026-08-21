@@ -28,6 +28,7 @@ function createRepository(): ManagementRepository {
     updateWallet: vi.fn().mockResolvedValue(null),
     reorderWallets: vi.fn().mockResolvedValue(undefined),
     deleteWallet: vi.fn().mockResolvedValue(false),
+    createBalanceAdjustment: vi.fn().mockResolvedValue(null),
     listCategories: vi.fn().mockResolvedValue([]),
     createCategory: vi.fn().mockResolvedValue({ id: categoryId, name: 'Restaurace', direction: 'expense' }),
     updateCategory: vi.fn().mockResolvedValue(null),
@@ -213,6 +214,64 @@ test('validates and scopes wallet writes to the verified user', async () => {
   })
   expect(deleted.statusCode).toBe(204)
   expect(repository.deleteWallet).toHaveBeenCalledWith(userId, walletId)
+  await app.close()
+})
+
+test('creates a balance adjustment from the actual wallet balance without creating a transaction', async () => {
+  const { app, repository } = await createTestApp()
+  repository.createBalanceAdjustment.mockResolvedValueOnce({
+    adjustment: {
+      id: 'c00f7a6a-d0c1-4f08-9bd4-643415bef126',
+      walletId,
+      amountCzk: 1544,
+      operation: 'add',
+      adjustmentDate: '2026-08-21',
+    },
+    currentBalanceCzk: 125000,
+  })
+
+  const created = await app.inject({
+    method: 'POST',
+    url: `/api/wallets/${walletId}/balance-adjustments`,
+    headers: { authorization: 'Bearer test-token' },
+    payload: { actualBalanceCzk: 125000 },
+  })
+
+  expect(created.statusCode).toBe(201)
+  expect(repository.createBalanceAdjustment).toHaveBeenCalledWith(userId, walletId, 125000)
+  expect(created.json()).toEqual(expect.objectContaining({ currentBalanceCzk: 125000, adjustment: expect.objectContaining({ operation: 'add', amountCzk: 1544 }) }))
+
+  repository.createBalanceAdjustment.mockResolvedValueOnce({ adjustment: null, currentBalanceCzk: 125000 })
+  const unchanged = await app.inject({
+    method: 'POST',
+    url: `/api/wallets/${walletId}/balance-adjustments`,
+    headers: { authorization: 'Bearer test-token' },
+    payload: { actualBalanceCzk: 125000 },
+  })
+  expect(unchanged.statusCode).toBe(200)
+  expect(unchanged.json()).toEqual({ adjustment: null, currentBalanceCzk: 125000 })
+  await app.close()
+})
+
+test('rejects invalid balance adjustments before they reach the repository', async () => {
+  const { app, repository } = await createTestApp()
+
+  const decimal = await app.inject({
+    method: 'POST',
+    url: `/api/wallets/${walletId}/balance-adjustments`,
+    headers: { authorization: 'Bearer test-token' },
+    payload: { actualBalanceCzk: 125000.5 },
+  })
+  expect(decimal.statusCode).toBe(400)
+
+  const extraField = await app.inject({
+    method: 'POST',
+    url: `/api/wallets/${walletId}/balance-adjustments`,
+    headers: { authorization: 'Bearer test-token' },
+    payload: { actualBalanceCzk: 125000, note: 'nepovolené' },
+  })
+  expect(extraField.statusCode).toBe(400)
+  expect(repository.createBalanceAdjustment).not.toHaveBeenCalled()
   await app.close()
 })
 

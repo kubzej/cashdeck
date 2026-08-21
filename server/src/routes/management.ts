@@ -62,11 +62,18 @@ export function createManagementRoutes(repository: ManagementRepository, require
       return wallet
     })
 
-    app.delete('/api/wallets/:walletId', { preHandler: requireAuth }, async (request, reply) => {
+  app.delete('/api/wallets/:walletId', { preHandler: requireAuth }, async (request, reply) => {
       const deleted = await repository.deleteWallet(request.authUser.id, parseUuid((request.params as Record<string, unknown>).walletId, 'ID peněženky'))
       if (!deleted) throw new DomainError(404, 'Peněženka neexistuje.')
-      return reply.code(204).send()
-    })
+    return reply.code(204).send()
+  })
+
+  app.post('/api/wallets/:walletId/balance-adjustments', { preHandler: requireAuth }, async (request, reply) => {
+    const walletId = parseUuid((request.params as Record<string, unknown>).walletId, 'ID peněženky')
+    const result = await repository.createBalanceAdjustment(request.authUser.id, walletId, parseActualBalance(request.body))
+    if (!result) throw new DomainError(404, 'Peněženka neexistuje.')
+    return reply.code(result.adjustment ? 201 : 200).send(result)
+  })
 
     app.get('/api/categories', { preHandler: requireAuth }, async (request) => ({
       items: await repository.listCategories(request.authUser.id),
@@ -144,6 +151,12 @@ function parseUpdateWallet(body: unknown): UpdateWalletInput {
   if ('isHidden' in value) update.isHidden = parseOptionalBoolean(value.isHidden, 'isHidden')
 
   return update
+}
+
+function parseActualBalance(body: unknown) {
+  const value = asRecord(body)
+  assertOnlyKeys(value, ['actualBalanceCzk'])
+  return parseWholeCzk(value.actualBalanceCzk, 'Skutečný zůstatek', { allowNegative: true })
 }
 
 function parseCreateCategory(body: unknown): CreateCategoryInput {

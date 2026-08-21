@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer'
 import type { Pool, PoolClient } from 'pg'
 import { defaultCategorySeeds, type CategoryDirection, type CategoryIconKey, type ColorKey, DomainError } from './domain.js'
+import { getPragueToday } from '../recurring/schedule.js'
 
 export type Wallet = {
   id: string
@@ -46,6 +47,19 @@ export type UpdateWalletInput = Partial<CreateWalletInput> & {
   isHidden?: boolean
 }
 
+export type BalanceAdjustment = {
+  id: string
+  walletId: string
+  amountCzk: number
+  operation: 'add' | 'subtract'
+  adjustmentDate: string
+}
+
+export type BalanceAdjustmentResult = {
+  adjustment: BalanceAdjustment | null
+  currentBalanceCzk: number
+}
+
 export type CreateCategoryInput = {
   name: string
   direction: CategoryDirection
@@ -68,6 +82,7 @@ export type ManagementRepository = {
   updateWallet(userId: string, walletId: string, input: UpdateWalletInput): Promise<Wallet | null>
   reorderWallets(userId: string, walletIds: string[]): Promise<void>
   deleteWallet(userId: string, walletId: string): Promise<boolean>
+  createBalanceAdjustment(userId: string, walletId: string, actualBalanceCzk: number): Promise<BalanceAdjustmentResult | null>
   listCategories(userId: string): Promise<Category[]>
   createCategory(userId: string, input: CreateCategoryInput): Promise<Category>
   updateCategory(userId: string, categoryId: string, input: UpdateCategoryInput): Promise<Category | null>
@@ -89,6 +104,14 @@ type WalletRow = {
   sort_order: number
   is_hidden: boolean
   opening_balance_locked: boolean
+}
+
+type BalanceAdjustmentRow = {
+  id: string
+  wallet_id: string
+  amount_czk: string
+  operation: 'add' | 'subtract'
+  adjustment_date: string
 }
 
 type CategoryRow = {
@@ -349,6 +372,48 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
         [userId, walletId],
       )
       return Boolean(result.rows[0])
+    },
+
+    async createBalanceAdjustment(userId, walletId, actualBalanceCzk) {
+      return withTransaction(pool, async (client) => {
+        const lockedWallet = await client.query<{ id: string }>(
+          `select id
+           from wallets
+           where user_id = $1 and id = $2
+           for update`,
+          [userId, walletId],
+        )
+        if (!lockedWallet.rows[0]) return null
+
+        const current = await client.query<WalletRow>(
+          `${walletSelect}
+           where w.user_id = $1 and w.id = $2`,
+          [userId, walletId],
+        )
+        const currentBalanceCzk = Number(current.rows[0].current_balance_czk)
+        const differenceCzk = actualBalanceCzk - currentBalanceCzk
+        if (differenceCzk === 0) {
+          return { adjustment: null, currentBalanceCzk }
+        }
+
+        const result = await client.query<BalanceAdjustmentRow>(
+          `insert into balance_adjustments (user_id, wallet_id, amount_czk, operation, adjustment_date)
+           values ($1, $2, $3, $4, $5)
+           returning id, wallet_id, amount_czk, operation, to_char(adjustment_date, 'YYYY-MM-DD') as adjustment_date`,
+          [userId, walletId, Math.abs(differenceCzk), differenceCzk > 0 ? 'add' : 'subtract', getPragueToday()],
+        )
+        const adjustment = result.rows[0]
+        return {
+          adjustment: {
+            id: adjustment.id,
+            walletId: adjustment.wallet_id,
+            amountCzk: Number(adjustment.amount_czk),
+            operation: adjustment.operation,
+            adjustmentDate: adjustment.adjustment_date,
+          },
+          currentBalanceCzk: actualBalanceCzk,
+        }
+      })
     },
 
     async listCategories(userId) {

@@ -45,5 +45,5 @@ export function feedItems(transactions: Transaction[] = [], transfers: Transfer[
 }
 
 function activityDate(item: FeedItem) {
-  return item.kind === 'transaction' ? item.transactionDate : item.transferDate
+  return item.kind === 'transaction' ? item.transactionDate : item.kind === 'transfer' ? item.transferDate : item.adjustmentDate
 }

@@ -36,14 +36,25 @@ export type FeedTransfer = {
   labels: FeedLabel[]
 }
 
-export type FeedItem = FeedTransaction | FeedTransfer
+export type FeedBalanceAdjustment = {
+  kind: 'balance_adjustment'
+  id: string
+  walletId: string
+  walletName: string
+  amountCzk: number
+  operation: 'add' | 'subtract'
+  adjustmentDate: string
+  note: string | null
+}
+
+export type FeedItem = FeedTransaction | FeedTransfer | FeedBalanceAdjustment
 export type FeedPage = { items: FeedItem[]; nextCursor: string | null }
 export type FeedBounds = { earliestActivityDate: string | null }
 export type FeedRepository = { listFeed(userId: string, input: FeedListInput): Promise<FeedPage>; getBounds(userId: string, input: FeedBoundsInput): Promise<FeedBounds> }
 
-type FeedCursor = { activityDate: string; createdAt: string; kind: 'transaction' | 'transfer'; id: string }
+type FeedCursor = { activityDate: string; createdAt: string; kind: 'transaction' | 'transfer' | 'balance_adjustment'; id: string }
 type FeedRow = {
-  kind: 'transaction' | 'transfer'
+  kind: 'transaction' | 'transfer' | 'balance_adjustment'
   id: string
   activity_date: string
   created_at: Date
@@ -60,6 +71,7 @@ type FeedRow = {
   source_wallet_name: string | null
   destination_wallet_id: string | null
   destination_wallet_name: string | null
+  adjustment_operation: 'add' | 'subtract' | null
   labels: unknown
 }
 
@@ -70,27 +82,32 @@ export function createFeedRepository(pool: Pool): FeedRepository {
       const values: unknown[] = [userId, getPragueToday()]
       const transactionFilters = ['t.user_id = $1', 't.transaction_date <= $2::date']
       const transferFilters = ['tr.user_id = $1', 'tr.transfer_date <= $2::date']
+      const adjustmentFilters = ['adjustment.user_id = $1', 'adjustment.adjustment_date <= $2::date']
 
       transactionFilters.push('not transaction_wallet.is_hidden')
       transferFilters.push('not source_wallet_filter.is_hidden', 'not destination_wallet_filter.is_hidden')
+      adjustmentFilters.push('not adjustment_wallet.is_hidden')
 
       if (input.walletIds) {
         values.push(input.walletIds)
         const parameter = `$${values.length}::uuid[]`
         transactionFilters.push(`t.wallet_id = any(${parameter})`)
         transferFilters.push(`(tr.source_wallet_id = any(${parameter}) or tr.destination_wallet_id = any(${parameter}))`)
+        adjustmentFilters.push(`adjustment.wallet_id = any(${parameter})`)
       }
       if (input.dateFrom) {
         values.push(input.dateFrom)
         const parameter = `$${values.length}::date`
         transactionFilters.push(`t.transaction_date >= ${parameter}`)
         transferFilters.push(`tr.transfer_date >= ${parameter}`)
+        adjustmentFilters.push(`adjustment.adjustment_date >= ${parameter}`)
       }
       if (input.dateTo) {
         values.push(input.dateTo)
         const parameter = `$${values.length}::date`
         transactionFilters.push(`t.transaction_date <= ${parameter}`)
         transferFilters.push(`tr.transfer_date <= ${parameter}`)
+        adjustmentFilters.push(`adjustment.adjustment_date <= ${parameter}`)
       }
       if (input.search) {
         values.push(input.search)
@@ -121,11 +138,17 @@ export function createFeedRepository(pool: Pool): FeedRepository {
               and search_label.name ilike '%' || ${parameter} || '%'
           )
         )`)
+        adjustmentFilters.push(`(
+          adjustment_wallet.name ilike '%' || ${parameter} || '%'
+          or coalesce(adjustment.note, '') ilike '%' || ${parameter} || '%'
+          or 'Vyrovnání zůstatku' ilike '%' || ${parameter} || '%'
+        )`)
       }
       if (input.categoryId) {
         values.push(input.categoryId)
         transactionFilters.push(`t.category_id = $${values.length}::uuid`)
         transferFilters.push('false')
+        adjustmentFilters.push('false')
       }
       if (input.labelId) {
         values.push(input.labelId)
@@ -142,11 +165,12 @@ export function createFeedRepository(pool: Pool): FeedRepository {
             and selected_label.transfer_id = tr.id
             and selected_label.label_id = ${parameter}
         )`)
+        adjustmentFilters.push('false')
       }
 
       const cursorFilter = cursor ? addCursorFilter(values, cursor) : ''
       values.push(input.limit + 1)
-      const result = await pool.query<FeedRow>(feedSelect(transactionFilters.join(' and '), transferFilters.join(' and '), cursorFilter, `$${values.length}`), values)
+      const result = await pool.query<FeedRow>(feedSelect(transactionFilters.join(' and '), transferFilters.join(' and '), adjustmentFilters.join(' and '), cursorFilter, `$${values.length}`), values)
       const rows = result.rows.slice(0, input.limit)
       const last = rows.at(-1)
       return { items: rows.map((row) => toFeedItem(row, input.walletIds)), nextCursor: result.rows.length > input.limit && last ? encodeCursor(last) : null }
@@ -155,16 +179,19 @@ export function createFeedRepository(pool: Pool): FeedRepository {
       const values: unknown[] = [userId, getPragueToday()]
       const transactionFilters = ['t.user_id = $1', 't.transaction_date <= $2::date', 'not transaction_wallet.is_hidden']
       const transferFilters = ['tr.user_id = $1', 'tr.transfer_date <= $2::date', 'not source_wallet_filter.is_hidden', 'not destination_wallet_filter.is_hidden']
+      const adjustmentFilters = ['adjustment.user_id = $1', 'adjustment.adjustment_date <= $2::date', 'not adjustment_wallet.is_hidden']
       if (input.walletIds) {
         values.push(input.walletIds)
         const parameter = `$${values.length}::uuid[]`
         transactionFilters.push(`t.wallet_id = any(${parameter})`)
         transferFilters.push(`(tr.source_wallet_id = any(${parameter}) or tr.destination_wallet_id = any(${parameter}))`)
+        adjustmentFilters.push(`adjustment.wallet_id = any(${parameter})`)
       }
       if (input.categoryId) {
         values.push(input.categoryId)
         transactionFilters.push(`t.category_id = $${values.length}::uuid`)
         transferFilters.push('false')
+        adjustmentFilters.push('false')
       }
       if (input.labelId) {
         values.push(input.labelId)
@@ -181,8 +208,9 @@ export function createFeedRepository(pool: Pool): FeedRepository {
             and selected_label.transfer_id = tr.id
             and selected_label.label_id = ${parameter}
         )`)
+        adjustmentFilters.push('false')
       }
-      const result = await pool.query<{ earliest_activity_date: string | null }>(feedBoundsSelect(transactionFilters.join(' and '), transferFilters.join(' and ')), values)
+      const result = await pool.query<{ earliest_activity_date: string | null }>(feedBoundsSelect(transactionFilters.join(' and '), transferFilters.join(' and '), adjustmentFilters.join(' and ')), values)
       return { earliestActivityDate: result.rows[0]?.earliest_activity_date ?? null }
     },
   }
@@ -194,11 +222,11 @@ function addCursorFilter(values: unknown[], cursor: FeedCursor) {
   return `where (activity_date, created_at, kind, id) < ($${start}::date, $${start + 1}::timestamptz, $${start + 2}::text, $${start + 3}::uuid)`
 }
 
-function feedSelect(transactionFilters: string, transferFilters: string, cursorFilter: string, limit: string) {
+function feedSelect(transactionFilters: string, transferFilters: string, adjustmentFilters: string, cursorFilter: string, limit: string) {
   return `with activity_rows as (
     select 'transaction'::text as kind, t.id, t.transaction_date as activity_date, t.created_at,
       t.amount_czk, t.note, t.wallet_id, t.category_id,
-      null::uuid as source_wallet_id, null::uuid as destination_wallet_id
+      null::uuid as source_wallet_id, null::uuid as destination_wallet_id, null::text as adjustment_operation
     from transactions t
     join wallets transaction_wallet on transaction_wallet.user_id = t.user_id and transaction_wallet.id = t.wallet_id
     join categories transaction_category on transaction_category.user_id = t.user_id and transaction_category.id = t.category_id
@@ -206,11 +234,18 @@ function feedSelect(transactionFilters: string, transferFilters: string, cursorF
     union all
     select 'transfer'::text as kind, tr.id, tr.transfer_date as activity_date, tr.created_at,
       tr.amount_czk, tr.note, null::uuid as wallet_id, null::uuid as category_id,
-      tr.source_wallet_id, tr.destination_wallet_id
+      tr.source_wallet_id, tr.destination_wallet_id, null::text as adjustment_operation
     from transfers tr
     join wallets source_wallet_filter on source_wallet_filter.user_id = tr.user_id and source_wallet_filter.id = tr.source_wallet_id
     join wallets destination_wallet_filter on destination_wallet_filter.user_id = tr.user_id and destination_wallet_filter.id = tr.destination_wallet_id
     where ${transferFilters}
+    union all
+    select 'balance_adjustment'::text as kind, adjustment.id, adjustment.adjustment_date as activity_date, adjustment.created_at,
+      adjustment.amount_czk, adjustment.note, adjustment.wallet_id, null::uuid as category_id,
+      null::uuid as source_wallet_id, null::uuid as destination_wallet_id, adjustment.operation::text as adjustment_operation
+    from balance_adjustments adjustment
+    join wallets adjustment_wallet on adjustment_wallet.user_id = adjustment.user_id and adjustment_wallet.id = adjustment.wallet_id
+    where ${adjustmentFilters}
   ), page as (
     select * from activity_rows
     ${cursorFilter}
@@ -225,6 +260,7 @@ function feedSelect(transactionFilters: string, transferFilters: string, cursorF
     category.direction,
     page.source_wallet_id, source_wallet.name as source_wallet_name,
     page.destination_wallet_id, destination_wallet.name as destination_wallet_name,
+    page.adjustment_operation,
     coalesce(
       json_agg(json_build_object('id', label.id, 'name', label.name) order by label.normalized_name asc, label.id asc)
         filter (where label.id is not null),
@@ -240,11 +276,11 @@ function feedSelect(transactionFilters: string, transferFilters: string, cursorF
   left join labels label on label.user_id = $1 and label.id = coalesce(transaction_label.label_id, transfer_label.label_id)
   group by page.kind, page.id, page.activity_date, page.created_at, page.amount_czk, page.note,
     page.wallet_id, wallet.name, page.category_id, category.name, category.icon_key, category.color_key, category.direction,
-    page.source_wallet_id, source_wallet.name, page.destination_wallet_id, destination_wallet.name
+    page.source_wallet_id, source_wallet.name, page.destination_wallet_id, destination_wallet.name, page.adjustment_operation
   order by page.activity_date desc, page.created_at desc, page.kind desc, page.id desc`
 }
 
-function feedBoundsSelect(transactionFilters: string, transferFilters: string) {
+function feedBoundsSelect(transactionFilters: string, transferFilters: string, adjustmentFilters: string) {
   return `with activity_dates as (
     select t.transaction_date as activity_date
     from transactions t
@@ -256,6 +292,11 @@ function feedBoundsSelect(transactionFilters: string, transferFilters: string) {
     join wallets source_wallet_filter on source_wallet_filter.user_id = tr.user_id and source_wallet_filter.id = tr.source_wallet_id
     join wallets destination_wallet_filter on destination_wallet_filter.user_id = tr.user_id and destination_wallet_filter.id = tr.destination_wallet_id
     where ${transferFilters}
+    union all
+    select adjustment.adjustment_date as activity_date
+    from balance_adjustments adjustment
+    join wallets adjustment_wallet on adjustment_wallet.user_id = adjustment.user_id and adjustment_wallet.id = adjustment.wallet_id
+    where ${adjustmentFilters}
   )
   select to_char(min(activity_date), 'YYYY-MM-DD') as earliest_activity_date
   from activity_dates`
@@ -263,6 +304,10 @@ function feedBoundsSelect(transactionFilters: string, transferFilters: string) {
 
 function toFeedItem(row: FeedRow, selectedWalletIds: string[] | null): FeedItem {
   const labels = parseLabels(row.labels)
+  if (row.kind === 'balance_adjustment') {
+    if (!row.wallet_id || !row.wallet_name || !row.adjustment_operation) throw new Error('Neúplný řádek vyrovnání zůstatku ve feedu.')
+    return { kind: 'balance_adjustment', id: row.id, walletId: row.wallet_id, walletName: row.wallet_name, amountCzk: Number(row.amount_czk), operation: row.adjustment_operation, adjustmentDate: row.activity_date, note: row.note }
+  }
   if (row.kind === 'transaction') {
     if (!row.wallet_id || !row.wallet_name || !row.category_id || !row.category_name || !row.category_icon_key || !row.category_color_key || !row.direction) throw new Error('Neúplný řádek transakce ve feedu.')
     return { kind: 'transaction', id: row.id, walletId: row.wallet_id, walletName: row.wallet_name, categoryId: row.category_id, categoryName: row.category_name, categoryIconKey: row.category_icon_key, categoryColorKey: row.category_color_key, direction: row.direction, amountCzk: Number(row.amount_czk), transactionDate: row.activity_date, note: row.note, labels }
@@ -285,7 +330,7 @@ function encodeCursor(row: FeedRow) {
 function decodeCursor(cursor: string): FeedCursor {
   try {
     const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<FeedCursor>
-    if (typeof parsed.activityDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.activityDate) && typeof parsed.createdAt === 'string' && !Number.isNaN(new Date(parsed.createdAt).valueOf()) && (parsed.kind === 'transaction' || parsed.kind === 'transfer') && typeof parsed.id === 'string' && /^[0-9a-f-]{36}$/i.test(parsed.id)) return parsed as FeedCursor
+    if (typeof parsed.activityDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.activityDate) && typeof parsed.createdAt === 'string' && !Number.isNaN(new Date(parsed.createdAt).valueOf()) && (parsed.kind === 'transaction' || parsed.kind === 'transfer' || parsed.kind === 'balance_adjustment') && typeof parsed.id === 'string' && /^[0-9a-f-]{36}$/i.test(parsed.id)) return parsed as FeedCursor
   } catch {
     // The generic validation error below intentionally does not expose parser details.
   }

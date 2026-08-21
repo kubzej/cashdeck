@@ -13,6 +13,7 @@ export type WalletFixture = {
 }
 
 type WalletInput = Pick<WalletFixture, 'name' | 'colorKey' | 'openingBalanceCzk' | 'openingBalanceDate'>
+type WalletUpdateInput = Partial<WalletInput>
 type WalletRequestMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 type WalletApiFailure = { status: number; message: string }
 type QueuedWalletApiFailure = WalletApiFailure & { remaining: number }
@@ -21,6 +22,7 @@ export type WalletApiMock = {
   failNext: (method: WalletRequestMethod, failure?: Partial<WalletApiFailure>) => void
   failTimes: (method: WalletRequestMethod, times: number, failure?: Partial<WalletApiFailure>) => void
   requestCount: (method: WalletRequestMethod) => number
+  lastRequestBody: (method: Extract<WalletRequestMethod, 'POST' | 'PATCH' | 'PUT'>) => unknown
   wallets: () => WalletFixture[]
 }
 
@@ -29,6 +31,7 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
   let nextId = wallets.length + 1
   const failures = new Map<WalletRequestMethod, QueuedWalletApiFailure>()
   const requestCounts = new Map<WalletRequestMethod, number>()
+  const requestBodies = new Map<'POST' | 'PATCH' | 'PUT', unknown>()
 
   await page.route('http://api.test/api/wallets**', async (route) => {
     expect(route.request().headers().authorization).toBe('Bearer token-1')
@@ -36,6 +39,7 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
     const request = route.request()
     const method = request.method() as WalletRequestMethod
     requestCounts.set(method, (requestCounts.get(method) ?? 0) + 1)
+    if (method === 'POST' || method === 'PATCH' || method === 'PUT') requestBodies.set(method, request.postDataJSON())
     const url = new URL(request.url())
     const pathname = url.pathname
 
@@ -61,9 +65,33 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
       return
     }
 
+    if (request.method() === 'POST' && pathname.endsWith('/balance-adjustments')) {
+      const walletId = pathname.split('/').at(-2)
+      const { actualBalanceCzk } = request.postDataJSON() as { actualBalanceCzk: number }
+      const wallet = wallets.find((item) => item.id === walletId)
+      if (!wallet) {
+        await route.fulfill(json({ message: 'Peněženka neexistuje.' }, 404))
+        return
+      }
+      const currentBalanceCzk = wallet.currentBalanceCzk ?? wallet.openingBalanceCzk
+      const difference = actualBalanceCzk - currentBalanceCzk
+      wallets = wallets.map((item) => item.id === walletId ? { ...item, currentBalanceCzk: actualBalanceCzk } : item)
+      await route.fulfill(json({
+        adjustment: difference === 0 ? null : {
+          id: `adjustment-${nextId++}`,
+          walletId,
+          amountCzk: Math.abs(difference),
+          operation: difference > 0 ? 'add' : 'subtract',
+          adjustmentDate: '2026-08-21',
+        },
+        currentBalanceCzk: actualBalanceCzk,
+      }, difference === 0 ? 200 : 201))
+      return
+    }
+
     if (request.method() === 'PATCH') {
       const walletId = pathname.split('/').at(-1)
-      const input = request.postDataJSON() as WalletInput
+      const input = request.postDataJSON() as WalletUpdateInput
       wallets = wallets.map((wallet) => wallet.id === walletId ? { ...wallet, ...input } : wallet)
       const wallet = wallets.find((item) => item.id === walletId)
       await route.fulfill(wallet ? json(wallet) : json({ message: 'Peněženka neexistuje.' }, 404))
@@ -104,6 +132,9 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
     },
     requestCount(method) {
       return requestCounts.get(method) ?? 0
+    },
+    lastRequestBody(method) {
+      return requestBodies.get(method)
     },
     wallets: () => wallets.map((wallet) => ({ ...wallet })),
   } satisfies WalletApiMock
