@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw, Scale, Tags } from 'lucide-react'
+import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw, Scale } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
@@ -12,6 +12,7 @@ import { getFeedBounds, listFeed, type FeedBalanceAdjustment, type FeedItem, typ
 import { createDefaultFeedFilters, FeedFilters, isNavigablePeriod, resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
 import { FeedPeriodPager } from '../feed/feed-period-pager'
 import { PlannedSummaryCard } from '../planned/planned-summary-card'
+import { SelectionSummaryCard } from './selection-summary-card'
 import type { Transaction } from './api'
 import type { Transfer } from '../transfers/api'
 import { listWallets, type Wallet } from '../wallets/api'
@@ -111,7 +112,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
 
   return <section className="transactions-screen" aria-label="Seznam transakcí">
     <FeedFilters wallets={wallets} value={filters} onChange={setFilters} showReset={hasFiltersToClear} onReset={resetAllFilters} />
-    {fixedSelection ? <div className="transaction-fixed-selection"><Tags aria-hidden="true" /><span>{fixedSelection.type === 'category' ? 'Kategorie' : 'Štítek'}: <strong>{fixedSelection.name}</strong></span></div> : null}
+    {fixedSelection ? <SelectionSummaryCard filters={filters} selection={fixedSelection} /> : null}
     {isNavigablePeriod(filters.period) ? <FeedPeriodPager period={filters.period} periodAnchor={filters.periodAnchor} earliestActivityDate={earliestActivityDate} onNavigate={(periodAnchor) => setFilters((current) => ({ ...current, periodAnchor }))}>{content}</FeedPeriodPager> : content}
   </section>
 }

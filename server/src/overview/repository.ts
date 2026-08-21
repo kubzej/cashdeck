@@ -1,6 +1,6 @@
 import type { Pool } from 'pg'
 import { getPragueToday } from '../recurring/schedule.js'
-import { resolveOverviewGranularity, type OverviewGranularity, type OverviewInput } from './domain.js'
+import { resolveOverviewGranularity, type OverviewGranularity, type OverviewInput, type OverviewSelectionInput } from './domain.js'
 
 export type OverviewCategory = {
   id: string
@@ -35,7 +35,13 @@ export type OverviewMetrics = {
   labels: OverviewLabel[]
 }
 
-export type OverviewRepository = { getOverview(userId: string, input: OverviewInput): Promise<OverviewMetrics> }
+export type OverviewSelectionSeriesPoint = { date: string; amountCzk: number }
+export type OverviewSelectionTrend = { previous: { amountCzk: number }; series: OverviewSelectionSeriesPoint[] }
+
+export type OverviewRepository = {
+  getOverview(userId: string, input: OverviewInput): Promise<OverviewMetrics>
+  getSelectionTrend(userId: string, input: OverviewSelectionInput): Promise<OverviewSelectionTrend>
+}
 
 type BoundsRow = { earliest_activity_date: string | null }
 type WealthRow = { wealth_czk: string; change_czk: string }
@@ -88,7 +94,78 @@ export function createOverviewRepository(pool: Pool): OverviewRepository {
       }
       return metrics
     },
+
+    async getSelectionTrend(userId, input) {
+      const parameters = [userId, input.walletIds, input.dateFrom, input.dateTo, input.id]
+      const selectionFilter = selectionFilterSql(input.type)
+
+      const [previousResult, seriesResult] = await Promise.all([
+        pool.query<{ amount_czk: string }>(selectionPreviousSql(selectionFilter), parameters),
+        pool.query<{ bucket_date: string; amount_czk: string }>(selectionSeriesSql(selectionFilter, input.granularity), parameters),
+      ])
+
+      return {
+        previous: { amountCzk: Number(previousResult.rows[0]?.amount_czk ?? '0') },
+        series: seriesResult.rows.map((row) => ({ date: row.bucket_date, amountCzk: Number(row.amount_czk) })),
+      }
+    },
   }
+}
+
+function selectionFilterSql(type: 'category' | 'label') {
+  return type === 'category'
+    ? 't.category_id = $5::uuid'
+    : `exists (select 1 from transaction_labels tl where tl.user_id = $1 and tl.transaction_id = t.id and tl.label_id = $5::uuid)`
+}
+
+function selectionPreviousSql(selectionFilter: string) {
+  return `with ${walletScope()},
+    previous_window as (
+      select $3::date - (($4::date - $3::date) + 1) as previous_from, $3::date - 1 as previous_to
+    ),
+    filtered_transactions as (
+      select t.id, t.amount_czk, t.category_id
+      from transactions t
+      join wallet_scope w on w.id = t.wallet_id
+      cross join previous_window
+      where t.user_id = $1
+        and t.transaction_date >= w.opening_balance_date
+        and t.transaction_date between previous_window.previous_from and previous_window.previous_to
+        and ${selectionFilter}
+    )
+    select coalesce(sum(case c.direction when 'income' then t.amount_czk else -t.amount_czk end), 0)::text as amount_czk
+    from filtered_transactions t
+    join categories c on c.user_id = $1 and c.id = t.category_id`
+}
+
+function selectionSeriesSql(selectionFilter: string, granularity: OverviewGranularity) {
+  const interval = granularity === 'day' ? "interval '1 day'" : granularity === 'month' ? "interval '1 month'" : "interval '3 months'"
+  const truncation = granularity === 'day' ? 'day' : granularity === 'month' ? 'month' : 'quarter'
+  return `with ${walletScope()},
+    filtered_transactions as (
+      select t.id, t.amount_czk, t.category_id, t.transaction_date
+      from transactions t
+      join wallet_scope w on w.id = t.wallet_id
+      where t.user_id = $1
+        and t.transaction_date >= w.opening_balance_date
+        and t.transaction_date between $3::date and $4::date
+        and ${selectionFilter}
+    ),
+    buckets as (
+      select bucket_start::date
+      from generate_series(date_trunc('${truncation}', $3::date)::date, date_trunc('${truncation}', $4::date)::date, ${interval}) bucket_start
+    ),
+    bucket_amounts as (
+      select date_trunc('${truncation}', t.transaction_date)::date as bucket_start,
+        sum(case c.direction when 'income' then t.amount_czk else -t.amount_czk end)::bigint as amount_czk
+      from filtered_transactions t
+      join categories c on c.user_id = $1 and c.id = t.category_id
+      group by 1
+    )
+    select to_char(b.bucket_start, 'YYYY-MM-DD') as bucket_date, coalesce(a.amount_czk, 0)::text as amount_czk
+    from buckets b
+    left join bucket_amounts a on a.bucket_start = b.bucket_start
+    order by b.bucket_start asc`
 }
 
 function clampToToday(value: string, today: string) {

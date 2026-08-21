@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import type { OverviewMetrics } from '../../src/features/overview/api'
+import type { OverviewMetrics, OverviewSelectionTrend } from '../../src/features/overview/api'
 
 export const overviewFixture: OverviewMetrics = {
   range: { dateFrom: '2026-08-01', dateTo: '2026-08-21', earliestActivityDate: '2025-01-01', granularity: 'day' },
@@ -28,22 +28,39 @@ export const overviewFixture: OverviewMetrics = {
   ],
 }
 
-export type OverviewApiMock = {
-  requests: () => URL[]
-  failNext: (failure?: { status?: number; message?: string }) => void
+export const overviewSelectionTrendFixture: OverviewSelectionTrend = {
+  previous: { amountCzk: -21_000 },
+  series: [
+    { date: '2026-06-01', amountCzk: -15_000 },
+    { date: '2026-07-01', amountCzk: -21_000 },
+    { date: '2026-08-01', amountCzk: -18_500 },
+  ],
 }
 
-export async function mockOverviewApi(page: Page, fixture: OverviewMetrics = overviewFixture) {
+export type OverviewApiMock = {
+  requests: () => URL[]
+  selectionRequests: () => URL[]
+  failNext: (failure?: { status?: number; message?: string; target?: 'overview' | 'selection' }) => void
+}
+
+export async function mockOverviewApi(page: Page, fixture: OverviewMetrics = overviewFixture, selectionTrend: OverviewSelectionTrend = overviewSelectionTrendFixture) {
   const requests: URL[] = []
-  let queuedFailure: { status: number; message: string } | null = null
+  const selectionRequests: URL[] = []
+  let queuedFailure: { status: number; message: string; target: 'overview' | 'selection' } | null = null
 
   await page.route('http://api.test/api/overview**', async (route) => {
     expect(route.request().headers().authorization).toBe('Bearer token-1')
     const url = new URL(route.request().url())
-    if (queuedFailure) {
+    const isSelection = url.pathname === '/api/overview/selection'
+    if (queuedFailure && queuedFailure.target === (isSelection ? 'selection' : 'overview')) {
       const failure = queuedFailure
       queuedFailure = null
       await route.fulfill({ contentType: 'application/json', status: failure.status, body: JSON.stringify({ message: failure.message }) })
+      return
+    }
+    if (isSelection) {
+      selectionRequests.push(url)
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify(selectionTrend) })
       return
     }
     requests.push(url)
@@ -52,8 +69,9 @@ export async function mockOverviewApi(page: Page, fixture: OverviewMetrics = ove
 
   return {
     requests: () => requests,
+    selectionRequests: () => selectionRequests,
     failNext(failure = {}) {
-      queuedFailure = { status: failure.status ?? 500, message: failure.message ?? 'Dočasně nedostupné.' }
+      queuedFailure = { status: failure.status ?? 500, message: failure.message ?? 'Dočasně nedostupné.', target: failure.target ?? 'overview' }
     },
   } satisfies OverviewApiMock
 }

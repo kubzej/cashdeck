@@ -58,8 +58,12 @@ test('opens an exact category filter in the transaction list', async ({ page }) 
   await page.getByRole('button', { name: /Bydlení/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Transakce', exact: true })).toBeVisible()
-  await expect(page.getByText('Kategorie:')).toBeVisible()
-  await expect(page.getByText('Bydlení', { exact: true })).toBeVisible()
+  const summary = page.locator('.selection-summary')
+  await expect(summary).toContainText('Kategorie')
+  await expect(summary).toContainText('Bydlení')
+  await expect(summary).toContainText('-18 500 Kč')
+  await expect(summary).toContainText('2 transakce')
+  await expect(summary).toContainText('12 %')
   await expect(page.getByText('Zatím bez transakcí', { exact: true })).toBeVisible()
 })
 
@@ -74,14 +78,16 @@ test('keeps an overview label filter exact in both actual and planned activity, 
   await page.getByRole('button', { name: /domácnost/ }).click()
 
   const labelId = overviewFixture.labels[0].id
-  await expect(page.locator('.transaction-fixed-selection')).toContainText('Štítek:')
+  await expect(page.locator('.selection-summary')).toContainText('Štítek')
+  await expect(page.locator('.selection-summary')).toContainText('domácnost')
+  await expect(page.locator('.selection-summary')).toContainText('-19 240 Kč')
   await expect.poll(() => feedApi.requests().some((request) => request.searchParams.get('labelId') === labelId)).toBe(true)
   await expect.poll(() => feedApi.boundsRequests().some((request) => request.searchParams.get('labelId') === labelId)).toBe(true)
   await expect.poll(() => plannedApi.requests().some((request) => request.searchParams.get('labelId') === labelId)).toBe(true)
 
   await page.getByRole('button', { name: 'Zrušit všechny filtry' }).click()
 
-  await expect(page.locator('.transaction-fixed-selection')).toHaveCount(0)
+  await expect(page.locator('.selection-summary')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Zrušit všechny filtry' })).toHaveCount(0)
   await expect.poll(() => feedApi.requests().at(-1)?.searchParams.get('labelId')).toBeNull()
   await expect.poll(() => feedApi.boundsRequests().at(-1)?.searchParams.get('labelId')).toBeNull()

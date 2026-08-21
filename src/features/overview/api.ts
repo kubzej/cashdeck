@@ -21,3 +21,12 @@ export async function getOverview({ walletIds, period, dateFrom, dateTo, signal 
   if (dateTo) query.set('dateTo', dateTo)
   return apiRequest<OverviewMetrics>(`/overview?${query.toString()}`, { signal })
 }
+
+export type OverviewSelectionType = 'category' | 'label'
+export type OverviewSelectionTrend = { previous: { amountCzk: number }; series: Array<{ date: string; amountCzk: number }> }
+
+export async function getOverviewSelectionTrend({ type, id, walletIds, dateFrom, dateTo, granularity, signal }: { type: OverviewSelectionType; id: string; walletIds?: string[]; dateFrom: string; dateTo: string; granularity: OverviewGranularity; signal?: AbortSignal }) {
+  const query = new URLSearchParams({ type, id, dateFrom, dateTo, granularity })
+  if (walletIds?.length) query.set('walletIds', walletIds.join(','))
+  return apiRequest<OverviewSelectionTrend>(`/overview/selection?${query.toString()}`, { signal })
+}

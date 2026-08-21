@@ -11,6 +11,42 @@ export type OverviewInput = {
 
 export type OverviewGranularity = 'day' | 'month' | 'quarter'
 
+export type OverviewSelectionType = 'category' | 'label'
+
+export type OverviewSelectionInput = {
+  type: OverviewSelectionType
+  id: string
+  walletIds: string[] | null
+  dateFrom: string
+  dateTo: string
+  granularity: OverviewGranularity
+}
+
+export function parseOverviewSelectionQuery(value: unknown): OverviewSelectionInput {
+  const query = asRecord(value)
+  assertOnlyKeys(query, ['type', 'id', 'walletIds', 'dateFrom', 'dateTo', 'granularity'])
+
+  const type = parseSelectionType(query.type)
+  const id = parseUuid(query.id, type === 'category' ? 'Kategorie' : 'Štítek')
+  const dateFrom = parseCalendarDate(query.dateFrom, 'Datum od')
+  const dateTo = parseCalendarDate(query.dateTo, 'Datum do')
+  if (dateFrom > dateTo) throw new DomainError(400, 'Datum od nesmí být po datu do.')
+  const granularity = parseGranularity(query.granularity)
+  const walletIds = query.walletIds === undefined ? null : parseWalletIds(query.walletIds)
+
+  return { type, id, walletIds, dateFrom, dateTo, granularity }
+}
+
+function parseSelectionType(value: unknown): OverviewSelectionType {
+  if (value === 'category' || value === 'label') return value
+  throw new DomainError(400, 'Typ výběru není platný.')
+}
+
+function parseGranularity(value: unknown): OverviewGranularity {
+  if (value === 'day' || value === 'month' || value === 'quarter') return value
+  throw new DomainError(400, 'Granularita přehledu není platná.')
+}
+
 export function parseOverviewQuery(value: unknown): OverviewInput {
   const query = asRecord(value)
   assertOnlyKeys(query, ['walletIds', 'dateFrom', 'dateTo', 'period'])
