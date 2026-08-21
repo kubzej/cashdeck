@@ -15,6 +15,8 @@
 .recurring-row__amount--income { color: var(--color-positive); }
 .recurring-row__amount--expense { color: var(--color-negative); }
 .recurring-row__amount--transfer { color: var(--color-foreground); }
+.recurring-row__wallet { color: var(--color-muted-foreground); font-size: 0.75rem; }
+.recurring-row__drag-handle { touch-action: none; }
 .recurring-row__labels { display: flex; min-width: 0; align-items: center; gap: 0.3125rem; overflow: hidden; }
 .recurring-row__label { flex: 0 0 auto; border: 1px solid color-mix(in oklab, var(--color-border) 90%, var(--color-foreground)); border-radius: var(--radius-full); padding: 0 0.3125rem; color: var(--color-muted-foreground); font-size: 0.625rem; line-height: 1rem; }
 .recurring-row__end { color: var(--color-muted-foreground); font-size: 0.6875rem; line-height: 1rem; }

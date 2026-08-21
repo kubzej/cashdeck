@@ -188,7 +188,7 @@ function parseUpdateCategory(body: unknown): UpdateCategoryInput {
   return update
 }
 
-function parseOrder(body: unknown, field: string) {
+export function parseOrder(body: unknown, field: string) {
   const value = asRecord(body)
   assertOnlyKeys(value, [field])
   if (!Array.isArray(value[field]) || value[field].length !== new Set(value[field]).size) {

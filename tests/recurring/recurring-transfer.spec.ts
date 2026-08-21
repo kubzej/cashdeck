@@ -43,7 +43,7 @@ test('creates a recurring transfer and prevents using one wallet on both sides',
       frequency: 'custom_days', customIntervalDays: 14,
     }),
   ])
-  await expect(page.getByRole('button', { name: /Přesun do rezervy/ })).toContainText('Každých 14 dní')
+  await expect(page.getByRole('listitem').filter({ hasText: 'Přesun do rezervy' })).toContainText('Každých 14 dní')
 })
 
 const wallets = [

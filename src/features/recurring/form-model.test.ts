@@ -65,7 +65,7 @@ describe('recurring rule form model', () => {
       categoryIconKey: 'house', categoryColorKey: 'orange', categoryDirection: 'expense',
       sourceWalletId: null, sourceWalletName: null, destinationWalletId: null, destinationWalletName: null,
       note: 'Poznámka', labels: [{ id: 'label-1', name: 'bydlení' }], frequency: 'monthly',
-      customIntervalDays: null, nextOccurrenceDate: '2026-09-20', endsOn: '2026-12-20', status: 'active',
+      customIntervalDays: null, nextOccurrenceDate: '2026-09-20', endsOn: '2026-12-20', status: 'active', sortOrder: 0,
     }, today)
     expect(stored).toMatchObject({ amountCzk: '23000', labelIds: ['label-1'], nextOccurrenceDate: '2026-09-20', endsOn: '2026-12-20' })
   })

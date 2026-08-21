@@ -27,6 +27,7 @@ const rule = {
   sourceWalletId: null, sourceWalletName: null, destinationWalletId: null, destinationWalletName: null,
   note: 'Každý měsíc', labels: [{ id: labelId, name: 'bydlení' }], frequency: 'monthly' as const,
   customIntervalDays: null, nextOccurrenceDate: '2099-08-18', endsOn: null, status: 'active' as const,
+  sortOrder: 0,
 }
 
 function createRepository(): RecurringRuleRepository {
@@ -35,6 +36,7 @@ function createRepository(): RecurringRuleRepository {
     createRule: vi.fn().mockResolvedValue(rule),
     updateRule: vi.fn().mockResolvedValue(rule),
     deleteRule: vi.fn().mockResolvedValue(true),
+    reorderRules: vi.fn().mockResolvedValue(undefined),
     generateDue: vi.fn().mockResolvedValue({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0, failedRuleIds: [] }),
   }
 }
@@ -108,6 +110,17 @@ test('rejects anonymous and malformed recurring rule requests', async () => {
   expect(invalidEnd.statusCode).toBe(400)
 
   expect(repository.createRule).not.toHaveBeenCalled()
+  await app.close()
+})
+
+test('reorders recurring rules only for the verified user', async () => {
+  const { app, repository } = await createTestApp()
+  const anonymous = await app.inject({ method: 'PUT', url: '/api/recurring-rules/order', payload: { ruleIds: [ruleId] } })
+  expect(anonymous.statusCode).toBe(401)
+
+  const response = await app.inject({ method: 'PUT', url: '/api/recurring-rules/order', headers: { authorization: 'Bearer test-token' }, payload: { ruleIds: [ruleId] } })
+  expect(response.statusCode).toBe(204)
+  expect(repository.reorderRules).toHaveBeenCalledWith(userId, [ruleId])
   await app.close()
 })
 

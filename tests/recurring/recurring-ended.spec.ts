@@ -13,7 +13,7 @@ test('shows an ended recurring rule as historical schedule data', async ({ page 
   await page.getByRole('button', { name: 'Nastavení', exact: true }).click()
   await page.getByRole('button', { name: /Opakování/ }).click()
 
-  const row = page.getByRole('button', { name: /Nájem/ })
+  const row = page.getByRole('listitem').filter({ hasText: 'Nájem' })
   await expect(row).toContainText('Ukončeno')
   await expect(row).toContainText('Ukončeno 20. srpna 2026')
   await expect(row).toContainText('bydlení')
@@ -31,7 +31,7 @@ test('edits an ended recurring rule\'s name without its frozen schedule being re
   await page.getByRole('button', { name: 'Nastavení', exact: true }).click()
   await page.getByRole('button', { name: /Opakování/ }).click()
 
-  await page.getByRole('button', { name: /Nájem/ }).click()
+  await page.getByRole('listitem').filter({ hasText: 'Nájem' }).click()
   await expect(page.getByRole('heading', { name: 'Upravit opakování' })).toBeVisible()
   await expect(page.getByText('Další výskyt musí být dnes nebo v budoucnu.', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Konec nesmí být před dalším výskytem.', { exact: true })).toHaveCount(0)
@@ -51,4 +51,5 @@ const endedRule = {
   sourceWalletId: null, sourceWalletName: null, destinationWalletId: null, destinationWalletName: null,
   note: 'Historická poznámka', labels: [{ id: 'label-1', name: 'bydlení' }], frequency: 'monthly' as const,
   customIntervalDays: null, nextOccurrenceDate: '2026-09-20', endsOn: '2026-08-20', status: 'ended' as const,
+  sortOrder: 0,
 }

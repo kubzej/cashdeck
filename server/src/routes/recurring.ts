@@ -4,10 +4,16 @@ import { DomainError, parseUuid } from '../management/domain.js'
 import { assertForwardSchedule, parseRecurringRule } from '../recurring/domain.js'
 import type { RecurringRuleRepository } from '../recurring/repository.js'
 import { getPragueToday } from '../recurring/schedule.js'
+import { parseOrder } from './management.js'
 
 export function createRecurringRuleRoutes(repository: RecurringRuleRepository, requireAuth: AuthGuard): FastifyPluginAsync {
   return async function recurringRuleRoutes(app) {
     app.get('/api/recurring-rules', { preHandler: requireAuth }, async (request) => repository.listRules(request.authUser.id))
+
+    app.put('/api/recurring-rules/order', { preHandler: requireAuth }, async (request, reply) => {
+      await repository.reorderRules(request.authUser.id, parseOrder(request.body, 'ruleIds'))
+      return reply.code(204).send()
+    })
 
     app.post('/api/recurring-rules', { preHandler: requireAuth }, async (request, reply) => {
       const today = getPragueToday()

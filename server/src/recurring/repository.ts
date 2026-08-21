@@ -29,6 +29,7 @@ export type RecurringRule = {
   nextOccurrenceDate: string
   endsOn: string | null
   status: 'active' | 'ended'
+  sortOrder: number
 }
 
 export type RecurringGenerationResult = {
@@ -43,6 +44,7 @@ export type RecurringRuleRepository = {
   createRule(userId: string, input: RecurringRuleInput, today: string): Promise<RecurringRule>
   updateRule(userId: string, ruleId: string, input: RecurringRuleInput, today: string): Promise<RecurringRule | null>
   deleteRule(userId: string, ruleId: string): Promise<boolean>
+  reorderRules(userId: string, ruleIds: string[]): Promise<void>
   generateDue(today: string): Promise<RecurringGenerationResult>
 }
 
@@ -69,6 +71,7 @@ type RuleRow = {
   next_occurrence_date: string
   ends_on: string | null
   status: 'active' | 'ended'
+  sort_order: number
   labels: unknown
 }
 
@@ -94,7 +97,7 @@ const maxOccurrencesPerRulePerRun = 1000
 export function createRecurringRuleRepository(pool: Pool): RecurringRuleRepository {
   return {
     async listRules(userId) {
-      const result = await pool.query<RuleRow>(ruleSelect('r.user_id = $1', 'order by r.next_occurrence_date asc, r.name asc, r.id asc'), [userId])
+      const result = await pool.query<RuleRow>(ruleSelect('r.user_id = $1', 'order by r.sort_order asc, r.id asc'), [userId])
       return result.rows.map(toRule)
     },
 
@@ -102,11 +105,18 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
       return withTransaction(pool, async (client) => {
         await assertLabelsExist(client, userId, input.labelIds)
         const created = await client.query<{ id: string }>(
-          `insert into recurring_rules (
+          `with next_order as (
+             select coalesce(max(sort_order) + 1, 0) as sort_order
+             from recurring_rules
+             where user_id = $1
+           )
+           insert into recurring_rules (
             user_id, name, kind, amount_czk, transaction_wallet_id, category_id,
             source_wallet_id, destination_wallet_id, note, frequency, custom_interval_days,
-            schedule_anchor_date, next_occurrence_date, ends_on
-          ) values ($1, $2, $3::recurring_rule_kind, $4, $5, $6, $7, $8, $9, $10::recurring_frequency, $11, $12, $13, $14)
+            schedule_anchor_date, next_occurrence_date, ends_on, sort_order
+          )
+          select $1, $2, $3::recurring_rule_kind, $4, $5, $6, $7, $8, $9, $10::recurring_frequency, $11, $12, $13, $14, next_order.sort_order
+          from next_order
           returning id`,
           ruleValues(userId, input),
         )
@@ -184,6 +194,22 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
         [userId, ruleId],
       )
       return Boolean(result.rows[0])
+    },
+
+    async reorderRules(userId, ruleIds) {
+      await withTransaction(pool, async (client) => {
+        const current = await client.query<{ id: string }>(
+          `select id from recurring_rules where user_id = $1 order by id asc for update`,
+          [userId],
+        )
+        assertExactRuleIds(current.rows.map((row) => row.id), ruleIds)
+        for (const [sortOrder, ruleId] of ruleIds.entries()) {
+          await client.query(
+            `update recurring_rules set sort_order = $3 where user_id = $1 and id = $2`,
+            [userId, ruleId, sortOrder],
+          )
+        }
+      })
     },
 
     async generateDue(today) {
@@ -309,6 +335,7 @@ function ruleSelect(filter: string, order: string) {
     to_char(r.schedule_anchor_date, 'YYYY-MM-DD') as schedule_anchor_date,
     to_char(r.next_occurrence_date, 'YYYY-MM-DD') as next_occurrence_date,
     to_char(r.ends_on, 'YYYY-MM-DD') as ends_on,
+    r.sort_order,
     coalesce(
       json_agg(json_build_object('id', label.id, 'name', label.name) order by label.normalized_name asc, label.id asc)
       filter (where label.id is not null),
@@ -360,6 +387,15 @@ function toRule(row: RuleRow): RecurringRule {
     nextOccurrenceDate: row.next_occurrence_date,
     endsOn: row.ends_on,
     status: row.status,
+    sortOrder: row.sort_order,
+  }
+}
+
+function assertExactRuleIds(currentIds: string[], requestedIds: string[]) {
+  const expected = [...currentIds].sort()
+  const received = [...requestedIds].sort()
+  if (expected.length !== received.length || expected.some((id, index) => id !== received[index])) {
+    throw new DomainError(409, 'Pořadí opakování neodpovídá aktuálním datům.')
   }
 }
 

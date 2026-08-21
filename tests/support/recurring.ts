@@ -6,7 +6,7 @@ export type RecurringRulesApiMock = {
   rules: () => RecurringRule[]
 }
 
-type RecurringRequestMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+type RecurringRequestMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 type RecurringApiFailure = { status: number; message: string }
 type QueuedRecurringApiFailure = RecurringApiFailure & { remaining: number }
 
@@ -46,6 +46,17 @@ export async function mockRecurringRulesApi(page: Page, initialRules: RecurringR
       const rule = { ...fromInput(existing.id, input), status: 'active' as const }
       rules = rules.map((item) => item.id === ruleId ? rule : item)
       await route.fulfill(json(rule))
+      return
+    }
+
+    if (request.method() === 'PUT' && pathname === '/api/recurring-rules/order') {
+      const { ruleIds } = request.postDataJSON() as { ruleIds: string[] }
+      rules = ruleIds.map((ruleId, sortOrder) => {
+        const rule = rules.find((item) => item.id === ruleId)
+        if (!rule) throw new Error(`Neznámé opakování ${ruleId}`)
+        return { ...rule, sortOrder }
+      })
+      await route.fulfill({ status: 204 })
       return
     }
 
@@ -96,6 +107,7 @@ function fromInput(id: string, input: RecurringRuleInput): RecurringRule {
     nextOccurrenceDate: input.nextOccurrenceDate,
     endsOn: input.endsOn,
     status: 'active',
+    sortOrder: 0,
   }
 }
 

@@ -29,7 +29,7 @@ const ruleRow = {
   category_name: 'Bydlení', category_icon_key: 'house', category_color_key: 'orange', category_direction: 'expense',
   source_wallet_id: null, source_wallet_name: null, destination_wallet_id: null, destination_wallet_name: null,
   note: null, frequency: 'monthly', custom_interval_days: null, status: 'active',
-  schedule_anchor_date: '2026-01-31', next_occurrence_date: '2026-02-28', ends_on: null, labels: [],
+  schedule_anchor_date: '2026-01-31', next_occurrence_date: '2026-02-28', ends_on: null, sort_order: 0, labels: [],
 }
 
 test('editing a rule without changing its next occurrence date keeps the original schedule anchor', async () => {
@@ -144,4 +144,44 @@ test('generateDue processes each due rule in its own transaction, so one rule fa
   expect(result.failedRuleIds).toEqual(['rule-b'])
   expect(result.processedRules).toBe(0)
   expect(invalidateWealthCache).not.toHaveBeenCalled()
+})
+
+test('reorderRules writes each rule\'s new sort_order by its position in the given list', async () => {
+  const client = {
+    query: vi.fn()
+      .mockResolvedValueOnce(undefined) // begin
+      .mockResolvedValueOnce({ rows: [{ id: 'rule-a' }, { id: 'rule-b' }] }) // current ids, locked
+      .mockResolvedValueOnce(undefined) // update rule-b -> 0
+      .mockResolvedValueOnce(undefined) // update rule-a -> 1
+      .mockResolvedValueOnce(undefined), // commit
+    release: vi.fn(),
+  }
+  const pool = { connect: vi.fn().mockResolvedValue(client) } as unknown as Pool
+  const repository = createRecurringRuleRepository(pool)
+
+  await repository.reorderRules('user-1', ['rule-b', 'rule-a'])
+
+  expect(client.query).toHaveBeenNthCalledWith(3, expect.stringContaining('update recurring_rules set sort_order'), ['user-1', 'rule-b', 0])
+  expect(client.query).toHaveBeenNthCalledWith(4, expect.stringContaining('update recurring_rules set sort_order'), ['user-1', 'rule-a', 1])
+})
+
+test('reorderRules rejects a stale or incomplete rule id set without writing anything', async () => {
+  const client = {
+    query: vi.fn()
+      .mockResolvedValueOnce(undefined) // begin
+      .mockResolvedValueOnce({ rows: [{ id: 'rule-a' }, { id: 'rule-b' }] }) // current ids, locked
+      .mockResolvedValueOnce(undefined), // rollback
+    release: vi.fn(),
+  }
+  const pool = { connect: vi.fn().mockResolvedValue(client) } as unknown as Pool
+  const repository = createRecurringRuleRepository(pool)
+
+  await expect(repository.reorderRules('user-1', ['rule-a'])).rejects.toMatchObject({
+    statusCode: 409,
+    message: 'Pořadí opakování neodpovídá aktuálním datům.',
+  })
+
+  const writeCalls = client.query.mock.calls.filter(([sql]) => String(sql).toLowerCase().includes('set sort_order'))
+  expect(writeCalls).toHaveLength(0)
+  expect(client.query).toHaveBeenCalledWith('rollback')
 })

@@ -34,6 +34,7 @@ export type RecurringRule = {
   nextOccurrenceDate: string
   endsOn: string | null
   status: 'active' | 'ended'
+  sortOrder: number
 }
 
 export type RecurringRuleInput = {
@@ -54,6 +55,10 @@ export type RecurringRuleInput = {
 
 export function listRecurringRules() {
   return apiRequest<RecurringRule[]>('/recurring-rules')
+}
+
+export async function reorderRecurringRules(ruleIds: string[]) {
+  await apiRequest<void>('/recurring-rules/order', { method: 'PUT', body: JSON.stringify({ ruleIds }) })
 }
 
 export function createRecurringRule(input: RecurringRuleInput) {

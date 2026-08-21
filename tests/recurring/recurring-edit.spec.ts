@@ -70,7 +70,7 @@ async function openRuleEditor(page: Parameters<typeof mockAuthAndApi>[0]): Promi
   await signIn(page)
   await page.getByRole('button', { name: 'Nastavení', exact: true }).click()
   await page.getByRole('button', { name: /Opakování/ }).click()
-  await page.getByRole('button', { name: /Nájem/ }).click()
+  await page.getByRole('listitem').filter({ hasText: 'Nájem' }).click()
   return recurringApi
 }
 
@@ -81,4 +81,5 @@ const rule = {
   sourceWalletId: null, sourceWalletName: null, destinationWalletId: null, destinationWalletName: null,
   note: 'Původní poznámka', labels: [{ id: 'label-1', name: 'bydlení' }], frequency: 'monthly' as const,
   customIntervalDays: null, nextOccurrenceDate: '2026-09-20', endsOn: '2026-12-20', status: 'active' as const,
+  sortOrder: 0,
 }
