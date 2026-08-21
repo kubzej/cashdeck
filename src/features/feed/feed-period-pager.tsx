@@ -64,7 +64,6 @@ export function FeedPeriodPager({ period, periodAnchor, earliestActivityDate, on
 
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
     if (navigationLocked.current) return
-    event.currentTarget.setPointerCapture(event.pointerId)
     pointerStart.current = { x: event.clientX, y: event.clientY }
   }
 
@@ -80,6 +79,7 @@ export function FeedPeriodPager({ period, periodAnchor, earliestActivityDate, on
     const direction = horizontalDistance < 0 ? 'previous' : 'next'
     if ((direction === 'previous' && !hasPrevious) || (direction === 'next' && !hasNext)) return
 
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId)
     const limit = viewport.clientWidth * 0.82
     setIsDragging(true)
     setPreviewDirection(direction)
@@ -92,6 +92,12 @@ export function FeedPeriodPager({ period, periodAnchor, earliestActivityDate, on
 
     const horizontalDistance = event.clientX - start.x
     const verticalDistance = event.clientY - start.y
+    const isHorizontalDrag = Math.abs(horizontalDistance) > Math.abs(verticalDistance) && dragOffset.current !== 0
+    if (!isHorizontalDrag) {
+      pointerStart.current = null
+      return
+    }
+
     const width = viewportRef.current?.clientWidth ?? 0
     const shouldNavigate = Math.abs(horizontalDistance) >= Math.min(96, width * 0.24) && Math.abs(horizontalDistance) > Math.abs(verticalDistance)
     if (!shouldNavigate) {
@@ -120,7 +126,7 @@ export function FeedPeriodPager({ period, periodAnchor, earliestActivityDate, on
       <button type="button" className="feed-period-pager__nav" aria-label={`Následující období: ${formatFeedPeriodTitle(period, nextAnchor)}`} disabled={!hasNext} onClick={() => navigate(nextAnchor, 'from-right')}><ChevronRight aria-hidden="true" /></button>
     </div>
     <div ref={viewportRef} className="feed-period-pager__viewport" aria-label="Obsah období" data-preview={previewDirection ?? undefined} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={resetDrag}>
-      <div className="feed-period-pager__preview" data-side={previewDirection === 'previous' ? 'right' : 'left'} aria-hidden="true">
+      <div className="feed-period-pager__preview-page" data-side={previewDirection === 'previous' ? 'right' : 'left'} aria-hidden="true">
         <span>{previewTitle}</span>
         <i /><i /><i />
       </div>

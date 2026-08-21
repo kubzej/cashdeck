@@ -1,0 +1,40 @@
+.planned-screen { display: grid; align-content: start; gap: 1rem; min-height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-top: 0.5rem; }
+.planned-header { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; align-items: center; }
+.planned-header h1 { margin: 0; font-size: 1.25rem; font-weight: 650; text-align: center; }
+.planned-header > span { width: 2.75rem; height: 2.75rem; }
+.planned-loading { display: grid; gap: 0.75rem; }
+.planned-feedback { margin-block: auto; }
+.planned-empty { margin-block: auto; }
+.planned-list { display: grid; gap: 0.875rem; }
+.planned-day { display: grid; gap: 0.5rem; }
+.planned-day h2 { margin: 0; color: var(--color-muted-foreground); font-size: 0.875rem; font-weight: 650; }
+.planned-row { min-height: 0; gap: 0.625rem; padding: 0.625rem 0.75rem; border-color: color-mix(in oklab, var(--color-border) 85%, var(--color-foreground)); }
+.planned-row__icon { width: 2.5rem; height: 2.5rem; align-self: center; margin-top: 0; background: color-mix(in oklab, var(--color-key-value) 14%, var(--color-card)); color: var(--color-key-value); }
+.planned-row__icon .category-icon, .planned-row__icon svg { width: 1.2rem; height: 1.2rem; }
+.planned-row__icon--transfer { background: color-mix(in oklab, var(--color-primary) 10%, var(--color-card)); color: var(--color-primary); }
+.planned-row [data-slot='list-item-content'] { gap: 0.125rem; }
+.planned-row [data-slot='list-item-title'] { overflow: hidden; font-size: 0.9375rem; font-weight: 650; line-height: 1.25rem; text-overflow: ellipsis; white-space: nowrap; }
+.planned-row__subtitle, .planned-row__note, .planned-row__recurring { overflow: hidden; margin: 0; color: var(--color-muted-foreground); font-size: 0.75rem; line-height: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.planned-row__labels { display: flex; min-width: 0; gap: 0.3125rem; overflow: hidden; }
+.planned-row__labels span { flex: 0 0 auto; border: 1px solid color-mix(in oklab, var(--color-border) 90%, var(--color-foreground)); border-radius: 999px; padding: 0 0.3125rem; font-size: 0.625rem; line-height: 1rem; }
+.planned-row__recurring { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--color-primary); font-weight: 600; }
+.planned-row__recurring svg { width: 0.75rem; height: 0.75rem; }
+.planned-row__amount { font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.planned-row__amount--income { color: var(--color-positive); }
+.planned-row__amount--expense { color: var(--color-negative); }
+.planned-row--recurring { border-style: dashed; border-color: color-mix(in oklab, var(--color-border) 68%, var(--color-muted-foreground)); background: color-mix(in oklab, var(--color-muted) 42%, var(--color-card)); color: var(--color-muted-foreground); }
+.planned-row--recurring [data-slot='list-item-title'] { color: var(--color-muted-foreground); }
+.planned-row--recurring .planned-row__icon { opacity: 0.72; }
+.planned-row--recurring .planned-row__recurring { color: var(--color-muted-foreground); }
+.planned-summary { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto 1rem; width: 100%; align-items: center; gap: 0.625rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); padding: 0.75rem; color: var(--color-foreground); text-align: left; box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 4%, transparent); cursor: pointer; }
+.planned-summary:hover { border-color: color-mix(in oklab, var(--color-primary) 55%, var(--color-border)); }
+.planned-summary > svg:first-child { width: 2.5rem; height: 2.5rem; padding: 0.625rem; border-radius: var(--radius-md); background: color-mix(in oklab, var(--color-primary) 10%, var(--color-card)); color: var(--color-primary); }
+.planned-summary__content { display: grid; gap: 0.125rem; min-width: 0; }
+.planned-summary__content strong { font-size: 0.9375rem; font-weight: 650; }
+.planned-summary__content small { color: var(--color-muted-foreground); font-size: 0.75rem; }
+.planned-summary__amount { color: var(--color-positive); font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.planned-summary__amount--expense { color: var(--color-negative); }
+.planned-summary > svg:last-child { width: 1rem; height: 1rem; color: var(--color-muted-foreground); }
+.planned-summary--loading { pointer-events: none; }
+.planned-summary--error { grid-template-columns: 1.25rem minmax(0, 1fr) auto; color: var(--color-negative); cursor: default; }
+.planned-summary--error > svg { width: 1.25rem; height: 1.25rem; padding: 0; background: transparent; color: currentColor; }

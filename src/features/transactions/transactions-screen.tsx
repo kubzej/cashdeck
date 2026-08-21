@@ -9,19 +9,20 @@ import { CategoryIcon } from '../categories/category-icon'
 import { getFeedBounds, listFeed, type FeedItem, type FeedTransfer } from '../feed/api'
 import { createDefaultFeedFilters, FeedFilters, isNavigablePeriod, resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
 import { FeedPeriodPager } from '../feed/feed-period-pager'
+import { PlannedSummaryCard } from '../planned/planned-summary-card'
 import type { Transaction } from './api'
 import type { Transfer } from '../transfers/api'
 import { listWallets, type Wallet } from '../wallets/api'
 import './transactions.css'
 
-export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, initialWalletId }: { onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void; initialWalletId?: string }) {
+export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOpenPlanned, initialWalletId, initialFilters }: { onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void; onOpenPlanned: (filters: FeedFilterValue) => void; initialWalletId?: string; initialFilters?: FeedFilterValue }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activities, setActivities] = useState<FeedItem[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [wallets, setWallets] = useState<Wallet[]>([])
   const [earliestActivityDate, setEarliestActivityDate] = useState<string | null>(null)
-  const [filters, setFilters] = useState<FeedFilterValue>(() => ({ ...createDefaultFeedFilters(), walletIds: initialWalletId ? [initialWalletId] : [] }))
+  const [filters, setFilters] = useState<FeedFilterValue>(() => initialFilters ?? { ...createDefaultFeedFilters(), walletIds: initialWalletId ? [initialWalletId] : [] })
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search)
   const [reloadToken, setReloadToken] = useState(0)
   const moreRequest = useRef<AbortController | null>(null)
@@ -85,6 +86,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, init
   }
 
   const content = <>
+    <PlannedSummaryCard filters={filters} onOpen={() => onOpenPlanned(filters)} />
     {status === 'loading' ? <div className="transactions-loading" aria-label="Načítání transakcí"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : null}
     {status === 'error' ? <FeedbackState status="error" layout="panel" className="transactions-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Transakce se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState> : null}
     {status === 'ready' && activities.length === 0 ? <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><ReceiptText aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Zatím bez transakcí</EmptyStateTitle><EmptyStateDescription>Přidej první příjem nebo výdaj.</EmptyStateDescription></EmptyState> : null}

@@ -16,6 +16,8 @@ import { createTransferRoutes } from './routes/transfers.js'
 import { createTransactionRepository, type TransactionRepository } from './transactions/repository.js'
 import { createTransferRepository, type TransferRepository } from './transfers/repository.js'
 import { createRecurringRuleRepository, type RecurringRuleRepository } from './recurring/repository.js'
+import { createPlannedRepository, type PlannedRepository } from './planned/repository.js'
+import { createPlannedRoutes } from './routes/planned.js'
 
 type AppDependencies = {
   config: ServerConfig
@@ -25,10 +27,11 @@ type AppDependencies = {
   transactionRepository?: TransactionRepository
   transferRepository?: TransferRepository
   recurringRuleRepository?: RecurringRuleRepository
+  plannedRepository?: PlannedRepository
   requireAuth?: AuthGuard
 }
 
-export async function createApp({ config, database, managementRepository, feedRepository, transactionRepository, transferRepository, recurringRuleRepository, requireAuth }: AppDependencies) {
+export async function createApp({ config, database, managementRepository, feedRepository, transactionRepository, transferRepository, recurringRuleRepository, plannedRepository, requireAuth }: AppDependencies) {
   const app = Fastify({ logger: true })
   const authGuard = requireAuth ?? createAuthGuard(config.neonAuthUrl)
   const repository = managementRepository ?? createManagementRepository(database)
@@ -36,6 +39,7 @@ export async function createApp({ config, database, managementRepository, feedRe
   const transactions = transactionRepository ?? createTransactionRepository(database)
   const transfers = transferRepository ?? createTransferRepository(database)
   const recurringRules = recurringRuleRepository ?? createRecurringRuleRepository(database)
+  const planned = plannedRepository ?? createPlannedRepository(database)
 
   await app.register(cors, {
     origin: config.frontendOrigin,
@@ -63,6 +67,7 @@ export async function createApp({ config, database, managementRepository, feedRe
   await app.register(createTransactionRoutes(transactions, authGuard))
   await app.register(createTransferRoutes(transfers, authGuard))
   await app.register(createRecurringRuleRoutes(recurringRules, authGuard))
+  await app.register(createPlannedRoutes(planned, authGuard))
   if (config.recurringJobSecret) await app.register(createRecurringJobRoutes(recurringRules, config.recurringJobSecret))
 
   app.addHook('onClose', async () => {

@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer'
 import type { Pool } from 'pg'
 import { DomainError } from '../management/domain.js'
+import { getPragueToday } from '../recurring/schedule.js'
 import { calculateTransferImpactCzk, type FeedBoundsInput, type FeedListInput } from './domain.js'
 
 export type FeedLabel = { id: string; name: string }
@@ -66,9 +67,9 @@ export function createFeedRepository(pool: Pool): FeedRepository {
   return {
     async listFeed(userId, input) {
       const cursor = input.cursor ? decodeCursor(input.cursor) : null
-      const values: unknown[] = [userId]
-      const transactionFilters = ['t.user_id = $1']
-      const transferFilters = ['tr.user_id = $1']
+      const values: unknown[] = [userId, getPragueToday()]
+      const transactionFilters = ['t.user_id = $1', 't.transaction_date <= $2::date']
+      const transferFilters = ['tr.user_id = $1', 'tr.transfer_date <= $2::date']
 
       transactionFilters.push('not transaction_wallet.is_hidden')
       transferFilters.push('not source_wallet_filter.is_hidden', 'not destination_wallet_filter.is_hidden')
@@ -130,9 +131,9 @@ export function createFeedRepository(pool: Pool): FeedRepository {
       return { items: rows.map((row) => toFeedItem(row, input.walletIds)), nextCursor: result.rows.length > input.limit && last ? encodeCursor(last) : null }
     },
     async getBounds(userId, input) {
-      const values: unknown[] = [userId]
-      const transactionFilters = ['t.user_id = $1', 'not transaction_wallet.is_hidden']
-      const transferFilters = ['tr.user_id = $1', 'not source_wallet_filter.is_hidden', 'not destination_wallet_filter.is_hidden']
+      const values: unknown[] = [userId, getPragueToday()]
+      const transactionFilters = ['t.user_id = $1', 't.transaction_date <= $2::date', 'not transaction_wallet.is_hidden']
+      const transferFilters = ['tr.user_id = $1', 'tr.transfer_date <= $2::date', 'not source_wallet_filter.is_hidden', 'not destination_wallet_filter.is_hidden']
       if (input.walletIds) {
         values.push(input.walletIds)
         const parameter = `$${values.length}::uuid[]`

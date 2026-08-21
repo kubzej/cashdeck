@@ -17,7 +17,7 @@ test('browses months in both directions without loading the complete history', a
 
   const firstSwipe = await startSwipe(page, viewport, 'left')
   await expect(viewport).toHaveAttribute('data-preview', 'previous')
-  await expect(page.locator('.feed-period-pager__preview')).toContainText('červenec 2026')
+  await expect(page.locator('.feed-period-pager__preview-page')).toContainText('červenec 2026')
   await firstSwipe.release()
   await expect.poll(() => feedApi.requests().length).toBe(2)
   await expect(page.locator('.feed-period-pager__page')).toHaveAttribute('data-motion', 'from-right')

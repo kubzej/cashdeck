@@ -5,12 +5,14 @@ import { Button } from '../components/ui/button'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../components/ui/empty-state'
 import { CategoriesScreen } from '../features/categories/categories-screen'
 import { LabelsScreen } from '../features/labels/labels-screen'
+import { PlannedScreen } from '../features/planned/planned-screen'
 import { RecurringRulesScreen } from '../features/recurring/recurring-rules-screen'
 import { SettingsScreen } from '../features/settings/settings-screen'
 import { TransactionFormScreen } from '../features/transactions/transaction-form-screen'
 import { AddActivityDialog } from '../features/transactions/add-activity-dialog'
 import { type Transaction } from '../features/transactions/api'
 import { TransactionsScreen } from '../features/transactions/transactions-screen'
+import type { FeedFilterValue } from '../features/feed/feed-filters'
 import { TransferFormScreen } from '../features/transfers/transfer-form-screen'
 import { type Transfer } from '../features/transfers/api'
 import { type Wallet } from '../features/wallets/api'
@@ -21,7 +23,7 @@ type NavKey = 'transactions' | 'wallets' | 'overview' | 'settings'
 type NavItem = { key: NavKey; label: string; icon: ComponentType<{ 'aria-hidden'?: boolean }> }
 type WalletView = 'list' | 'new' | 'edit'
 type SettingsView = 'index' | 'categories' | 'labels' | 'recurring'
-type TransactionView = 'list' | 'new' | 'edit'
+type TransactionView = 'list' | 'new' | 'edit' | 'planned'
 type TransferView = 'list' | 'new' | 'edit'
 
 const navItems: NavItem[] = [
@@ -45,6 +47,8 @@ export function AppShell() {
   const [transactionWalletId, setTransactionWalletId] = useState<string | null>(null)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null)
+  const [plannedFilters, setPlannedFilters] = useState<FeedFilterValue | null>(null)
+  const [transactionReturnView, setTransactionReturnView] = useState<'list' | 'planned'>('list')
   const [settingsView, setSettingsView] = useState<SettingsView>('index')
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false)
   const activeItem = navItems.find((item) => item.key === activeNav)
@@ -52,7 +56,10 @@ export function AppShell() {
 
   function selectNavigation(key: NavKey) {
     setActiveNav(key)
-    if (key === 'transactions') setTransactionWalletId(null)
+    if (key === 'transactions') {
+      setTransactionWalletId(null)
+      setPlannedFilters(null)
+    }
     if (key !== 'wallets') {
       setWalletView('list')
       setSelectedWallet(null)
@@ -62,6 +69,7 @@ export function AppShell() {
       setSelectedTransaction(null)
       setTransferView('list')
       setSelectedTransfer(null)
+      setTransactionReturnView('list')
     }
     if (key !== 'settings') setSettingsView('index')
   }
@@ -75,9 +83,10 @@ export function AppShell() {
           {walletView === 'new' ? <WalletFormScreen onCancel={() => setWalletView('list')} onSaved={() => setWalletView('list')} /> : null}
           {walletView === 'edit' && selectedWallet ? <WalletFormScreen wallet={selectedWallet} onCancel={() => setWalletView('list')} onSaved={() => setWalletView('list')} onDeleted={() => { setSelectedWallet(null); setWalletView('list') }} /> : null}
           {transactionView === 'new' ? <TransactionFormScreen onCancel={() => setTransactionView('list')} onSaved={() => setTransactionView('list')} /> : null}
-          {transactionView === 'edit' && selectedTransaction ? <TransactionFormScreen transaction={selectedTransaction} onCancel={() => setTransactionView('list')} onSaved={() => { setSelectedTransaction(null); setTransactionView('list') }} onDeleted={() => { setSelectedTransaction(null); setTransactionView('list') }} /> : null}
+          {transactionView === 'edit' && selectedTransaction ? <TransactionFormScreen transaction={selectedTransaction} onCancel={() => setTransactionView(transactionReturnView)} onSaved={() => { setSelectedTransaction(null); setTransactionView(transactionReturnView) }} onDeleted={() => { setSelectedTransaction(null); setTransactionView(transactionReturnView) }} /> : null}
           {transferView === 'new' ? <TransferFormScreen onCancel={() => setTransferView('list')} onSaved={() => setTransferView('list')} /> : null}
-          {transferView === 'edit' && selectedTransfer ? <TransferFormScreen transfer={selectedTransfer} onCancel={() => setTransferView('list')} onSaved={() => { setSelectedTransfer(null); setTransferView('list') }} onDeleted={() => { setSelectedTransfer(null); setTransferView('list') }} /> : null}
+          {transferView === 'edit' && selectedTransfer ? <TransferFormScreen transfer={selectedTransfer} onCancel={() => { setSelectedTransfer(null); setTransferView('list') }} onSaved={() => { setSelectedTransfer(null); setTransferView('list') }} onDeleted={() => { setSelectedTransfer(null); setTransferView('list') }} /> : null}
+          {transactionView === 'planned' && transferView === 'list' && plannedFilters ? <PlannedScreen filters={plannedFilters} onBack={() => setTransactionView('list')} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('planned'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('planned'); setTransferView('edit') }} /> : null}
           {activeNav === 'settings' && settingsView === 'categories' ? <CategoriesScreen onBack={() => setSettingsView('index')} /> : null}
           {activeNav === 'settings' && settingsView === 'labels' ? <LabelsScreen onBack={() => setSettingsView('index')} /> : null}
           {activeNav === 'settings' && settingsView === 'recurring' ? <RecurringRulesScreen onBack={() => setSettingsView('index')} /> : null}
@@ -86,7 +95,7 @@ export function AppShell() {
               <h1>{activeItem?.label}</h1>
               {activeNav === 'wallets' ? <Button variant="ghost" size="icon" aria-label="Přidat peněženku" onClick={() => setWalletView('new')}><Plus aria-hidden="true" /></Button> : null}
             </div>
-            {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} onOpenRecurring={() => setSettingsView('recurring')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransferView('edit') }} /> : activeItem ? <PlaceholderScreen item={activeItem} /> : null}
+          {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} onOpenRecurring={() => setSettingsView('recurring')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setPlannedFilters(null); setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} initialFilters={plannedFilters ?? undefined} onOpenPlanned={(filters) => { setPlannedFilters(filters); setTransactionView('planned') }} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('list'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('list'); setTransferView('edit') }} /> : activeItem ? <PlaceholderScreen item={activeItem} /> : null}
           </> : null}
         </main>
         {!isDetailScreen && activeNav === 'transactions' ? <Button size="icon" className="transaction-fab" aria-label="Přidat záznam" onClick={() => setIsAddActivityOpen(true)}><Plus aria-hidden="true" /></Button> : null}
