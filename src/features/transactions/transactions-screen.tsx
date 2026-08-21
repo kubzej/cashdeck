@@ -99,7 +99,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
 
   const content = <>
     <PlannedSummaryCard filters={filters} selection={fixedSelection} onOpen={() => onOpenPlanned(filters)} />
-    {status === 'loading' ? <div className="transactions-loading" aria-label="Načítání transakcí"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : null}
+    {status === 'loading' ? <List gap="sm" className="transactions-loading" aria-label="Načítání transakcí"><TransactionRowSkeleton /><TransactionRowSkeleton /><TransactionRowSkeleton /></List> : null}
     {status === 'error' ? <FeedbackState status="error" layout="panel" className="transactions-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Transakce se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState> : null}
     {status === 'ready' && activities.length === 0 ? <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><ReceiptText aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Zatím bez transakcí</EmptyStateTitle><EmptyStateDescription>Přidej první příjem nebo výdaj.</EmptyStateDescription></EmptyState> : null}
     {status === 'ready' ? <>{groupActivities(activities).map(([date, items]) => <div className="transaction-day" key={date}><h2>{formatDate(date)}</h2><List gap="sm">{items.map((activity) => {
@@ -125,6 +125,10 @@ function hasDefaultFilters(filters: FeedFilterValue) {
     && filters.customDateFrom === defaults.customDateFrom
     && filters.customDateTo === defaults.customDateTo
     && filters.search.trim() === ''
+}
+
+function TransactionRowSkeleton() {
+  return <ListItem variant="quiet" size="default" className="transaction-row surface-row"><ListItemLeading><Skeleton shape="circle" /></ListItemLeading><ListItemContent><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-20" /></ListItemContent><ListItemActions><Skeleton className="h-4 w-14" /></ListItemActions></ListItem>
 }
 
 function TransactionRow({ transaction, onSelect }: { transaction: Transaction; onSelect: (transaction: Transaction) => void }) {

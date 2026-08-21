@@ -1,7 +1,9 @@
 import type { Pool } from 'pg'
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { resetWealthCacheForTests } from '../wealth-cache.js'
 import { createOverviewRepository } from './repository.js'
 
+beforeEach(() => resetWealthCacheForTests())
 afterEach(() => vi.useRealTimers())
 
 test('caps overview aggregates at today and never loads recurring forecasts', async () => {
@@ -9,9 +11,8 @@ test('caps overview aggregates at today and never loads recurring forecasts', as
   vi.setSystemTime(new Date('2026-08-21T12:00:00+02:00'))
   const query = vi.fn()
     .mockResolvedValueOnce({ rows: [{ earliest_activity_date: '2025-01-01' }] })
-    .mockResolvedValueOnce({ rows: [{ wealth_czk: '428600', change_czk: '21400' }] })
+    .mockResolvedValueOnce({ rows: [{ wealth_czk: '428600', change_czk: '21400', series: [{ date: '2026-08-21', value_czk: 428600 }] }] })
     .mockResolvedValueOnce({ rows: [{ income_czk: '74500', expense_czk: '53100' }] })
-    .mockResolvedValueOnce({ rows: [{ bucket_date: '2026-08-21', value_czk: '428600' }] })
     .mockResolvedValueOnce({ rows: [{ bucket_date: '2026-08-21', income_czk: '74500', expense_czk: '53100' }] })
     .mockResolvedValueOnce({ rows: [] })
     .mockResolvedValueOnce({ rows: [] })
@@ -24,7 +25,7 @@ test('caps overview aggregates at today and never loads recurring forecasts', as
     dateTo: '2026-08-31',
   })
 
-  expect(query).toHaveBeenCalledTimes(7)
+  expect(query).toHaveBeenCalledTimes(6)
   for (const [, parameters] of query.mock.calls.slice(1)) {
     expect(parameters).toEqual(['user-1', null, '2026-08-01', '2026-08-21'])
   }
@@ -41,9 +42,8 @@ test('shows a past period\'s own ending balance, not today\'s — a later transa
   vi.setSystemTime(new Date('2026-08-21T12:00:00+02:00'))
   const query = vi.fn()
     .mockResolvedValueOnce({ rows: [{ earliest_activity_date: '2025-01-01' }] })
-    .mockResolvedValueOnce({ rows: [{ wealth_czk: '100000', change_czk: '5000' }] })
+    .mockResolvedValueOnce({ rows: [{ wealth_czk: '100000', change_czk: '5000', series: [{ date: '2026-03-31', value_czk: 100000 }] }] })
     .mockResolvedValueOnce({ rows: [{ income_czk: '5000', expense_czk: '0' }] })
-    .mockResolvedValueOnce({ rows: [{ bucket_date: '2026-03-31', value_czk: '100000' }] })
     .mockResolvedValueOnce({ rows: [{ bucket_date: '2026-03-31', income_czk: '5000', expense_czk: '0' }] })
     .mockResolvedValueOnce({ rows: [] })
     .mockResolvedValueOnce({ rows: [] })

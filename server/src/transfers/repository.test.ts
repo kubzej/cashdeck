@@ -1,6 +1,10 @@
 import type { Pool } from 'pg'
-import { expect, test, vi } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
+import { invalidateWealthCache } from '../wealth-cache.js'
 import { createTransferRepository } from './repository.js'
+
+vi.mock('../wealth-cache.js', () => ({ invalidateWealthCache: vi.fn() }))
+beforeEach(() => vi.mocked(invalidateWealthCache).mockClear())
 
 test('listTransfers excludes transfers where either wallet endpoint is hidden', async () => {
   const query = vi.fn().mockResolvedValue({ rows: [] })
@@ -33,6 +37,7 @@ test('updateTransfer persists a changed destination wallet so both old and new w
   const [updateSql, updateValues] = updateCall!
   expect(String(updateSql)).toContain('destination_wallet_id = $3')
   expect(updateValues).toEqual(['user-1', 'transfer-1', 'wallet-3'])
+  expect(invalidateWealthCache).toHaveBeenCalledTimes(1)
 })
 
 test('createTransfer rolls back and releases the client if a write fails mid-transaction', async () => {
@@ -58,4 +63,5 @@ test('createTransfer rolls back and releases the client if a write fails mid-tra
   expect(query).toHaveBeenCalledWith('rollback')
   expect(query).not.toHaveBeenCalledWith('commit')
   expect(release).toHaveBeenCalledTimes(1)
+  expect(invalidateWealthCache).not.toHaveBeenCalled()
 })

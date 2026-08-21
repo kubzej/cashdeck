@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer'
 import type { Pool, PoolClient } from 'pg'
 import { DomainError } from '../management/domain.js'
 import { assertDifferentWallets, type TransferInput, type TransferListInput, type TransferUpdateInput } from './domain.js'
+import { invalidateWealthCache } from '../wealth-cache.js'
 
 export type TransferLabel = { id: string; name: string }
 
@@ -82,6 +83,7 @@ export function createTransferRepository(pool: Pool): TransferRepository {
         const transferId = created.rows[0]?.id
         if (!transferId) throw new Error('Vytvoření převodu nevrátilo ID.')
         await replaceTransferLabels(client, userId, transferId, input.labelIds)
+        invalidateWealthCache()
         return requireTransfer(client, userId, transferId)
       })
     },
@@ -120,12 +122,14 @@ export function createTransferRepository(pool: Pool): TransferRepository {
           )
         }
         if (input.labelIds !== undefined) await replaceTransferLabels(client, userId, transferId, input.labelIds)
+        invalidateWealthCache()
         return requireTransfer(client, userId, transferId)
       })
     },
 
     async deleteTransfer(userId, transferId) {
       const result = await pool.query(`delete from transfers where user_id = $1 and id = $2 returning id`, [userId, transferId])
+      if (result.rows[0]) invalidateWealthCache()
       return Boolean(result.rows[0])
     },
   }

@@ -1,5 +1,6 @@
 import type { Pool } from 'pg'
 import { DomainError } from '../management/domain.js'
+import { withWealthCache } from '../wealth-cache.js'
 import type { IndependenceSettingsInput, IrregularExpenseInput } from './domain.js'
 
 export type IndependenceSettings = {
@@ -218,7 +219,7 @@ const wealthSeriesSql = `
     from wallets
     where user_id = $1 and counts_toward_independence
   ),
-  financial_events as (
+  financial_events as materialized (
     select opening_balance_date as event_date, opening_balance_czk::bigint as delta_czk
     from wallet_scope
     union all
@@ -363,7 +364,7 @@ export function createIndependenceRepository(pool: Pool): IndependenceRepository
       const [settingsResult, irregularExpenses, walletBalancesResult] = await Promise.all([
         pool.query<SettingsRow>('select * from independence_settings where user_id = $1', [userId]),
         this.listIrregularExpenses(userId),
-        pool.query<{ total_wealth_czk: string; available_wealth_czk: string }>(walletBalancesSql, [userId]),
+        withWealthCache(`independence:wallet-balances:${userId}`, () => pool.query<{ total_wealth_czk: string; available_wealth_czk: string }>(walletBalancesSql, [userId])),
       ])
 
       const settings = settingsResult.rows[0] ? toSettings(settingsResult.rows[0]) : null
@@ -413,7 +414,7 @@ export function createIndependenceRepository(pool: Pool): IndependenceRepository
     },
 
     async getWealthSeries(userId) {
-      const result = await pool.query<{ bucket_date: string; amount_czk: string }>(wealthSeriesSql, [userId])
+      const result = await withWealthCache(`independence:wealth-series:${userId}`, () => pool.query<{ bucket_date: string; amount_czk: string }>(wealthSeriesSql, [userId]))
       return result.rows.map((row) => ({ date: row.bucket_date, amountCzk: Number(row.amount_czk) }))
     },
   }

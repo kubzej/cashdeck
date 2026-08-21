@@ -1,5 +1,6 @@
 import type { Pool } from 'pg'
 import { getPragueToday } from '../recurring/schedule.js'
+import { withWealthCache } from '../wealth-cache.js'
 import { resolveOverviewGranularity, type OverviewGranularity, type OverviewInput, type OverviewSelectionInput } from './domain.js'
 
 export type OverviewCategory = {
@@ -44,42 +45,47 @@ export type OverviewRepository = {
 }
 
 type BoundsRow = { earliest_activity_date: string | null }
-type WealthRow = { wealth_czk: string; change_czk: string }
+type WealthAndSeriesRow = { wealth_czk: string; change_czk: string; series: Array<{ date: string; value_czk: number }> | string }
 type FlowRow = { income_czk: string; expense_czk: string }
-type SeriesRow = { bucket_date: string; value_czk: string }
 type FlowSeriesRow = { bucket_date: string; income_czk: string; expense_czk: string }
 type CategoryRow = { id: string; name: string; icon_key: string; color_key: string; direction: 'income' | 'expense'; amount_czk: string; transaction_count: string }
 type LabelRow = { id: string; name: string; income_czk: string; expense_czk: string; transaction_count: string; transfer_impact_czk: string; transfer_count: string }
+
+function walletCacheKey(walletIds: string[] | null) {
+  return walletIds ? [...walletIds].sort().join(',') : 'all'
+}
+
 export function createOverviewRepository(pool: Pool): OverviewRepository {
   return {
     async getOverview(userId, input) {
       const today = getPragueToday()
-      const bounds = await pool.query<BoundsRow>(boundsSql(), [userId, input.walletIds, today])
+      const walletKey = walletCacheKey(input.walletIds)
+      const bounds = await withWealthCache(`overview:bounds:${userId}:${walletKey}`, () => pool.query<BoundsRow>(boundsSql(), [userId, input.walletIds, today]))
       const earliestActivityDate = bounds.rows[0]?.earliest_activity_date ?? null
       const dateFrom = clampToToday(input.dateFrom ?? earliestActivityDate ?? today, today)
       const dateTo = clampToToday(input.dateTo ?? today, today)
       const granularity = resolveOverviewGranularity(input.period, dateFrom, dateTo)
       const parameters: unknown[] = [userId, input.walletIds, dateFrom, dateTo]
 
-      const [wealthResult, flowResult, wealthSeriesResult, flowSeriesResult, categoryResult, labelResult] = await Promise.all([
-        pool.query<WealthRow>(wealthSql(), parameters),
+      const [wealthAndSeriesResult, flowResult, flowSeriesResult, categoryResult, labelResult] = await Promise.all([
+        withWealthCache(`overview:wealth:${userId}:${walletKey}:${dateFrom}:${dateTo}:${granularity}`, () => pool.query<WealthAndSeriesRow>(wealthAndSeriesSql(granularity), parameters)),
         pool.query<FlowRow>(flowSql(), parameters),
-        pool.query<SeriesRow>(wealthSeriesSql(granularity), parameters),
         pool.query<FlowSeriesRow>(flowSeriesSql(granularity), parameters),
         pool.query<CategoryRow>(categoriesSql(), parameters),
         pool.query<LabelRow>(labelsSql(), parameters),
       ])
 
-      const wealth = wealthResult.rows[0] ?? { wealth_czk: '0', change_czk: '0' }
+      const wealthAndSeries = wealthAndSeriesResult.rows[0] ?? { wealth_czk: '0', change_czk: '0', series: [] }
+      const wealthSeriesRows = typeof wealthAndSeries.series === 'string' ? JSON.parse(wealthAndSeries.series) : wealthAndSeries.series
       const flow = flowResult.rows[0] ?? { income_czk: '0', expense_czk: '0' }
       const incomeCzk = Number(flow.income_czk)
       const expenseCzk = Number(flow.expense_czk)
 
       const metrics: OverviewMetrics = {
         range: { dateFrom, dateTo, earliestActivityDate, granularity },
-        wealth: { amountCzk: Number(wealth.wealth_czk), changeCzk: Number(wealth.change_czk) },
+        wealth: { amountCzk: Number(wealthAndSeries.wealth_czk), changeCzk: Number(wealthAndSeries.change_czk) },
         flow: { incomeCzk, expenseCzk, cashflowCzk: incomeCzk - expenseCzk },
-        wealthSeries: wealthSeriesResult.rows.map((row) => ({ date: row.bucket_date, valueCzk: Number(row.value_czk) })),
+        wealthSeries: wealthSeriesRows.map((row: { date: string; value_czk: number }) => ({ date: row.date, valueCzk: Number(row.value_czk) })),
         flowSeries: flowSeriesResult.rows.map((row) => ({ date: row.bucket_date, incomeCzk: Number(row.income_czk), expenseCzk: Number(row.expense_czk) })),
         categories: categoryResult.rows.map((row) => ({ id: row.id, name: row.name, iconKey: row.icon_key, colorKey: row.color_key, direction: row.direction, amountCzk: Number(row.amount_czk), transactionCount: Number(row.transaction_count) })),
         labels: labelResult.rows.map((row) => ({
@@ -183,7 +189,7 @@ function walletScope() {
 }
 
 function financialEvents() {
-  return `${walletScope()}, financial_events as (
+  return `${walletScope()}, financial_events as materialized (
     select opening_balance_date as event_date, opening_balance_czk::bigint as delta_czk
     from wallet_scope
     union all
@@ -217,12 +223,49 @@ function boundsSql() {
     where event_date <= $3::date`
 }
 
-function wealthSql() {
-  return `with ${financialEvents()}
+// Combines the old wealthSql + wealthSeriesSql into one round trip sharing one evaluation of
+// financial_events (materialized above) — this CTE scans the user's entire financial history,
+// so re-running it per query used to mean 2x that scan on every Overview load. See
+// alethea-knowledge/.../plans/cashdeck/2026-08-21-performance-scaling/context.md finding 1.
+function wealthAndSeriesSql(granularity: OverviewGranularity) {
+  const interval = granularity === 'day' ? "interval '1 day'" : granularity === 'month' ? "interval '1 month'" : "interval '3 months'"
+  const truncation = granularity === 'day' ? 'day' : granularity === 'month' ? 'month' : 'quarter'
+  return `with ${financialEvents()},
+    wealth as (
+      select
+        coalesce(sum(delta_czk) filter (where event_date <= $4::date), 0)::bigint as wealth_czk,
+        coalesce(sum(delta_czk) filter (where event_date >= $3::date and event_date <= $4::date), 0)::bigint as change_czk
+      from financial_events
+    ),
+    base as (
+      select coalesce(sum(delta_czk) filter (where event_date < $3::date), 0)::bigint as amount_czk
+      from financial_events
+    ),
+    buckets as (
+      select bucket_start::date
+      from generate_series(date_trunc('${truncation}', $3::date)::date, date_trunc('${truncation}', $4::date)::date, ${interval}) bucket_start
+    ),
+    bucket_deltas as (
+      select date_trunc('${truncation}', event_date)::date as bucket_start, sum(delta_czk)::bigint as delta_czk
+      from financial_events
+      where event_date between $3::date and $4::date
+      group by 1
+    ),
+    series as (
+      select b.bucket_start,
+        (base.amount_czk + sum(coalesce(d.delta_czk, 0)) over (order by b.bucket_start rows unbounded preceding))::bigint as value_czk
+      from buckets b
+      cross join base
+      left join bucket_deltas d on d.bucket_start = b.bucket_start
+    )
     select
-      coalesce(sum(delta_czk) filter (where event_date <= $4::date), 0)::text as wealth_czk,
-      coalesce(sum(delta_czk) filter (where event_date >= $3::date and event_date <= $4::date), 0)::text as change_czk
-    from financial_events`
+      (select wealth_czk from wealth)::text as wealth_czk,
+      (select change_czk from wealth)::text as change_czk,
+      coalesce(
+        json_agg(json_build_object('date', to_char(series.bucket_start, 'YYYY-MM-DD'), 'value_czk', series.value_czk) order by series.bucket_start),
+        '[]'::json
+      ) as series
+    from series`
 }
 
 function transactionScope() {
@@ -243,32 +286,6 @@ function flowSql() {
       coalesce(sum(t.amount_czk) filter (where c.direction = 'expense'), 0)::text as expense_czk
     from filtered_transactions t
     join categories c on c.user_id = $1 and c.id = t.category_id`
-}
-
-function wealthSeriesSql(granularity: OverviewGranularity) {
-  const interval = granularity === 'day' ? "interval '1 day'" : granularity === 'month' ? "interval '1 month'" : "interval '3 months'"
-  const truncation = granularity === 'day' ? 'day' : granularity === 'month' ? 'month' : 'quarter'
-  return `with ${financialEvents()},
-    base as (
-      select coalesce(sum(delta_czk) filter (where event_date < $3::date), 0)::bigint as amount_czk
-      from financial_events
-    ),
-    buckets as (
-      select bucket_start::date
-      from generate_series(date_trunc('${truncation}', $3::date)::date, date_trunc('${truncation}', $4::date)::date, ${interval}) bucket_start
-    ),
-    bucket_deltas as (
-      select date_trunc('${truncation}', event_date)::date as bucket_start, sum(delta_czk)::bigint as delta_czk
-      from financial_events
-      where event_date between $3::date and $4::date
-      group by 1
-    )
-    select to_char(b.bucket_start, 'YYYY-MM-DD') as bucket_date,
-      (base.amount_czk + sum(coalesce(d.delta_czk, 0)) over (order by b.bucket_start rows unbounded preceding))::text as value_czk
-    from buckets b
-    cross join base
-    left join bucket_deltas d on d.bucket_start = b.bucket_start
-    order by b.bucket_start asc`
 }
 
 function flowSeriesSql(granularity: OverviewGranularity) {

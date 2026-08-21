@@ -1,6 +1,7 @@
 import type { Pool, PoolClient } from 'pg'
 import { DomainError } from '../management/domain.js'
 import type { TransactionInput, TransactionUpdateInput } from './domain.js'
+import { invalidateWealthCache } from '../wealth-cache.js'
 
 export type TransactionLabel = {
   id: string
@@ -59,6 +60,7 @@ export function createTransactionRepository(pool: Pool): TransactionRepository {
         const transactionId = created.rows[0]?.id
         if (!transactionId) throw new Error('Vytvoření transakce nevrátilo ID.')
         await replaceTransactionLabels(client, userId, transactionId, input.labelIds)
+        invalidateWealthCache()
         return requireTransaction(client, userId, transactionId)
       })
     },
@@ -91,6 +93,7 @@ export function createTransactionRepository(pool: Pool): TransactionRepository {
         }
 
         if (input.labelIds !== undefined) await replaceTransactionLabels(client, userId, transactionId, input.labelIds)
+        invalidateWealthCache()
         return requireTransaction(client, userId, transactionId)
       })
     },
@@ -100,6 +103,7 @@ export function createTransactionRepository(pool: Pool): TransactionRepository {
         `delete from transactions where user_id = $1 and id = $2 returning id`,
         [userId, transactionId],
       )
+      if (result.rows[0]) invalidateWealthCache()
       return Boolean(result.rows[0])
     },
   }

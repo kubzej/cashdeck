@@ -1,6 +1,9 @@
 import type { Pool } from 'pg'
-import { expect, test, vi } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
+import { resetWealthCacheForTests } from '../wealth-cache.js'
 import { createIndependenceRepository } from './repository.js'
+
+beforeEach(() => resetWealthCacheForTests())
 
 const settingsRow = {
   withdrawal_rate_percent: '4.00',
