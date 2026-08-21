@@ -147,12 +147,12 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
       <div className="transaction-primary-pickers">
         <Field invalid={Boolean(errors.categoryId)} className="transaction-primary-picker">
           <FieldLabel>Kategorie</FieldLabel>
-          {status === 'loading' ? <Skeleton className="h-36 w-full" /> : <CategoryPicker categories={selectableCategories} selectedCategory={selectedCategory} onSelect={(categoryId) => setValues((current) => ({ ...current, categoryId }))} />}
+          {status === 'loading' ? <Skeleton className="h-[4.25rem] w-full" /> : <CategoryPicker categories={selectableCategories} selectedCategory={selectedCategory} onSelect={(categoryId) => setValues((current) => ({ ...current, categoryId }))} />}
           <FieldError match={Boolean(errors.categoryId)}>{errors.categoryId}</FieldError>
         </Field>
         <Field invalid={Boolean(errors.walletId)} className="transaction-primary-picker">
           <FieldLabel>Peněženka</FieldLabel>
-          {status === 'loading' ? <Skeleton className="h-36 w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={selectedWallet} placeholder="Vyber peněženku" onSelect={(walletId) => setValues((current) => ({ ...current, walletId }))} buttonClassName="transaction-primary-picker-button" />}
+          {status === 'loading' ? <Skeleton className="h-[4.25rem] w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={selectedWallet} placeholder="Vyber peněženku" onSelect={(walletId) => setValues((current) => ({ ...current, walletId }))} buttonClassName="transaction-primary-picker-button" />}
           <FieldError match={Boolean(errors.walletId)}>{errors.walletId}</FieldError>
         </Field>
       </div>

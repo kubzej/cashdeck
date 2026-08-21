@@ -137,12 +137,12 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
       <div className="transaction-primary-pickers transfer-wallet-pickers">
         <Field invalid={Boolean(errors.sourceWalletId)} className="transaction-primary-picker">
           <FieldLabel>Z peněženky</FieldLabel>
-          {status === 'loading' ? <Skeleton className="h-36 w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={sourceWallet} placeholder="Vyber zdroj" onSelect={(sourceWalletId) => setValues((current) => ({ ...current, sourceWalletId }))} buttonClassName="transaction-primary-picker-button" />}
+          {status === 'loading' ? <Skeleton className="h-[4.25rem] w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={sourceWallet} placeholder="Vyber zdroj" onSelect={(sourceWalletId) => setValues((current) => ({ ...current, sourceWalletId }))} buttonClassName="transaction-primary-picker-button" />}
           <FieldError match={Boolean(errors.sourceWalletId)}>{errors.sourceWalletId}</FieldError>
         </Field>
         <Field invalid={Boolean(errors.destinationWalletId)} className="transaction-primary-picker">
           <FieldLabel>Do peněženky</FieldLabel>
-          {status === 'loading' ? <Skeleton className="h-36 w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={destinationWallet} placeholder="Vyber cíl" onSelect={(destinationWalletId) => setValues((current) => ({ ...current, destinationWalletId }))} buttonClassName="transaction-primary-picker-button" />}
+          {status === 'loading' ? <Skeleton className="h-[4.25rem] w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={destinationWallet} placeholder="Vyber cíl" onSelect={(destinationWalletId) => setValues((current) => ({ ...current, destinationWalletId }))} buttonClassName="transaction-primary-picker-button" />}
           <FieldError match={Boolean(errors.destinationWalletId)}>{errors.destinationWalletId}</FieldError>
         </Field>
       </div>
