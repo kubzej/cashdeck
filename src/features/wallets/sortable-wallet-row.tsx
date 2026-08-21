@@ -20,7 +20,7 @@ export function SortableWalletRow({ wallet, disabled, onSelect, onManage }: { wa
         <ListItemTitle className="wallet-name">{wallet.name}</ListItemTitle>
       </ListItemContent>
       <ListItemActions>
-        <span className="wallet-balance">{formatCzk(wallet.openingBalanceCzk)}</span>
+        <span className="wallet-balance">{formatCzk(wallet.currentBalanceCzk ?? wallet.openingBalanceCzk)}</span>
         <Button
           variant="ghost"
           size="icon"

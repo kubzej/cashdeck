@@ -9,6 +9,7 @@ export type Wallet = {
   name: string
   colorKey: WalletColorKey
   openingBalanceCzk: number
+  currentBalanceCzk?: number
   openingBalanceDate: string
   sortOrder: number
   isHidden: boolean

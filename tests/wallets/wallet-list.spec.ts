@@ -46,6 +46,21 @@ test('reorders wallets with the drag handle and saves the new order', async ({ p
   await expect.poll(() => walletApi.wallets().map((wallet) => wallet.id)).toEqual(['wallet-2', 'wallet-1'])
 })
 
+test('shows the current balance instead of the opening balance', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page, [{
+    ...wallet('wallet-1', 'Běžný účet', 0),
+    openingBalanceCzk: 78000,
+    currentBalanceCzk: 123456,
+  }])
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Peněženky' }).click()
+  await expect(page.getByRole('listitem').filter({ hasText: 'Běžný účet' })).toContainText(/123\s456\sKč/)
+  await expect(page.getByRole('listitem').filter({ hasText: 'Běžný účet' })).not.toContainText(/78\s000\sKč/)
+})
+
 function wallet(id: string, name: string, sortOrder: number): WalletFixture {
   return {
     id,

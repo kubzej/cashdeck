@@ -5,6 +5,7 @@ export type WalletFixture = {
   name: string
   colorKey: string
   openingBalanceCzk: number
+  currentBalanceCzk?: number
   openingBalanceDate: string
   sortOrder: number
   isHidden: boolean
@@ -50,6 +51,7 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
       const wallet: WalletFixture = {
         id: `wallet-${nextId++}`,
         ...input,
+        currentBalanceCzk: input.openingBalanceCzk,
         sortOrder: wallets.length,
         isHidden: false,
         openingBalanceLocked: false,

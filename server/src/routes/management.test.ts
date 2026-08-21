@@ -75,6 +75,37 @@ test('protects management routes and bootstraps only the verified user', async (
   await app.close()
 })
 
+test('returns the current wallet balance alongside its opening balance', async () => {
+  const { app, repository } = await createTestApp()
+  repository.listWallets.mockResolvedValueOnce([{
+    id: walletId,
+    name: 'Běžný účet',
+    colorKey: 'teal',
+    openingBalanceCzk: 78000,
+    currentBalanceCzk: 123456,
+    openingBalanceDate: '2026-01-01',
+    sortOrder: 0,
+    isHidden: false,
+    openingBalanceLocked: true,
+  }])
+
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/wallets',
+    headers: { authorization: 'Bearer test-token' },
+  })
+
+  expect(response.statusCode).toBe(200)
+  expect(response.json()).toEqual({
+    items: [expect.objectContaining({
+      id: walletId,
+      openingBalanceCzk: 78000,
+      currentBalanceCzk: 123456,
+    })],
+  })
+  await app.close()
+})
+
 test('normalizes category and label writes before they reach the repository', async () => {
   const { app, repository } = await createTestApp()
 

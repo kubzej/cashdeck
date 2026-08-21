@@ -7,6 +7,7 @@ export type Wallet = {
   name: string
   colorKey: string
   openingBalanceCzk: number
+  currentBalanceCzk: number
   openingBalanceDate: string
   sortOrder: number
   isHidden: boolean
@@ -83,6 +84,7 @@ type WalletRow = {
   name: string
   color_key: string
   opening_balance_czk: string
+  current_balance_czk: string
   opening_balance_date: string
   sort_order: number
   is_hidden: boolean
@@ -105,11 +107,72 @@ type LabelRow = {
 }
 
 const walletSelect = `
+  with prague_today as (
+    select (now() at time zone 'Europe/Prague')::date as value
+  ),
+  transaction_deltas as (
+    select
+      t.wallet_id,
+      sum(case when c.direction = 'income' then t.amount_czk else -t.amount_czk end) as delta_czk
+    from transactions t
+    join categories c on c.user_id = t.user_id and c.id = t.category_id
+    join wallets w on w.user_id = t.user_id and w.id = t.wallet_id
+    cross join prague_today today
+    where t.user_id = $1
+      and t.transaction_date >= w.opening_balance_date
+      and t.transaction_date <= today.value
+    group by t.wallet_id
+  ),
+  transfer_deltas as (
+    select tr.source_wallet_id as wallet_id, -sum(tr.amount_czk) as delta_czk
+    from transfers tr
+    join wallets w on w.user_id = tr.user_id and w.id = tr.source_wallet_id
+    cross join prague_today today
+    where tr.user_id = $1
+      and tr.transfer_date >= w.opening_balance_date
+      and tr.transfer_date <= today.value
+    group by tr.source_wallet_id
+
+    union all
+
+    select tr.destination_wallet_id as wallet_id, sum(tr.amount_czk) as delta_czk
+    from transfers tr
+    join wallets w on w.user_id = tr.user_id and w.id = tr.destination_wallet_id
+    cross join prague_today today
+    where tr.user_id = $1
+      and tr.transfer_date >= w.opening_balance_date
+      and tr.transfer_date <= today.value
+    group by tr.destination_wallet_id
+  ),
+  adjustment_deltas as (
+    select
+      ba.wallet_id,
+      sum(case when ba.operation = 'add' then ba.amount_czk else -ba.amount_czk end) as delta_czk
+    from balance_adjustments ba
+    join wallets w on w.user_id = ba.user_id and w.id = ba.wallet_id
+    cross join prague_today today
+    where ba.user_id = $1
+      and ba.adjustment_date >= w.opening_balance_date
+      and ba.adjustment_date <= today.value
+    group by ba.wallet_id
+  ),
+  wallet_deltas as (
+    select wallet_id, sum(delta_czk)::bigint as delta_czk
+    from (
+      select wallet_id, delta_czk from transaction_deltas
+      union all
+      select wallet_id, delta_czk from transfer_deltas
+      union all
+      select wallet_id, delta_czk from adjustment_deltas
+    ) as all_deltas
+    group by wallet_id
+  )
   select
     w.id,
     w.name,
     w.color_key,
     w.opening_balance_czk,
+    (w.opening_balance_czk + coalesce(wallet_deltas.delta_czk, 0))::bigint as current_balance_czk,
     to_char(w.opening_balance_date, 'YYYY-MM-DD') as opening_balance_date,
     w.sort_order,
     w.is_hidden,
@@ -122,6 +185,7 @@ const walletSelect = `
       select 1 from balance_adjustments ba where ba.user_id = w.user_id and ba.wallet_id = w.id
     ) as opening_balance_locked
   from wallets w
+  left join wallet_deltas on wallet_deltas.wallet_id = w.id
 `
 
 function toWallet(row: WalletRow): Wallet {
@@ -130,6 +194,7 @@ function toWallet(row: WalletRow): Wallet {
     name: row.name,
     colorKey: row.color_key,
     openingBalanceCzk: Number(row.opening_balance_czk),
+    currentBalanceCzk: Number(row.current_balance_czk),
     openingBalanceDate: row.opening_balance_date,
     sortOrder: row.sort_order,
     isHidden: row.is_hidden,
@@ -228,6 +293,7 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
          select $1, $2, $3, $4, $5, next_order.sort_order
          from next_order
          returning id, name, color_key, opening_balance_czk,
+           opening_balance_czk as current_balance_czk,
            to_char(opening_balance_date, 'YYYY-MM-DD') as opening_balance_date,
            sort_order, is_hidden, false as opening_balance_locked`,
         [userId, input.name, input.colorKey, input.openingBalanceCzk, input.openingBalanceDate],
