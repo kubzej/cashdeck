@@ -8,6 +8,8 @@ import type { PlannedRepository } from '../planned/repository.js'
 
 const userId = 'user-1'
 const walletId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef123'
+const categoryId = 'f2b30da3-819e-4eb1-bfbd-5bea6760624d'
+const labelId = '23ceac7e-cba7-4d8c-8559-0a162fb544c2'
 const config: ServerConfig = { databaseUrl: 'postgres://unused', frontendOrigin: 'http://localhost:5173', host: '127.0.0.1', neonAuthUrl: 'https://auth.test/neondb/auth', port: 8000 }
 
 function createRepository(): PlannedRepository {
@@ -25,6 +27,15 @@ test('reads planned data within a bounded future interval for the verified user'
   const response = await app.inject({ method: 'GET', url: `/api/planned?walletIds=${walletId}&dateFrom=2026-08-21&dateTo=2026-08-31`, headers: { authorization: 'Bearer test-token' } })
   expect(response.statusCode).toBe(200)
   expect(repository.listPlanned).toHaveBeenCalledWith(userId, { walletIds: [walletId], dateFrom: '2026-08-21', dateTo: '2026-08-31' })
+  await app.close()
+})
+
+test('forwards exact category and label filters to planned calculations', async () => {
+  const repository = createRepository()
+  const app = await createApp({ config, database: { end: vi.fn() } as unknown as Pool, plannedRepository: repository, requireAuth: requireTestAuth })
+  const response = await app.inject({ method: 'GET', url: `/api/planned?walletIds=${walletId}&dateFrom=2026-08-21&dateTo=2026-08-31&categoryId=${categoryId}&labelId=${labelId}`, headers: { authorization: 'Bearer test-token' } })
+  expect(response.statusCode).toBe(200)
+  expect(repository.listPlanned).toHaveBeenCalledWith(userId, { walletIds: [walletId], dateFrom: '2026-08-21', dateTo: '2026-08-31', categoryId, labelId })
   await app.close()
 })
 

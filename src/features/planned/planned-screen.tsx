@@ -13,8 +13,9 @@ import { listPlanned, type PlannedItem } from './api'
 import { resolvePlannedRange } from './planned-range'
 import './planned.css'
 
-export function PlannedScreen({ filters, onBack, onSelectTransaction, onSelectTransfer }: {
+export function PlannedScreen({ filters, selection, onBack, onSelectTransaction, onSelectTransfer }: {
   filters: FeedFilterValue
+  selection?: { type: 'category' | 'label'; id: string }
   onBack: () => void
   onSelectTransaction: (transaction: Transaction) => void
   onSelectTransfer: (transfer: Transfer) => void
@@ -24,12 +25,13 @@ export function PlannedScreen({ filters, onBack, onSelectTransaction, onSelectTr
   const [items, setItems] = useState<PlannedItem[]>([])
   const [retryKey, setRetryKey] = useState(0)
   const walletKey = filters.walletIds.join(',')
+  const selectionKey = selection ? `${selection.type}:${selection.id}` : ''
 
   useEffect(() => {
     if (!range) return
     const controller = new AbortController()
     setStatus('loading')
-    void listPlanned({ walletIds: filters.walletIds, ...range, signal: controller.signal })
+    void listPlanned({ walletIds: filters.walletIds, ...range, categoryId: selection?.type === 'category' ? selection.id : undefined, labelId: selection?.type === 'label' ? selection.id : undefined, signal: controller.signal })
       .then((result) => {
         if (controller.signal.aborted) return
         setItems(result.items)
@@ -37,7 +39,7 @@ export function PlannedScreen({ filters, onBack, onSelectTransaction, onSelectTr
       })
       .catch(() => { if (!controller.signal.aborted) setStatus('error') })
     return () => controller.abort()
-  }, [range?.dateFrom, range?.dateTo, walletKey, retryKey])
+  }, [range?.dateFrom, range?.dateTo, walletKey, selectionKey, retryKey])
 
   return <section className="planned-screen" aria-labelledby="planned-title">
     <header className="planned-header">

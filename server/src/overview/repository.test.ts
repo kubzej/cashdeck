@@ -1,0 +1,35 @@
+import type { Pool } from 'pg'
+import { afterEach, expect, test, vi } from 'vitest'
+import { createOverviewRepository } from './repository.js'
+
+afterEach(() => vi.useRealTimers())
+
+test('caps overview aggregates at today and never loads recurring forecasts', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-08-21T12:00:00+02:00'))
+  const query = vi.fn()
+    .mockResolvedValueOnce({ rows: [{ earliest_activity_date: '2025-01-01' }] })
+    .mockResolvedValueOnce({ rows: [{ wealth_czk: '428600', change_czk: '21400' }] })
+    .mockResolvedValueOnce({ rows: [{ income_czk: '74500', expense_czk: '53100' }] })
+    .mockResolvedValueOnce({ rows: [{ bucket_date: '2026-08-21', value_czk: '428600' }] })
+    .mockResolvedValueOnce({ rows: [{ bucket_date: '2026-08-21', income_czk: '74500', expense_czk: '53100' }] })
+    .mockResolvedValueOnce({ rows: [] })
+    .mockResolvedValueOnce({ rows: [] })
+  const repository = createOverviewRepository({ query } as unknown as Pool)
+
+  const result = await repository.getOverview('user-1', {
+    walletIds: null,
+    period: 'month',
+    dateFrom: '2026-08-01',
+    dateTo: '2026-08-31',
+  })
+
+  expect(query).toHaveBeenCalledTimes(7)
+  for (const [, parameters] of query.mock.calls.slice(1)) {
+    expect(parameters).toEqual(['user-1', null, '2026-08-01', '2026-08-21'])
+  }
+  expect(query.mock.calls.some(([sql]) => String(sql).includes('recurring_rules'))).toBe(false)
+  expect(result.range).toEqual({ dateFrom: '2026-08-01', dateTo: '2026-08-21', earliestActivityDate: '2025-01-01', granularity: 'day' })
+  expect(result.wealth).toEqual({ amountCzk: 428_600, changeCzk: 21_400 })
+  expect(result.flow).toEqual({ incomeCzk: 74_500, expenseCzk: 53_100, cashflowCzk: 21_400 })
+})

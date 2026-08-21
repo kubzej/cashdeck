@@ -21,8 +21,10 @@ export type PlannedItem = PlannedTransaction | PlannedTransfer
 export type PlannedSummary = { count: number; totalCzk: number }
 export type PlannedResult = { items: PlannedItem[]; summary: PlannedSummary }
 
-export function listPlanned({ walletIds, dateFrom, dateTo, signal }: { walletIds?: string[]; dateFrom: string; dateTo: string; signal?: AbortSignal }) {
+export function listPlanned({ walletIds, dateFrom, dateTo, categoryId, labelId, signal }: { walletIds?: string[]; dateFrom: string; dateTo: string; categoryId?: string; labelId?: string; signal?: AbortSignal }) {
   const query = new URLSearchParams({ dateFrom, dateTo })
   if (walletIds?.length) query.set('walletIds', walletIds.join(','))
+  if (categoryId) query.set('categoryId', categoryId)
+  if (labelId) query.set('labelId', labelId)
   return apiRequest<PlannedResult>(`/planned?${query.toString()}`, { signal })
 }

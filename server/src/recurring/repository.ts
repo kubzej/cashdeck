@@ -187,16 +187,18 @@ async function materializeDueOccurrences(client: PoolClient, today: string, rule
         throw new Error(`Recurring rule ${rule.id} exceeded the per-run occurrence limit.`)
       }
 
-      if (rule.kind === 'transaction') {
-        const transactionId = await createGeneratedTransaction(client, rule, nextOccurrenceDate)
-        await copyRuleLabelsToTransaction(client, rule.user_id, rule.id, transactionId)
-        await recordOccurrence(client, rule.user_id, rule.id, nextOccurrenceDate, transactionId, null)
-        result.generatedTransactions += 1
-      } else {
-        const transferId = await createGeneratedTransfer(client, rule, nextOccurrenceDate)
-        await copyRuleLabelsToTransfer(client, rule.user_id, rule.id, transferId)
-        await recordOccurrence(client, rule.user_id, rule.id, nextOccurrenceDate, null, transferId)
-        result.generatedTransfers += 1
+      if (!await occurrenceAlreadyRecorded(client, rule.user_id, rule.id, nextOccurrenceDate)) {
+        if (rule.kind === 'transaction') {
+          const transactionId = await createGeneratedTransaction(client, rule, nextOccurrenceDate)
+          await copyRuleLabelsToTransaction(client, rule.user_id, rule.id, transactionId)
+          await recordOccurrence(client, rule.user_id, rule.id, nextOccurrenceDate, transactionId, null)
+          result.generatedTransactions += 1
+        } else {
+          const transferId = await createGeneratedTransfer(client, rule, nextOccurrenceDate)
+          await copyRuleLabelsToTransfer(client, rule.user_id, rule.id, transferId)
+          await recordOccurrence(client, rule.user_id, rule.id, nextOccurrenceDate, null, transferId)
+          result.generatedTransfers += 1
+        }
       }
 
       nextOccurrenceDate = getNextOccurrenceDate({
@@ -374,6 +376,17 @@ async function recordOccurrence(client: PoolClient, userId: string, ruleId: stri
      values ($1, $2, $3::date, $4, $5)`,
     [userId, ruleId, occurrenceDate, transactionId, transferId],
   )
+}
+
+async function occurrenceAlreadyRecorded(client: PoolClient, userId: string, ruleId: string, occurrenceDate: string) {
+  const result = await client.query<{ exists: boolean }>(
+    `select exists(
+      select 1 from recurring_rule_occurrences
+      where user_id = $1 and recurring_rule_id = $2 and occurrence_date = $3::date
+    ) as exists`,
+    [userId, ruleId, occurrenceDate],
+  )
+  return result.rows[0]?.exists ?? false
 }
 
 function parseLabels(value: unknown): RecurringRuleLabel[] {

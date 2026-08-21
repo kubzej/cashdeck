@@ -32,6 +32,7 @@ test('browses months in both directions without loading the complete history', a
   const currentMonthAgain = feedApi.requests()[2]
   expect(currentMonthAgain.searchParams.get('dateFrom')).toBe(currentMonth.searchParams.get('dateFrom'))
   await expect(title).toHaveText(titleBeforeScroll ?? '')
+  await expect(page.getByRole('button', { name: /Následující období/ })).toBeDisabled()
 
   await page.getByRole('button', { name: 'Filtrovat období: Po měsících' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Celá historie', exact: true }).click()

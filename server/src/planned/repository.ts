@@ -77,9 +77,9 @@ export function createPlannedRepository(pool: Pool): PlannedRepository {
       if (range.dateFrom > range.dateTo) return { items: [], summary: { count: 0, totalCzk: 0 } }
 
       const [transactions, transfers, recurringRules] = await Promise.all([
-        listManualTransactions(pool, userId, range.dateFrom, range.dateTo, input.walletIds),
-        listManualTransfers(pool, userId, range.dateFrom, range.dateTo, input.walletIds),
-        listRecurringProjectionRules(pool, userId, range.dateFrom, range.dateTo, input.walletIds),
+        listManualTransactions(pool, userId, range.dateFrom, range.dateTo, input),
+        listManualTransfers(pool, userId, range.dateFrom, range.dateTo, input),
+        listRecurringProjectionRules(pool, userId, range.dateFrom, range.dateTo, input),
       ])
 
       const manualItems: PlannedItem[] = [
@@ -95,9 +95,16 @@ export function createPlannedRepository(pool: Pool): PlannedRepository {
   }
 }
 
-async function listManualTransactions(pool: Pool, userId: string, dateFrom: string, dateTo: string, walletIds: string[] | null) {
+async function listManualTransactions(pool: Pool, userId: string, dateFrom: string, dateTo: string, input: PlannedListInput) {
   const values: unknown[] = [userId, dateFrom, dateTo]
-  const walletFilter = walletIds ? `and wallet.id = any($${values.push(walletIds)}::uuid[])` : ''
+  const walletFilter = input.walletIds ? `and wallet.id = any($${values.push(input.walletIds)}::uuid[])` : ''
+  const categoryFilter = input.categoryId ? `and t.category_id = $${values.push(input.categoryId)}::uuid` : ''
+  const labelFilter = input.labelId ? `and exists (
+    select 1 from transaction_labels selected_label
+    where selected_label.user_id = t.user_id
+      and selected_label.transaction_id = t.id
+      and selected_label.label_id = $${values.push(input.labelId)}::uuid
+  )` : ''
   const result = await pool.query<ManualTransactionRow>(`
     select t.id, t.wallet_id, wallet.name as wallet_name, t.category_id,
       category.name as category_name, category.icon_key as category_icon_key,
@@ -117,14 +124,23 @@ async function listManualTransactions(pool: Pool, userId: string, dateFrom: stri
       and not wallet.is_hidden
       and t.transaction_date between $2::date and $3::date
       ${walletFilter}
+      ${categoryFilter}
+      ${labelFilter}
     group by t.id, t.wallet_id, wallet.name, t.category_id, category.name, category.icon_key, category.color_key, category.direction
   `, values)
   return result.rows
 }
 
-async function listManualTransfers(pool: Pool, userId: string, dateFrom: string, dateTo: string, walletIds: string[] | null) {
+async function listManualTransfers(pool: Pool, userId: string, dateFrom: string, dateTo: string, input: PlannedListInput) {
   const values: unknown[] = [userId, dateFrom, dateTo]
-  const walletFilter = walletIds ? `and (source_wallet.id = any($${values.push(walletIds)}::uuid[]) or destination_wallet.id = any($${values.length}::uuid[]))` : ''
+  const walletFilter = input.walletIds ? `and (source_wallet.id = any($${values.push(input.walletIds)}::uuid[]) or destination_wallet.id = any($${values.length}::uuid[]))` : ''
+  const categoryFilter = input.categoryId ? 'and false' : ''
+  const labelFilter = input.labelId ? `and exists (
+    select 1 from transfer_labels selected_label
+    where selected_label.user_id = tr.user_id
+      and selected_label.transfer_id = tr.id
+      and selected_label.label_id = $${values.push(input.labelId)}::uuid
+  )` : ''
   const result = await pool.query<ManualTransferRow>(`
     select tr.id, tr.source_wallet_id, source_wallet.name as source_wallet_name,
       tr.destination_wallet_id, destination_wallet.name as destination_wallet_name,
@@ -144,16 +160,25 @@ async function listManualTransfers(pool: Pool, userId: string, dateFrom: string,
       and not destination_wallet.is_hidden
       and tr.transfer_date between $2::date and $3::date
       ${walletFilter}
+      ${categoryFilter}
+      ${labelFilter}
     group by tr.id, tr.source_wallet_id, source_wallet.name, tr.destination_wallet_id, destination_wallet.name
   `, values)
   return result.rows
 }
 
-async function listRecurringProjectionRules(pool: Pool, userId: string, dateFrom: string, dateTo: string, walletIds: string[] | null) {
+async function listRecurringProjectionRules(pool: Pool, userId: string, dateFrom: string, dateTo: string, input: PlannedListInput) {
   const values: unknown[] = [userId, dateFrom, dateTo]
-  const walletFilter = walletIds ? `and (
-    (r.kind = 'transaction' and transaction_wallet.id = any($${values.push(walletIds)}::uuid[]))
+  const walletFilter = input.walletIds ? `and (
+    (r.kind = 'transaction' and transaction_wallet.id = any($${values.push(input.walletIds)}::uuid[]))
     or (r.kind = 'transfer' and (source_wallet.id = any($${values.length}::uuid[]) or destination_wallet.id = any($${values.length}::uuid[])))
+  )` : ''
+  const categoryFilter = input.categoryId ? `and r.kind = 'transaction' and r.category_id = $${values.push(input.categoryId)}::uuid` : ''
+  const labelFilter = input.labelId ? `and exists (
+    select 1 from recurring_rule_labels selected_label
+    where selected_label.user_id = r.user_id
+      and selected_label.recurring_rule_id = r.id
+      and selected_label.label_id = $${values.push(input.labelId)}::uuid
   )` : ''
   const result = await pool.query<RecurringRuleRow>(`
     select r.id, r.name, r.kind, r.amount_czk,
@@ -187,6 +212,8 @@ async function listRecurringProjectionRules(pool: Pool, userId: string, dateFrom
         or (r.kind = 'transfer' and source_wallet.is_hidden is false and destination_wallet.is_hidden is false)
       )
       ${walletFilter}
+      ${categoryFilter}
+      ${labelFilter}
     group by r.id, r.name, r.kind, r.amount_czk, r.transaction_wallet_id, transaction_wallet.name,
       r.category_id, category.name, category.icon_key, category.color_key, category.direction,
       r.source_wallet_id, source_wallet.name, r.destination_wallet_id, destination_wallet.name,

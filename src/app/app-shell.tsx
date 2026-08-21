@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from 'react'
+import { lazy, Suspense, useState, type ComponentType } from 'react'
 import { BarChart3, Plus, ReceiptText, Settings2, WalletCards } from 'lucide-react'
 import { useAuth } from '../auth/auth-context'
 import { Button } from '../components/ui/button'
@@ -18,6 +18,9 @@ import { type Transfer } from '../features/transfers/api'
 import { type Wallet } from '../features/wallets/api'
 import { WalletFormScreen } from '../features/wallets/wallet-form-screen'
 import { WalletsScreen } from '../features/wallets/wallets-screen'
+import type { OverviewSelection } from '../features/overview/overview-screen'
+
+const OverviewScreen = lazy(() => import('../features/overview/overview-screen').then((module) => ({ default: module.OverviewScreen })))
 
 type NavKey = 'transactions' | 'wallets' | 'overview' | 'settings'
 type NavItem = { key: NavKey; label: string; icon: ComponentType<{ 'aria-hidden'?: boolean }> }
@@ -33,10 +36,6 @@ const navItems: NavItem[] = [
   { key: 'settings', label: 'Nastavení', icon: Settings2 },
 ]
 
-const placeholders = {
-  overview: { title: 'Zatím bez přehledu', description: 'Přehled se zobrazí po přidání prvních záznamů.' },
-}
-
 export function AppShell() {
   const { status } = useAuth()
   const [activeNav, setActiveNav] = useState<NavKey>('transactions')
@@ -48,6 +47,7 @@ export function AppShell() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null)
   const [plannedFilters, setPlannedFilters] = useState<FeedFilterValue | null>(null)
+  const [feedSelection, setFeedSelection] = useState<OverviewSelection | null>(null)
   const [transactionReturnView, setTransactionReturnView] = useState<'list' | 'planned'>('list')
   const [settingsView, setSettingsView] = useState<SettingsView>('index')
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false)
@@ -59,6 +59,7 @@ export function AppShell() {
     if (key === 'transactions') {
       setTransactionWalletId(null)
       setPlannedFilters(null)
+      setFeedSelection(null)
     }
     if (key !== 'wallets') {
       setWalletView('list')
@@ -86,7 +87,7 @@ export function AppShell() {
           {transactionView === 'edit' && selectedTransaction ? <TransactionFormScreen transaction={selectedTransaction} onCancel={() => setTransactionView(transactionReturnView)} onSaved={() => { setSelectedTransaction(null); setTransactionView(transactionReturnView) }} onDeleted={() => { setSelectedTransaction(null); setTransactionView(transactionReturnView) }} /> : null}
           {transferView === 'new' ? <TransferFormScreen onCancel={() => setTransferView('list')} onSaved={() => setTransferView('list')} /> : null}
           {transferView === 'edit' && selectedTransfer ? <TransferFormScreen transfer={selectedTransfer} onCancel={() => { setSelectedTransfer(null); setTransferView('list') }} onSaved={() => { setSelectedTransfer(null); setTransferView('list') }} onDeleted={() => { setSelectedTransfer(null); setTransferView('list') }} /> : null}
-          {transactionView === 'planned' && transferView === 'list' && plannedFilters ? <PlannedScreen filters={plannedFilters} onBack={() => setTransactionView('list')} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('planned'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('planned'); setTransferView('edit') }} /> : null}
+          {transactionView === 'planned' && transferView === 'list' && plannedFilters ? <PlannedScreen filters={plannedFilters} selection={feedSelection ?? undefined} onBack={() => setTransactionView('list')} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('planned'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('planned'); setTransferView('edit') }} /> : null}
           {activeNav === 'settings' && settingsView === 'categories' ? <CategoriesScreen onBack={() => setSettingsView('index')} /> : null}
           {activeNav === 'settings' && settingsView === 'labels' ? <LabelsScreen onBack={() => setSettingsView('index')} /> : null}
           {activeNav === 'settings' && settingsView === 'recurring' ? <RecurringRulesScreen onBack={() => setSettingsView('index')} /> : null}
@@ -95,7 +96,7 @@ export function AppShell() {
               <h1>{activeItem?.label}</h1>
               {activeNav === 'wallets' ? <Button variant="ghost" size="icon" aria-label="Přidat peněženku" onClick={() => setWalletView('new')}><Plus aria-hidden="true" /></Button> : null}
             </div>
-          {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} onOpenRecurring={() => setSettingsView('recurring')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setPlannedFilters(null); setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} initialFilters={plannedFilters ?? undefined} onOpenPlanned={(filters) => { setPlannedFilters(filters); setTransactionView('planned') }} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('list'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('list'); setTransferView('edit') }} /> : activeItem ? <PlaceholderScreen item={activeItem} /> : null}
+          {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} onOpenRecurring={() => setSettingsView('recurring')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setPlannedFilters(null); setFeedSelection(null); setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} initialFilters={plannedFilters ?? undefined} fixedSelection={feedSelection ?? undefined} onClearFixedSelection={() => setFeedSelection(null)} onOpenPlanned={(filters) => { setPlannedFilters(filters); setTransactionView('planned') }} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('list'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('list'); setTransferView('edit') }} /> : activeNav === 'overview' ? <Suspense fallback={<OverviewRouteSkeleton />}><OverviewScreen onOpenTransactions={(filters, selection) => { setPlannedFilters(filters); setFeedSelection(selection); setTransactionWalletId(null); setActiveNav('transactions') }} /></Suspense> : null}
           </> : null}
         </main>
         {!isDetailScreen && activeNav === 'transactions' ? <Button size="icon" className="transaction-fab" aria-label="Přidat záznam" onClick={() => setIsAddActivityOpen(true)}><Plus aria-hidden="true" /></Button> : null}
@@ -106,8 +107,4 @@ export function AppShell() {
   )
 }
 
-function PlaceholderScreen({ item }: { item: NavItem }) {
-  const content = placeholders[item.key as keyof typeof placeholders]
-  const Icon = item.icon
-  return <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><Icon aria-hidden={true} /></EmptyStateIcon><EmptyStateTitle>{content.title}</EmptyStateTitle><EmptyStateDescription>{content.description}</EmptyStateDescription></EmptyState>
-}
+function OverviewRouteSkeleton() { return <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><BarChart3 aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Načítám přehled</EmptyStateTitle><EmptyStateDescription>Připravuji souhrn financí.</EmptyStateDescription></EmptyState> }

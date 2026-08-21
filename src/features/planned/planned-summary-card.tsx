@@ -6,12 +6,13 @@ import type { FeedFilterValue } from '../feed/feed-filters'
 import { listPlanned, type PlannedSummary } from './api'
 import { resolvePlannedRange } from './planned-range'
 
-export function PlannedSummaryCard({ filters, onOpen }: { filters: FeedFilterValue; onOpen: () => void }) {
+export function PlannedSummaryCard({ filters, selection, onOpen }: { filters: FeedFilterValue; selection?: { type: 'category' | 'label'; id: string }; onOpen: () => void }) {
   const range = useMemo(() => resolvePlannedRange(filters), [filters])
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [summary, setSummary] = useState<PlannedSummary | null>(null)
   const [retryKey, setRetryKey] = useState(0)
   const walletKey = filters.walletIds.join(',')
+  const selectionKey = selection ? `${selection.type}:${selection.id}` : ''
 
   useEffect(() => {
     if (!range) {
@@ -21,11 +22,11 @@ export function PlannedSummaryCard({ filters, onOpen }: { filters: FeedFilterVal
     }
     const controller = new AbortController()
     setStatus('loading')
-    void listPlanned({ walletIds: filters.walletIds, ...range, signal: controller.signal })
+    void listPlanned({ walletIds: filters.walletIds, ...range, categoryId: selection?.type === 'category' ? selection.id : undefined, labelId: selection?.type === 'label' ? selection.id : undefined, signal: controller.signal })
       .then((result) => { if (!controller.signal.aborted) { setSummary(result.summary); setStatus('ready') } })
       .catch(() => { if (!controller.signal.aborted) setStatus('error') })
     return () => controller.abort()
-  }, [range?.dateFrom, range?.dateTo, walletKey, retryKey])
+  }, [range?.dateFrom, range?.dateTo, walletKey, selectionKey, retryKey])
 
   if (!range || status === 'idle') return null
   if (status === 'loading') return <div className="planned-summary planned-summary--loading" aria-label="Načítání naplánovaných položek"><Skeleton className="h-6 w-6" /><div><Skeleton className="h-4 w-28" /><Skeleton className="mt-1 h-3 w-20" /></div><Skeleton className="ml-auto h-5 w-24" /></div>

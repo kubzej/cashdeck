@@ -244,7 +244,7 @@ test('rejects invalid wallet payloads before they reach the repository', async (
   await app.close()
 })
 
-test('rejects category direction changes and maps lifecycle conflicts', async () => {
+test('rejects category direction changes and maps lifecycle and opening-date conflicts', async () => {
   const { app, repository } = await createTestApp()
 
   const invalidUpdate = await app.inject({
@@ -264,6 +264,16 @@ test('rejects category direction changes and maps lifecycle conflicts', async ()
   })
   expect(conflict.statusCode).toBe(409)
   expect(conflict.json()).toEqual({ error: 'Změna je v konfliktu s existujícími daty.' })
+
+  repository.updateWallet.mockRejectedValueOnce({ code: '23514' })
+  const openingDateConflict = await app.inject({
+    method: 'PATCH',
+    url: `/api/wallets/${walletId}`,
+    headers: { authorization: 'Bearer test-token' },
+    payload: { openingBalanceDate: '2026-08-20' },
+  })
+  expect(openingDateConflict.statusCode).toBe(409)
+  expect(openingDateConflict.json()).toEqual({ error: 'Změna je v konfliktu s existujícími daty.' })
   await app.close()
 })
 

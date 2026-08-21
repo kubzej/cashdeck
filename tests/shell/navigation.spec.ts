@@ -6,7 +6,7 @@ test('switches between all signed-in destinations', async ({ page }) => {
 
   const destinations = [
     ['Peněženky', 'Zatím bez peněženek'],
-    ['Přehled', 'Zatím bez přehledu'],
+    ['Přehled', 'Celkové bohatství'],
     ['Nastavení', null],
     ['Transakce', 'Zatím bez transakcí'],
   ] as const

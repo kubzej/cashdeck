@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw } from 'lucide-react'
+import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw, Tags, X } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
@@ -13,9 +13,10 @@ import { PlannedSummaryCard } from '../planned/planned-summary-card'
 import type { Transaction } from './api'
 import type { Transfer } from '../transfers/api'
 import { listWallets, type Wallet } from '../wallets/api'
+import type { OverviewSelection } from '../overview/overview-screen'
 import './transactions.css'
 
-export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOpenPlanned, initialWalletId, initialFilters }: { onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void; onOpenPlanned: (filters: FeedFilterValue) => void; initialWalletId?: string; initialFilters?: FeedFilterValue }) {
+export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOpenPlanned, initialWalletId, initialFilters, fixedSelection, onClearFixedSelection }: { onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void; onOpenPlanned: (filters: FeedFilterValue) => void; initialWalletId?: string; initialFilters?: FeedFilterValue; fixedSelection?: OverviewSelection; onClearFixedSelection?: () => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activities, setActivities] = useState<FeedItem[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -40,23 +41,23 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
   useEffect(() => {
     const controller = new AbortController()
     setEarliestActivityDate(null)
-    void getFeedBounds({ walletIds: filters.walletIds, signal: controller.signal }).then((bounds) => {
+    void getFeedBounds({ walletIds: filters.walletIds, categoryId: fixedSelection?.type === 'category' ? fixedSelection.id : undefined, labelId: fixedSelection?.type === 'label' ? fixedSelection.id : undefined, signal: controller.signal }).then((bounds) => {
       if (!controller.signal.aborted) setEarliestActivityDate(bounds.earliestActivityDate)
     }).catch((error: unknown) => {
       if (!controller.signal.aborted && !isAbortError(error)) setEarliestActivityDate(null)
     })
     return () => controller.abort()
-  }, [walletFilterKey])
+  }, [walletFilterKey, fixedSelection?.id, fixedSelection?.type])
 
   const range = resolveFeedDateRange(filters)
-  const filterKey = JSON.stringify({ walletIds: filters.walletIds, ...range, search: debouncedSearch, reloadToken })
+  const filterKey = JSON.stringify({ walletIds: filters.walletIds, ...range, search: debouncedSearch, fixedSelection, reloadToken })
 
   useEffect(() => {
     const controller = new AbortController()
     moreRequest.current?.abort()
     setIsLoadingMore(false)
     setStatus('loading')
-    void listFeed({ walletIds: filters.walletIds, ...range, search: debouncedSearch || undefined, signal: controller.signal }).then((page) => {
+    void listFeed({ walletIds: filters.walletIds, ...range, search: debouncedSearch || undefined, categoryId: fixedSelection?.type === 'category' ? fixedSelection.id : undefined, labelId: fixedSelection?.type === 'label' ? fixedSelection.id : undefined, signal: controller.signal }).then((page) => {
       if (controller.signal.aborted) return
       setActivities(page.items)
       setNextCursor(page.nextCursor)
@@ -74,7 +75,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
     moreRequest.current = controller
     setIsLoadingMore(true)
     try {
-      const page = await listFeed({ walletIds: filters.walletIds, ...range, search: debouncedSearch || undefined, cursor: nextCursor, signal: controller.signal })
+      const page = await listFeed({ walletIds: filters.walletIds, ...range, search: debouncedSearch || undefined, categoryId: fixedSelection?.type === 'category' ? fixedSelection.id : undefined, labelId: fixedSelection?.type === 'label' ? fixedSelection.id : undefined, cursor: nextCursor, signal: controller.signal })
       if (controller.signal.aborted) return
       setActivities((current) => [...current, ...page.items])
       setNextCursor(page.nextCursor)
@@ -86,7 +87,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
   }
 
   const content = <>
-    <PlannedSummaryCard filters={filters} onOpen={() => onOpenPlanned(filters)} />
+    <PlannedSummaryCard filters={filters} selection={fixedSelection} onOpen={() => onOpenPlanned(filters)} />
     {status === 'loading' ? <div className="transactions-loading" aria-label="Načítání transakcí"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : null}
     {status === 'error' ? <FeedbackState status="error" layout="panel" className="transactions-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Transakce se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState> : null}
     {status === 'ready' && activities.length === 0 ? <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><ReceiptText aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Zatím bez transakcí</EmptyStateTitle><EmptyStateDescription>Přidej první příjem nebo výdaj.</EmptyStateDescription></EmptyState> : null}
@@ -96,6 +97,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
 
   return <section className="transactions-screen" aria-label="Seznam transakcí">
     <FeedFilters wallets={wallets} value={filters} onChange={setFilters} />
+    {fixedSelection ? <div className="transaction-fixed-selection"><Tags aria-hidden="true" /><span>{fixedSelection.type === 'category' ? 'Kategorie' : 'Štítek'}: <strong>{fixedSelection.name}</strong></span>{onClearFixedSelection ? <Button variant="ghost" size="icon" aria-label="Zrušit pevný filtr" onClick={onClearFixedSelection}><X aria-hidden="true" /></Button> : null}</div> : null}
     {isNavigablePeriod(filters.period) ? <FeedPeriodPager period={filters.period} periodAnchor={filters.periodAnchor} earliestActivityDate={earliestActivityDate} onNavigate={(periodAnchor) => setFilters((current) => ({ ...current, periodAnchor }))}>{content}</FeedPeriodPager> : content}
   </section>
 }

@@ -122,6 +122,27 @@ export function createFeedRepository(pool: Pool): FeedRepository {
           )
         )`)
       }
+      if (input.categoryId) {
+        values.push(input.categoryId)
+        transactionFilters.push(`t.category_id = $${values.length}::uuid`)
+        transferFilters.push('false')
+      }
+      if (input.labelId) {
+        values.push(input.labelId)
+        const parameter = `$${values.length}::uuid`
+        transactionFilters.push(`exists (
+          select 1 from transaction_labels selected_label
+          where selected_label.user_id = $1
+            and selected_label.transaction_id = t.id
+            and selected_label.label_id = ${parameter}
+          )`)
+        transferFilters.push(`exists (
+          select 1 from transfer_labels selected_label
+          where selected_label.user_id = $1
+            and selected_label.transfer_id = tr.id
+            and selected_label.label_id = ${parameter}
+        )`)
+      }
 
       const cursorFilter = cursor ? addCursorFilter(values, cursor) : ''
       values.push(input.limit + 1)
@@ -139,6 +160,27 @@ export function createFeedRepository(pool: Pool): FeedRepository {
         const parameter = `$${values.length}::uuid[]`
         transactionFilters.push(`t.wallet_id = any(${parameter})`)
         transferFilters.push(`(tr.source_wallet_id = any(${parameter}) or tr.destination_wallet_id = any(${parameter}))`)
+      }
+      if (input.categoryId) {
+        values.push(input.categoryId)
+        transactionFilters.push(`t.category_id = $${values.length}::uuid`)
+        transferFilters.push('false')
+      }
+      if (input.labelId) {
+        values.push(input.labelId)
+        const parameter = `$${values.length}::uuid`
+        transactionFilters.push(`exists (
+          select 1 from transaction_labels selected_label
+          where selected_label.user_id = $1
+            and selected_label.transaction_id = t.id
+            and selected_label.label_id = ${parameter}
+          )`)
+        transferFilters.push(`exists (
+          select 1 from transfer_labels selected_label
+          where selected_label.user_id = $1
+            and selected_label.transfer_id = tr.id
+            and selected_label.label_id = ${parameter}
+        )`)
       }
       const result = await pool.query<{ earliest_activity_date: string | null }>(feedBoundsSelect(transactionFilters.join(' and '), transferFilters.join(' and ')), values)
       return { earliestActivityDate: result.rows[0]?.earliest_activity_date ?? null }

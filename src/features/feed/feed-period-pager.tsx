@@ -15,9 +15,8 @@ export function FeedPeriodPager({ period, periodAnchor, earliestActivityDate, on
   const previousAnchor = shiftFeedPeriod(periodAnchor, period, -1)
   const nextAnchor = shiftFeedPeriod(periodAnchor, period, 1)
   const hasPrevious = earliestActivityDate !== null && resolveFeedDateRange({ walletIds: [], period, periodAnchor: previousAnchor, customDateFrom: '', customDateTo: '', search: '' }).dateTo! >= earliestActivityDate
-  const latestRange = resolveFeedDateRange({ walletIds: [], period, periodAnchor: getFeedToday(), customDateFrom: '', customDateTo: '', search: '' })
   const nextRange = resolveFeedDateRange({ walletIds: [], period, periodAnchor: nextAnchor, customDateFrom: '', customDateTo: '', search: '' })
-  const hasNext = nextRange.dateFrom! <= latestRange.dateFrom!
+  const hasNext = nextRange.dateFrom! <= getFeedToday()
 
   useEffect(() => {
     navigationLocked.current = false

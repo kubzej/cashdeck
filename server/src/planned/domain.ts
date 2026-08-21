@@ -42,7 +42,7 @@ export type PlannedTransfer = {
 
 export type PlannedItem = PlannedTransaction | PlannedTransfer
 export type PlannedSummary = { count: number; totalCzk: number }
-export type PlannedListInput = { walletIds: string[] | null; dateFrom: string; dateTo: string }
+export type PlannedListInput = { walletIds: string[] | null; dateFrom: string; dateTo: string; categoryId?: string; labelId?: string }
 export type PlannedListResult = { items: PlannedItem[]; summary: PlannedSummary }
 
 export type RecurringProjectionRule = {
@@ -72,11 +72,17 @@ export type RecurringProjectionRule = {
 
 export function parsePlannedListQuery(value: unknown): PlannedListInput {
   const query = asRecord(value)
-  assertOnlyKeys(query, ['walletIds', 'dateFrom', 'dateTo'])
+  assertOnlyKeys(query, ['walletIds', 'dateFrom', 'dateTo', 'categoryId', 'labelId'])
   const dateFrom = parseCalendarDate(query.dateFrom, 'Datum od')
   const dateTo = parseCalendarDate(query.dateTo, 'Datum do')
   if (dateFrom > dateTo) throw new DomainError(400, 'Datum od nesmí být po datu do.')
-  return { walletIds: query.walletIds === undefined ? null : parseWalletIds(query.walletIds), dateFrom, dateTo }
+  return {
+    walletIds: query.walletIds === undefined ? null : parseWalletIds(query.walletIds),
+    dateFrom,
+    dateTo,
+    ...(query.categoryId === undefined ? {} : { categoryId: parseUuid(query.categoryId, 'Kategorie') }),
+    ...(query.labelId === undefined ? {} : { labelId: parseUuid(query.labelId, 'Štítek') }),
+  }
 }
 
 export function getPlannedRange(input: PlannedListInput, today = getPragueToday()) {
@@ -88,7 +94,10 @@ export function projectRecurringRules(rules: RecurringProjectionRule[], input: P
   const range = getPlannedRange(input, today)
   if (range.dateFrom > range.dateTo) return []
 
-  return rules.flatMap((rule) => projectRule(rule, range.dateFrom, range.dateTo, input.walletIds))
+  return rules
+    .filter((rule) => !input.categoryId || (rule.kind === 'transaction' && rule.categoryId === input.categoryId))
+    .filter((rule) => !input.labelId || rule.labels.some((label) => label.id === input.labelId))
+    .flatMap((rule) => projectRule(rule, range.dateFrom, range.dateTo, input.walletIds))
 }
 
 export function summarizePlanned(items: PlannedItem[]): PlannedSummary {

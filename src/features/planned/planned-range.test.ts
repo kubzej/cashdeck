@@ -7,13 +7,17 @@ const baseFilters: FeedFilterValue = {
 }
 
 test('uses only the remaining future part of the selected period', () => {
-  expect(resolvePlannedRange(baseFilters, '2026-08-20')).toEqual({ dateFrom: '2026-08-21', dateTo: '2026-08-31', isTwelveMonthHorizon: false })
+  expect(resolvePlannedRange(baseFilters, '2026-08-20')).toEqual({ dateFrom: '2026-08-21', dateTo: '2026-08-31' })
 })
 
 test('does not show planned data for a historical period', () => {
   expect(resolvePlannedRange({ ...baseFilters, periodAnchor: '2026-07-20' }, '2026-08-20')).toBeNull()
 })
 
-test('uses a bounded twelve-month future horizon for all history', () => {
-  expect(resolvePlannedRange({ ...baseFilters, period: 'all' }, '2026-08-20')).toEqual({ dateFrom: '2026-08-21', dateTo: '2027-08-21', isTwelveMonthHorizon: true })
+test('does not create a planned horizon for all history', () => {
+  expect(resolvePlannedRange({ ...baseFilters, period: 'all' }, '2026-08-20')).toBeNull()
+})
+
+test('keeps the complete selected range when it lies in the future', () => {
+  expect(resolvePlannedRange({ ...baseFilters, periodAnchor: '2026-09-20' }, '2026-08-20')).toEqual({ dateFrom: '2026-09-01', dateTo: '2026-09-30' })
 })

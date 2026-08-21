@@ -35,16 +35,16 @@ export function resolveFeedDateRange(value: FeedFilterValue): FeedDateRange {
   return getMonthRange(value.periodAnchor)
 }
 
-export function FeedFilters({ wallets, value, onChange }: { wallets: Wallet[]; value: FeedFilterValue; onChange: (value: FeedFilterValue) => void }) {
+export function FeedFilters({ wallets, value, onChange, showSearch = true, ariaLabel = 'Filtry transakcí' }: { wallets: Wallet[]; value: FeedFilterValue; onChange: (value: FeedFilterValue) => void; showSearch?: boolean; ariaLabel?: string }) {
   const visibleWallets = useMemo(() => wallets.filter((wallet) => !wallet.isHidden), [wallets])
   const walletLabel = getWalletLabel(value.walletIds, visibleWallets)
   const dateRange = resolveFeedDateRange(value)
 
-  return <section className="feed-filters" aria-label="Filtry transakcí">
-    <div className="feed-filters__search">
+  return <section className="feed-filters" aria-label={ariaLabel}>
+    {showSearch ? <div className="feed-filters__search">
       <Search aria-hidden="true" />
       <Input aria-label="Hledat v transakcích" value={value.search} placeholder="Hledat" onChange={(event) => onChange({ ...value, search: event.currentTarget.value })} />
-    </div>
+    </div> : null}
     <div className="feed-filters__controls">
       <WalletFilterDialog wallets={visibleWallets} selectedWalletIds={value.walletIds} label={walletLabel} onApply={(walletIds) => onChange({ ...value, walletIds })} />
       <PeriodFilterDialog value={value} label={getPeriodLabel(value.period, dateRange)} onApply={(next) => onChange({ ...value, ...next, periodAnchor: next.period !== value.period && isNavigablePeriod(next.period) ? getFeedToday() : value.periodAnchor })} />

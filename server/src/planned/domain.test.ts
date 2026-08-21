@@ -41,3 +41,17 @@ test('uses the selected wallet impact for recurring transfers and summarizes ent
   expect(oneWallet[0]).toMatchObject({ kind: 'transfer', impactCzk: -5_000 })
   expect(summarizePlanned([...oneWallet, ...projectRecurringRules([rule], { walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-31' }, '2026-08-20')])).toEqual({ count: 2, totalCzk: -28_000 })
 })
+
+test('keeps exact category and label drill-down filters consistent for recurring projections', () => {
+  const secondRule: RecurringProjectionRule = {
+    ...rule,
+    id: 'rule-3',
+    categoryId: 'category-2',
+    categoryName: 'Předplatné',
+    labels: [{ id: 'label-2', name: 'streaming' }],
+  }
+
+  expect(projectRecurringRules([rule, secondRule], { walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-31', categoryId: 'category-1' }, '2026-08-20')).toHaveLength(1)
+  expect(projectRecurringRules([rule, secondRule], { walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-31', labelId: 'label-2' }, '2026-08-20')).toMatchObject([{ recurringRuleId: 'rule-3' }])
+  expect(projectRecurringRules([rule, secondRule], { walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-31', categoryId: 'category-1', labelId: 'label-2' }, '2026-08-20')).toEqual([])
+})

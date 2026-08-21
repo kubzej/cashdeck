@@ -18,6 +18,8 @@ only as the restricted `cashdeck_app` role; it never applies schema changes.
 | Migration | Neon branch | Applied |
 | --- | --- | --- |
 | `0001_initial_schema.sql` | `production` | 2026-08-20 |
+| `0002_recurring_rules.sql` | `production` | 2026-08-20 |
+| `0003_recurring_rule_status.sql` | `production` | 2026-08-21 |
 
 ## Rules
 

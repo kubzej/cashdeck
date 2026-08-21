@@ -1,4 +1,5 @@
 .transactions-screen { display: grid; gap: 1.125rem; }
+.transaction-fixed-selection { display: flex; min-height: 2.75rem; align-items: center; gap: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-card); padding: 0 0.625rem 0 0.75rem; color: var(--color-muted-foreground); font-size: 0.8125rem; }.transaction-fixed-selection > svg { width: 1rem; height: 1rem; color: var(--color-primary); }.transaction-fixed-selection > span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.transaction-fixed-selection strong { color: var(--color-foreground); }.transaction-fixed-selection button { margin-left: auto; }
 .transactions-loading, .transaction-form-loading { display: grid; gap: 0.75rem; }
 .transactions-feedback { margin-block: auto; }
 .feed-period-pager { display: grid; gap: 0.75rem; min-width: 0; }

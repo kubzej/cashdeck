@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 import { mockFeedApi } from './feed'
 import { mockWalletsApi } from './wallets'
+import { mockOverviewApi } from './overview'
 
 export const testUser = {
   id: 'user-1',
@@ -54,6 +55,7 @@ export async function mockAuthAndApi(page: Page, { signedIn = false }: AuthMockO
 
   await mockFeedApi(page)
   await mockWalletsApi(page)
+  await mockOverviewApi(page)
 }
 
 export async function signIn(page: Page) {
