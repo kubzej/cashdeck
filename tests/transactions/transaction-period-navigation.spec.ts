@@ -34,7 +34,7 @@ test('browses months in both directions without loading the complete history', a
   await expect(title).toHaveText(titleBeforeScroll ?? '')
   await expect(page.getByRole('button', { name: /Následující období/ })).toBeDisabled()
 
-  await page.getByRole('button', { name: 'Filtrovat období: Po měsících' }).click()
+  await page.getByRole('button', { name: /^Nastavit zobrazené období:/ }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Celá historie', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Použít filtr' }).click()
   await expect(viewport).toBeHidden()

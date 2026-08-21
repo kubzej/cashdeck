@@ -32,7 +32,7 @@ test('scopes the feed by the current month, selected visible wallets, period, an
   await expect.poll(() => plannedApi.requests().length).toBe(2)
   const plannedRequestCountBeforeHistory = plannedApi.requests().length
 
-  await page.getByRole('button', { name: 'Filtrovat období: Po měsících' }).click()
+  await page.getByRole('button', { name: /^Nastavit zobrazené období:/ }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Celá historie', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Použít filtr' }).click()
   await expect.poll(() => feedApi.requests().length).toBe(3)

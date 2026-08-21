@@ -38,7 +38,6 @@ export function resolveFeedDateRange(value: FeedFilterValue): FeedDateRange {
 export function FeedFilters({ wallets, value, onChange, showSearch = true, ariaLabel = 'Filtry transakcí', showReset = false, onReset }: { wallets: Wallet[]; value: FeedFilterValue; onChange: (value: FeedFilterValue) => void; showSearch?: boolean; ariaLabel?: string; showReset?: boolean; onReset?: () => void }) {
   const visibleWallets = useMemo(() => wallets.filter((wallet) => !wallet.isHidden), [wallets])
   const walletLabel = getWalletLabel(value.walletIds, visibleWallets)
-  const dateRange = resolveFeedDateRange(value)
 
   return <section className="feed-filters" aria-label={ariaLabel}>
     {showSearch ? <div className="feed-filters__search">
@@ -47,7 +46,7 @@ export function FeedFilters({ wallets, value, onChange, showSearch = true, ariaL
     </div> : null}
     <div className="feed-filters__controls">
       <WalletFilterDialog wallets={visibleWallets} selectedWalletIds={value.walletIds} label={walletLabel} onApply={(walletIds) => onChange({ ...value, walletIds })} />
-      <PeriodFilterDialog value={value} label={getPeriodLabel(value.period, dateRange)} onApply={(next) => onChange({ ...value, ...next, periodAnchor: next.period !== value.period && isNavigablePeriod(next.period) ? getFeedToday() : value.periodAnchor })} />
+      <PeriodFilterDialog value={value} label={getPeriodLabel(value.period)} onApply={(next) => onChange({ ...value, ...next, periodAnchor: next.period !== value.period && isNavigablePeriod(next.period) ? getFeedToday() : value.periodAnchor })} />
       {showReset && onReset ? <Button variant="ghost" size="icon" className="feed-filter-reset" aria-label="Zrušit všechny filtry" onClick={onReset}><X aria-hidden="true" /></Button> : null}
     </div>
   </section>
@@ -94,11 +93,11 @@ function PeriodFilterDialog({ value, label, onApply }: { value: FeedFilterValue;
   }
 
   return <Dialog open={open} onOpenChange={setOpen}>
-    <Button variant="outline" className="feed-filter-button" aria-label={`Filtrovat období: ${label}`} onClick={() => setOpen(true)}><CalendarRange aria-hidden="true" /><span>{label}</span></Button>
+    <Button variant="outline" className="feed-filter-button" aria-label={`Nastavit zobrazené období: ${label}`} onClick={() => setOpen(true)}><CalendarRange aria-hidden="true" /><span>{label}</span></Button>
     <DialogContent size="sm" className="feed-filter-dialog">
-      <DialogHeader><DialogTitle>Období</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle>Zobrazit období</DialogTitle></DialogHeader>
       <DialogBody><div className="feed-period-options">
-        {([['week', 'Tento týden'], ['month', 'Tento měsíc'], ['year', 'Tento rok'], ['all', 'Celá historie'], ['custom', 'Vlastní období']] as const).map(([period, periodLabel]) => <button type="button" key={period} className="feed-period-option" data-selected={draft.period === period || undefined} onClick={() => setDraft((current) => ({ ...current, period }))}>{periodLabel}{draft.period === period ? <Check aria-hidden="true" /> : null}</button>)}
+        {([['week', 'Týden'], ['month', 'Měsíc'], ['year', 'Rok'], ['all', 'Celá historie'], ['custom', 'Vlastní období']] as const).map(([period, periodLabel]) => <button type="button" key={period} className="feed-period-option" data-selected={draft.period === period || undefined} onClick={() => setDraft((current) => ({ ...current, period }))}>{periodLabel}{draft.period === period ? <Check aria-hidden="true" /> : null}</button>)}
       </div>
       {draft.period === 'custom' ? <div className="feed-custom-range">
         <Field><FieldLabel>Od</FieldLabel><DatePicker value={parseIsoDate(draft.customDateFrom)} onValueChange={(date) => setDraft((current) => ({ ...current, customDateFrom: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} /></Field>
@@ -137,12 +136,12 @@ function formatShortDate(value: string) {
 
 export function isNavigablePeriod(period: FeedPeriod): period is Exclude<FeedPeriod, 'all' | 'custom'> { return period === 'week' || period === 'month' || period === 'year' }
 
-function getPeriodLabel(period: FeedPeriod, range: FeedDateRange) {
-  if (period === 'week') return 'Po týdnech'
-  if (period === 'month') return 'Po měsících'
-  if (period === 'year') return 'Po letech'
+function getPeriodLabel(period: FeedPeriod) {
+  if (period === 'week') return 'Týden'
+  if (period === 'month') return 'Měsíc'
+  if (period === 'year') return 'Rok'
   if (period === 'all') return 'Celá historie'
-  return range.dateFrom && range.dateTo ? 'Vlastní období' : 'Vyber období'
+  return 'Vlastní období'
 }
 
 export function getFeedToday() {

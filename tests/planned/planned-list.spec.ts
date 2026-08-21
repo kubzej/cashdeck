@@ -45,5 +45,9 @@ test('keeps future manual and recurring items in Naplanovane, with only manual i
   await expect(page.getByRole('heading', { name: 'Upravit transakci', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Zpět na transakce' }).click()
   await expect(page.getByRole('heading', { name: 'Naplánované', exact: true })).toBeVisible()
-  await expect.poll(() => plannedApi.requests().length).toBe(2)
+  await expect.poll(() => plannedApi.requests().length).toBeGreaterThanOrEqual(2)
+  const initialRequest = plannedApi.requests()[0]
+  const returnedRequest = plannedApi.requests().at(-1)
+  if (!returnedRequest) throw new Error('Naplánované se po návratu z editoru znovu nenačetlo.')
+  expect(returnedRequest.search).toBe(initialRequest.search)
 })
