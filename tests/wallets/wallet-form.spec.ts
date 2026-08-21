@@ -95,7 +95,7 @@ test('locks the opening balance and date after the wallet has activity', async (
 
   await page.getByLabel('Název').fill('Hlavní účet')
   await page.getByRole('button', { name: 'Uložit změny' }).click()
-  await expect.poll(() => walletApi.lastRequestBody('PATCH')).toEqual({ name: 'Hlavní účet', colorKey: 'teal' })
+  await expect.poll(() => walletApi.lastRequestBody('PATCH')).toEqual({ name: 'Hlavní účet', colorKey: 'teal', walletType: 'other' })
   await expect.poll(() => walletApi.wallets()[0]).toMatchObject({
     name: 'Hlavní účet',
     openingBalanceCzk: 150000,

@@ -18,6 +18,9 @@ const config: ServerConfig = {
   host: '127.0.0.1',
   neonAuthUrl: 'https://auth.test/neondb/auth',
   port: 8000,
+  sessionSigningSecret: 'test-session-signing-secret-32-characters-long',
+  appAccessPassphrase: 'test-passphrase',
+  appUserId: 'test-user-id',
 }
 
 function createRepository(): ManagementRepository {
@@ -371,6 +374,62 @@ test('rejects a client-supplied userId instead of silently ignoring it, and neve
   expect(response.statusCode).toBe(400)
   expect(response.json()).toEqual({ error: 'Pole userId není podporované.' })
   expect(repository.createWallet).not.toHaveBeenCalled()
+  await app.close()
+})
+
+test('rejects a wallet marked available-now without also counting toward independence', async () => {
+  const { app, repository } = await createTestApp()
+
+  const createResponse = await app.inject({
+    method: 'POST',
+    url: '/api/wallets',
+    headers: { authorization: 'Bearer test-token' },
+    payload: { name: 'Broker', colorKey: 'teal', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', availableNow: true },
+  })
+  expect(createResponse.statusCode).toBe(400)
+  expect(createResponse.json()).toEqual({ error: 'Peněženka dostupná hned musí být zároveň počítaná do nezávislosti.' })
+  expect(repository.createWallet).not.toHaveBeenCalled()
+
+  const updateResponse = await app.inject({
+    method: 'PATCH',
+    url: '/api/wallets/c00f7a6a-d0c1-4f08-9bd4-643415bef123',
+    headers: { authorization: 'Bearer test-token' },
+    payload: { countsTowardIndependence: false, availableNow: true },
+  })
+  expect(updateResponse.statusCode).toBe(400)
+  expect(updateResponse.json()).toEqual({ error: 'Peněženka dostupná hned musí být zároveň počítaná do nezávislosti.' })
+  expect(repository.updateWallet).not.toHaveBeenCalled()
+
+  await app.close()
+})
+
+test('accepts a wallet type and both independence flags together on create', async () => {
+  const { app, repository } = await createTestApp()
+
+  repository.createWallet.mockResolvedValueOnce({
+    id: 'c00f7a6a-d0c1-4f08-9bd4-643415bef123',
+    name: 'Broker',
+    colorKey: 'teal',
+    walletType: 'investment',
+    countsTowardIndependence: true,
+    availableNow: true,
+    openingBalanceCzk: 0,
+    currentBalanceCzk: 0,
+    openingBalanceDate: '2026-01-01',
+    sortOrder: 0,
+    isHidden: false,
+    openingBalanceLocked: false,
+  })
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/wallets',
+    headers: { authorization: 'Bearer test-token' },
+    payload: { name: 'Broker', colorKey: 'teal', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', walletType: 'investment', countsTowardIndependence: true, availableNow: true },
+  })
+
+  expect(response.statusCode).toBe(201)
+  expect(repository.createWallet).toHaveBeenCalledWith('user-1', expect.objectContaining({ walletType: 'investment', countsTowardIndependence: true, availableNow: true }))
   await app.close()
 })
 

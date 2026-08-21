@@ -9,6 +9,7 @@ import {
   parseCalendarDate,
   parseCategoryIconKey,
   parseColorKey,
+  parseWalletType,
   parseWholeCzk,
 } from './domain.js'
 
@@ -40,6 +41,13 @@ test('rejects invalid whole-CZK values and calendar dates', () => {
 test('accepts the extended category icon and color catalogs', () => {
   expect(parseCategoryIconKey('chart-no-axes-combined')).toBe('chart-no-axes-combined')
   expect(parseColorKey('brown-dark')).toBe('brown-dark')
+})
+
+test('accepts every wallet type and rejects an unsupported one', () => {
+  expect(parseWalletType('investment')).toBe('investment')
+  expect(parseWalletType('pension')).toBe('pension')
+  expect(() => parseWalletType('brokerage')).toThrow(DomainError)
+  expect(() => parseWalletType(undefined)).toThrow(DomainError)
 })
 
 test('defines the agreed one-time default category set', () => {

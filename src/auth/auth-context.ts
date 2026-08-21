@@ -1,7 +1,6 @@
 import { createContext, useContext } from 'react'
-import type { ConfiguredAuthClient } from '../lib/auth-client'
 
-export type AuthSession = Awaited<ReturnType<ConfiguredAuthClient['getSession']>>['data']
+export type AuthSession = { userId: string }
 export type AuthStatus = 'loading' | 'signed-out' | 'signed-in' | 'unavailable' | 'error'
 
 export type AuthContextValue = {
@@ -9,7 +8,7 @@ export type AuthContextValue = {
   session: AuthSession | null
   errorMessage: string | null
   refreshSession: () => Promise<void>
-  signIn: (email: string, password: string) => Promise<string | null>
+  unlock: (passphrase: string) => Promise<string | null>
   signOut: () => Promise<void>
 }
 

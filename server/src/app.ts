@@ -1,7 +1,8 @@
 import cors from '@fastify/cors'
 import Fastify from 'fastify'
 import type { Pool } from 'pg'
-import { createAuthGuard, type AuthGuard } from './auth.js'
+import { createLocalAuthGuard, type AuthGuard } from './auth.js'
+import { createUnlockRoutes } from './routes/unlock.js'
 import type { ServerConfig } from './config.js'
 import { createFeedRepository, type FeedRepository } from './feed/repository.js'
 import { DomainError } from './management/domain.js'
@@ -20,6 +21,8 @@ import { createPlannedRepository, type PlannedRepository } from './planned/repos
 import { createPlannedRoutes } from './routes/planned.js'
 import { createOverviewRoutes } from './routes/overview.js'
 import { createOverviewRepository, type OverviewRepository } from './overview/repository.js'
+import { createIndependenceRoutes } from './routes/independence.js'
+import { createIndependenceRepository, type IndependenceRepository } from './independence/repository.js'
 
 type AppDependencies = {
   config: ServerConfig
@@ -31,12 +34,13 @@ type AppDependencies = {
   recurringRuleRepository?: RecurringRuleRepository
   plannedRepository?: PlannedRepository
   overviewRepository?: OverviewRepository
+  independenceRepository?: IndependenceRepository
   requireAuth?: AuthGuard
 }
 
-export async function createApp({ config, database, managementRepository, feedRepository, transactionRepository, transferRepository, recurringRuleRepository, plannedRepository, overviewRepository, requireAuth }: AppDependencies) {
+export async function createApp({ config, database, managementRepository, feedRepository, transactionRepository, transferRepository, recurringRuleRepository, plannedRepository, overviewRepository, independenceRepository, requireAuth }: AppDependencies) {
   const app = Fastify({ logger: true })
-  const authGuard = requireAuth ?? createAuthGuard(config.neonAuthUrl)
+  const authGuard = requireAuth ?? createLocalAuthGuard(config.sessionSigningSecret)
   const repository = managementRepository ?? createManagementRepository(database)
   const feed = feedRepository ?? createFeedRepository(database)
   const transactions = transactionRepository ?? createTransactionRepository(database)
@@ -44,6 +48,7 @@ export async function createApp({ config, database, managementRepository, feedRe
   const recurringRules = recurringRuleRepository ?? createRecurringRuleRepository(database)
   const planned = plannedRepository ?? createPlannedRepository(database)
   const overview = overviewRepository ?? createOverviewRepository(database)
+  const independence = independenceRepository ?? createIndependenceRepository(database)
 
   await app.register(cors, {
     origin: config.frontendOrigin,
@@ -66,6 +71,7 @@ export async function createApp({ config, database, managementRepository, feedRe
   })
 
   app.get('/health', async () => ({ status: 'ok' }))
+  await app.register(createUnlockRoutes(config.appAccessPassphrase, config.appUserId, config.sessionSigningSecret))
   await app.register(createSessionRoutes(authGuard))
   await app.register(createManagementRoutes(repository, authGuard))
   await app.register(createFeedRoutes(feed, authGuard))
@@ -74,6 +80,7 @@ export async function createApp({ config, database, managementRepository, feedRe
   await app.register(createRecurringRuleRoutes(recurringRules, authGuard))
   await app.register(createPlannedRoutes(planned, authGuard))
   await app.register(createOverviewRoutes(overview, authGuard))
+  await app.register(createIndependenceRoutes(independence, authGuard))
   if (config.recurringJobSecret) await app.register(createRecurringJobRoutes(recurringRules, config.recurringJobSecret))
 
   app.addHook('onClose', async () => {

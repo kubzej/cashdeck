@@ -13,6 +13,7 @@ import {
   parseColorKey,
   parseOptionalBoolean,
   parseUuid,
+  parseWalletType,
   parseWholeCzk,
 } from '../management/domain.js'
 import type {
@@ -125,22 +126,32 @@ export function createManagementRoutes(repository: ManagementRepository, require
 
 function parseCreateWallet(body: unknown): CreateWalletInput {
   const value = asRecord(body)
-  assertOnlyKeys(value, ['name', 'colorKey', 'openingBalanceCzk', 'openingBalanceDate'])
+  assertOnlyKeys(value, ['name', 'colorKey', 'openingBalanceCzk', 'openingBalanceDate', 'walletType', 'countsTowardIndependence', 'availableNow'])
+  const countsTowardIndependence = value.countsTowardIndependence === undefined ? undefined : parseOptionalBoolean(value.countsTowardIndependence, 'countsTowardIndependence')
+  const availableNow = value.availableNow === undefined ? undefined : parseOptionalBoolean(value.availableNow, 'availableNow')
+  if (availableNow && !countsTowardIndependence) throw new DomainError(400, 'Peněženka dostupná hned musí být zároveň počítaná do nezávislosti.')
   return {
     name: normalizeWalletName(value.name),
     colorKey: parseColorKey(value.colorKey),
     openingBalanceCzk: parseWholeCzk(value.openingBalanceCzk, 'Počáteční zůstatek', { allowNegative: true }),
     openingBalanceDate: parseCalendarDate(value.openingBalanceDate, 'Datum počátečního zůstatku'),
+    walletType: value.walletType === undefined ? undefined : parseWalletType(value.walletType),
+    countsTowardIndependence,
+    availableNow,
   }
 }
 
 function parseUpdateWallet(body: unknown): UpdateWalletInput {
   const value = asRecord(body)
-  assertOnlyKeys(value, ['name', 'colorKey', 'openingBalanceCzk', 'openingBalanceDate', 'isHidden'])
+  assertOnlyKeys(value, ['name', 'colorKey', 'openingBalanceCzk', 'openingBalanceDate', 'isHidden', 'walletType', 'countsTowardIndependence', 'availableNow'])
   const update: UpdateWalletInput = {}
 
   if ('name' in value) update.name = normalizeWalletName(value.name)
   if ('colorKey' in value) update.colorKey = parseColorKey(value.colorKey)
+  if ('walletType' in value) update.walletType = parseWalletType(value.walletType)
+  if ('countsTowardIndependence' in value) update.countsTowardIndependence = parseOptionalBoolean(value.countsTowardIndependence, 'countsTowardIndependence')
+  if ('availableNow' in value) update.availableNow = parseOptionalBoolean(value.availableNow, 'availableNow')
+  if (update.availableNow && update.countsTowardIndependence === false) throw new DomainError(400, 'Peněženka dostupná hned musí být zároveň počítaná do nezávislosti.')
   if ('openingBalanceCzk' in value) update.openingBalanceCzk = parseWholeCzk(value.openingBalanceCzk, 'Počáteční zůstatek', { allowNegative: true })
   if ('openingBalanceDate' in value) update.openingBalanceDate = parseCalendarDate(value.openingBalanceDate, 'Datum počátečního zůstatku')
   if ('isHidden' in value) update.isHidden = parseOptionalBoolean(value.isHidden, 'isHidden')

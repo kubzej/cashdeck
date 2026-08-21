@@ -167,7 +167,7 @@
   z-index: 10;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.125rem;
   max-width: 28rem;
   margin: 0 auto;
@@ -196,6 +196,7 @@
 .bottom-nav__item span {
   max-width: 100%;
   overflow: hidden;
+  font-size: 0.6875rem;
   text-overflow: ellipsis;
 }
 

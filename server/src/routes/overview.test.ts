@@ -8,7 +8,7 @@ import type { OverviewRepository } from '../overview/repository.js'
 
 const userId = 'user-1'
 const walletId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef123'
-const config: ServerConfig = { databaseUrl: 'postgres://unused', frontendOrigin: 'http://localhost:5173', host: '127.0.0.1', neonAuthUrl: 'https://auth.test/neondb/auth', port: 8000 }
+const config: ServerConfig = { databaseUrl: 'postgres://unused', frontendOrigin: 'http://localhost:5173', host: '127.0.0.1', neonAuthUrl: 'https://auth.test/neondb/auth', port: 8000, sessionSigningSecret: 'test-session-signing-secret-32-characters-long', appAccessPassphrase: 'test-passphrase', appUserId: 'test-user-id' }
 
 const requireTestAuth: AuthGuard = async (request: FastifyRequest, reply: FastifyReply) => {
   if (request.headers.authorization !== 'Bearer test-token') return reply.code(401).send({ error: 'Unauthorized' })

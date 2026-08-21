@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer'
 import type { Pool, PoolClient } from 'pg'
-import type { CategoryDirection, CategoryIconKey, ColorKey } from './domain.js'
+import type { CategoryDirection, CategoryIconKey, ColorKey, WalletType } from './domain.js'
 import { DomainError } from './domain.js'
 import { getPragueToday } from '../recurring/schedule.js'
 
@@ -8,6 +8,9 @@ export type Wallet = {
   id: string
   name: string
   colorKey: string
+  walletType: WalletType
+  countsTowardIndependence: boolean
+  availableNow: boolean
   openingBalanceCzk: number
   currentBalanceCzk: number
   openingBalanceDate: string
@@ -42,6 +45,9 @@ export type CreateWalletInput = {
   colorKey: ColorKey
   openingBalanceCzk: number
   openingBalanceDate: string
+  walletType?: WalletType
+  countsTowardIndependence?: boolean
+  availableNow?: boolean
 }
 
 export type UpdateWalletInput = Partial<CreateWalletInput> & {
@@ -98,6 +104,9 @@ type WalletRow = {
   id: string
   name: string
   color_key: string
+  wallet_type: WalletType
+  counts_toward_independence: boolean
+  available_now: boolean
   opening_balance_czk: string
   current_balance_czk: string
   opening_balance_date: string
@@ -194,6 +203,9 @@ const walletSelect = `
     w.id,
     w.name,
     w.color_key,
+    w.wallet_type,
+    w.counts_toward_independence,
+    w.available_now,
     w.opening_balance_czk,
     (w.opening_balance_czk + coalesce(wallet_deltas.delta_czk, 0))::bigint as current_balance_czk,
     to_char(w.opening_balance_date, 'YYYY-MM-DD') as opening_balance_date,
@@ -222,6 +234,9 @@ function toWallet(row: WalletRow): Wallet {
     id: row.id,
     name: row.name,
     colorKey: row.color_key,
+    walletType: row.wallet_type,
+    countsTowardIndependence: row.counts_toward_independence,
+    availableNow: row.available_now,
     openingBalanceCzk: toSafeCzk(row.opening_balance_czk),
     currentBalanceCzk: toSafeCzk(row.current_balance_czk),
     openingBalanceDate: row.opening_balance_date,
@@ -278,14 +293,14 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
            from wallets
            where user_id = $1
          )
-         insert into wallets (user_id, name, color_key, opening_balance_czk, opening_balance_date, sort_order)
-         select $1, $2, $3, $4, $5, next_order.sort_order
+         insert into wallets (user_id, name, color_key, wallet_type, counts_toward_independence, available_now, opening_balance_czk, opening_balance_date, sort_order)
+         select $1, $2, $3, $4, $5, $6, $7, $8, next_order.sort_order
          from next_order
-         returning id, name, color_key, opening_balance_czk,
+         returning id, name, color_key, wallet_type, counts_toward_independence, available_now, opening_balance_czk,
            opening_balance_czk as current_balance_czk,
            to_char(opening_balance_date, 'YYYY-MM-DD') as opening_balance_date,
            sort_order, is_hidden, false as opening_balance_locked`,
-        [userId, input.name, input.colorKey, input.openingBalanceCzk, input.openingBalanceDate],
+        [userId, input.name, input.colorKey, input.walletType ?? 'other', input.countsTowardIndependence ?? false, input.availableNow ?? false, input.openingBalanceCzk, input.openingBalanceDate],
       )
 
       return toWallet(result.rows[0])
@@ -301,6 +316,9 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
 
       if (input.name !== undefined) add('name', input.name)
       if (input.colorKey !== undefined) add('color_key', input.colorKey)
+      if (input.walletType !== undefined) add('wallet_type', input.walletType)
+      if (input.countsTowardIndependence !== undefined) add('counts_toward_independence', input.countsTowardIndependence)
+      if (input.availableNow !== undefined) add('available_now', input.availableNow)
       if (input.openingBalanceCzk !== undefined) add('opening_balance_czk', input.openingBalanceCzk)
       if (input.openingBalanceDate !== undefined) add('opening_balance_date', input.openingBalanceDate)
       if (input.isHidden !== undefined) add('is_hidden', input.isHidden)

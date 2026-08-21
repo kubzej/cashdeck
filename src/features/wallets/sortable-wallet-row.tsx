@@ -1,11 +1,12 @@
 import { useState, type CSSProperties } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
-import { GripVertical, Pencil, Scale, WalletCards } from 'lucide-react'
+import { GripVertical, Pencil, Scale } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { ListItem, ListItemActions, ListItemContent, ListItemTitle } from '../../components/ui/list'
 import { formatCzk } from '../../lib/format-czk'
 import { type Wallet } from './api'
 import { BalanceAdjustmentDialog } from './balance-adjustment-dialog'
+import { WalletTypeIcon } from './wallet-type-icon'
 
 export function SortableWalletRow({ wallet, disabled, onSelect, onManage, onAdjusted }: { wallet: Wallet; disabled: boolean; onSelect: (wallet: Wallet) => void; onManage: (wallet: Wallet) => void; onAdjusted: () => void }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: wallet.id, disabled })
@@ -18,7 +19,7 @@ export function SortableWalletRow({ wallet, disabled, onSelect, onManage, onAdju
 
   return (
     <ListItem render={<div ref={setNodeRef} style={style} />} role="listitem" variant="quiet" size="spacious" className="wallet-row surface-row" interactive onClick={() => onSelect(wallet)}>
-      <WalletCards className={`wallet-icon color-key--${wallet.colorKey}`} aria-hidden="true" />
+      <WalletTypeIcon walletType={wallet.walletType} className={`wallet-icon color-key--${wallet.colorKey}`} />
       <ListItemContent className="wallet-row__content">
         <ListItemTitle className="wallet-name">{wallet.name}</ListItemTitle>
         <span className="wallet-balance">{formatCzk(wallet.currentBalanceCzk ?? wallet.openingBalanceCzk)}</span>

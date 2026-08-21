@@ -16,6 +16,8 @@ const jobSecret = 'recurring-job-secret-that-is-long-enough'
 const config: ServerConfig = {
   databaseUrl: 'postgres://unused', frontendOrigin: 'http://localhost:5173', host: '127.0.0.1',
   neonAuthUrl: 'https://auth.test/neondb/auth', port: 8000, recurringJobSecret: jobSecret,
+  sessionSigningSecret: 'test-session-signing-secret-32-characters-long',
+  appAccessPassphrase: 'test-passphrase', appUserId: 'test-user-id',
 }
 
 const rule = {

@@ -5,9 +5,9 @@ import { mockOverviewApi } from './overview'
 
 export const testUser = {
   id: 'user-1',
-  email: 'jakub@example.com',
-  name: 'Jakub',
 }
+
+export const testPassphrase = 'test-passphrase'
 
 type AuthMockOptions = {
   signedIn?: boolean
@@ -16,36 +16,23 @@ type AuthMockOptions = {
 export async function mockAuthAndApi(page: Page, { signedIn = false }: AuthMockOptions = {}) {
   let isAuthenticated = signedIn
 
-  await page.route('http://neon.test/auth/**', async (route) => {
-    const pathname = new URL(route.request().url()).pathname
-
-    if (pathname.endsWith('/get-session')) {
-      await route.fulfill({
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session: isAuthenticated ? { id: 'session-1', userId: testUser.id, token: 'token-1' } : null,
-          user: isAuthenticated ? testUser : null,
-        }),
-      })
+  await page.route('http://api.test/api/unlock', async (route) => {
+    const body = route.request().postDataJSON() as { passphrase?: string }
+    if (body.passphrase !== testPassphrase) {
+      await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: 'Nesprávné heslo.' }) })
       return
     }
 
-    if (pathname.endsWith('/sign-in/email')) {
-      isAuthenticated = true
-      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ user: testUser }) })
-      return
-    }
-
-    if (pathname.endsWith('/sign-out')) {
-      isAuthenticated = false
-      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({}) })
-      return
-    }
-
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({}) })
+    isAuthenticated = true
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ token: 'token-1' }) })
   })
 
   await page.route('http://api.test/api/session', async (route) => {
+    if (!isAuthenticated) {
+      await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: 'Unauthorized' }) })
+      return
+    }
+
     expect(route.request().headers().authorization).toBe('Bearer token-1')
     await route.fulfill({
       contentType: 'application/json',
@@ -59,9 +46,8 @@ export async function mockAuthAndApi(page: Page, { signedIn = false }: AuthMockO
 }
 
 export async function signIn(page: Page) {
-  await page.getByLabel('Email').fill(testUser.email)
-  await page.getByLabel('Heslo').fill('secure-password')
-  await page.getByRole('button', { name: 'Přihlásit se' }).click()
+  await page.getByLabel('Heslo').fill(testPassphrase)
+  await page.getByRole('button', { name: 'Odemknout' }).click()
   await expect(page.getByRole('heading', { name: 'Transakce', exact: true })).toBeVisible()
 }
 

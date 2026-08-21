@@ -60,6 +60,9 @@ export const colorKeys = [
 ] as const
 export type ColorKey = (typeof colorKeys)[number]
 
+export const walletTypes = ['cash', 'checking', 'savings', 'investment', 'pension', 'crypto', 'other'] as const
+export type WalletType = (typeof walletTypes)[number]
+
 export type DefaultCategory = {
   name: string
   direction: CategoryDirection
@@ -151,6 +154,14 @@ export function parseColorKey(value: unknown): ColorKey {
   }
 
   throw new DomainError(400, 'Barva není podporovaná.')
+}
+
+export function parseWalletType(value: unknown): WalletType {
+  if (typeof value === 'string' && (walletTypes as readonly string[]).includes(value)) {
+    return value as WalletType
+  }
+
+  throw new DomainError(400, 'Typ peněženky není podporovaný.')
 }
 
 export function parseCategoryIconKey(value: unknown): CategoryIconKey {

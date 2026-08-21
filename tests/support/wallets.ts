@@ -4,6 +4,9 @@ export type WalletFixture = {
   id: string
   name: string
   colorKey: string
+  walletType?: string
+  countsTowardIndependence?: boolean
+  availableNow?: boolean
   openingBalanceCzk: number
   currentBalanceCzk?: number
   openingBalanceDate: string
@@ -12,7 +15,7 @@ export type WalletFixture = {
   openingBalanceLocked: boolean
 }
 
-type WalletInput = Pick<WalletFixture, 'name' | 'colorKey' | 'openingBalanceCzk' | 'openingBalanceDate'>
+type WalletInput = Pick<WalletFixture, 'name' | 'colorKey' | 'openingBalanceCzk' | 'openingBalanceDate' | 'walletType' | 'countsTowardIndependence' | 'availableNow'>
 type WalletUpdateInput = Partial<WalletInput>
 type WalletRequestMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 type WalletApiFailure = { status: number; message: string }
@@ -26,8 +29,17 @@ export type WalletApiMock = {
   wallets: () => WalletFixture[]
 }
 
+function normalizeWallet(wallet: WalletFixture): WalletFixture {
+  return {
+    ...wallet,
+    walletType: wallet.walletType ?? 'other',
+    countsTowardIndependence: wallet.countsTowardIndependence ?? false,
+    availableNow: wallet.availableNow ?? false,
+  }
+}
+
 export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[] = []) {
-  let wallets = [...initialWallets]
+  let wallets = initialWallets.map(normalizeWallet)
   let nextId = wallets.length + 1
   const failures = new Map<WalletRequestMethod, QueuedWalletApiFailure>()
   const requestCounts = new Map<WalletRequestMethod, number>()
@@ -54,14 +66,14 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
 
     if (request.method() === 'POST' && pathname === '/api/wallets') {
       const input = request.postDataJSON() as WalletInput
-      const wallet: WalletFixture = {
+      const wallet: WalletFixture = normalizeWallet({
         id: `wallet-${nextId++}`,
         ...input,
         currentBalanceCzk: input.openingBalanceCzk,
         sortOrder: wallets.length,
         isHidden: false,
         openingBalanceLocked: false,
-      }
+      })
       wallets = [...wallets, wallet]
       await route.fulfill(json(wallet, 201))
       return

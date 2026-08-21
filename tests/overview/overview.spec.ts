@@ -19,6 +19,18 @@ test('shows server-aggregated wealth, cashflow and breakdowns', async ({ page })
   await expect(page.getByLabel('Graf peněžního toku')).toBeVisible()
 })
 
+test('shows expenses with a minus sign, not a plus, even though the stored amount is a positive magnitude', async ({ page }) => {
+  await openSignedInApp(page)
+  await page.locator('.bottom-nav').getByRole('button', { name: 'Přehled', exact: true }).click()
+
+  await page.getByRole('button', { name: 'Příjmy', exact: true }).click()
+  await expect(page.getByText('+74 500 Kč', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Výdaje', exact: true }).click()
+  await expect(page.getByText('-53 100 Kč', { exact: true })).toBeVisible()
+  await expect(page.getByText('+53 100 Kč', { exact: true })).toHaveCount(0)
+})
+
 test('excludes transfer impact from a label\'s total, even in Celkem mode', async ({ page }) => {
   await mockAuthAndApi(page)
   await mockOverviewApi(page, {

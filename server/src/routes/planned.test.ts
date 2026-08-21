@@ -10,7 +10,7 @@ const userId = 'user-1'
 const walletId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef123'
 const categoryId = 'f2b30da3-819e-4eb1-bfbd-5bea6760624d'
 const labelId = '23ceac7e-cba7-4d8c-8559-0a162fb544c2'
-const config: ServerConfig = { databaseUrl: 'postgres://unused', frontendOrigin: 'http://localhost:5173', host: '127.0.0.1', neonAuthUrl: 'https://auth.test/neondb/auth', port: 8000 }
+const config: ServerConfig = { databaseUrl: 'postgres://unused', frontendOrigin: 'http://localhost:5173', host: '127.0.0.1', neonAuthUrl: 'https://auth.test/neondb/auth', port: 8000, sessionSigningSecret: 'test-session-signing-secret-32-characters-long', appAccessPassphrase: 'test-passphrase', appUserId: 'test-user-id' }
 
 function createRepository(): PlannedRepository {
   return { listPlanned: vi.fn().mockResolvedValue({ items: [], summary: { count: 0, totalCzk: 0 } }) }

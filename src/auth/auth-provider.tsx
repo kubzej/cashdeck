@@ -1,61 +1,38 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthSession, type AuthStatus } from './auth-context'
-import { authClient, isNeonAuthConfigured } from '../lib/auth-client'
-import { verifyBackendSession } from '../lib/api-client'
+import { ApiError, unlock as requestUnlock, verifyBackendSession } from '../lib/api-client'
+import { clearStoredSessionToken, getStoredSessionToken, setStoredSessionToken } from '../lib/session-token'
 
-type AuthErrorResponse = { code?: string; message?: string }
-
-function getAuthErrorMessage(error: unknown) {
-  const authError = error as AuthErrorResponse | null
-
-  switch (authError?.code) {
-    case 'INVALID_EMAIL_OR_PASSWORD':
-    case 'USER_NOT_FOUND':
-    case 'invalid_credentials':
-      return 'Email nebo heslo není správně.'
-    case 'TOO_MANY_REQUESTS':
-      return 'Příliš mnoho pokusů. Zkus to za chvíli znovu.'
-    case 'USER_ALREADY_EXISTS':
-      return 'Účet s tímto emailem už existuje.'
-    default:
-      return 'Přihlášení se nepodařilo. Zkus to znovu.'
-  }
-}
+const isApiConfigured = Boolean(import.meta.env.VITE_API_URL?.trim())
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>(isNeonAuthConfigured ? 'loading' : 'unavailable')
-  const [session, setSession] = useState<AuthSession>(null)
+  const [status, setStatus] = useState<AuthStatus>(isApiConfigured ? 'loading' : 'unavailable')
+  const [session, setSession] = useState<AuthSession | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const refreshSession = useCallback(async () => {
-    const client = authClient
-    if (!client) {
+    if (!isApiConfigured) {
       setStatus('unavailable')
       setSession(null)
+      return
+    }
+
+    if (!(await getStoredSessionToken())) {
+      setSession(null)
+      setStatus('signed-out')
       return
     }
 
     setErrorMessage(null)
 
     try {
-      const response = await client.getSession()
-      if (response.error) {
-        setStatus('error')
-        setSession(null)
-        setErrorMessage(getAuthErrorMessage(response.error))
-        return
-      }
-
-      const nextSession = response.data?.user ? response.data : null
-      if (nextSession) {
-        await verifyBackendSession()
-      }
-      setSession(nextSession)
-      setStatus(nextSession ? 'signed-in' : 'signed-out')
-    } catch (error) {
-      setStatus('error')
+      const result = await verifyBackendSession()
+      setSession({ userId: result.userId })
+      setStatus('signed-in')
+    } catch {
+      clearStoredSessionToken()
       setSession(null)
-      setErrorMessage(error instanceof Error ? error.message : 'Připojení k účtu se nepodařilo.')
+      setStatus('signed-out')
     }
   }, [])
 
@@ -63,23 +40,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshSession()
   }, [refreshSession])
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const client = authClient
-    if (!client) return 'Neon Auth není pro toto prostředí nastavený.'
-
+  const unlock = useCallback(async (passphrase: string) => {
     try {
-      const response = await client.signIn.email({ email, password })
-      if (response.error) {
-        const message = getAuthErrorMessage(response.error)
-        setStatus('signed-out')
-        setErrorMessage(message)
-        return message
-      }
-
+      const token = await requestUnlock(passphrase)
+      setStoredSessionToken(token)
       await refreshSession()
       return null
     } catch (error) {
-      const message = getAuthErrorMessage(error)
+      const message = error instanceof ApiError ? error.message : 'Odemčení se nepodařilo. Zkus to znovu.'
       setStatus('signed-out')
       setErrorMessage(message)
       return message
@@ -87,16 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshSession])
 
   const signOut = useCallback(async () => {
-    const client = authClient
-    if (client) await client.signOut()
+    clearStoredSessionToken()
     setSession(null)
     setStatus('signed-out')
     setErrorMessage(null)
   }, [])
 
   const value = useMemo(
-    () => ({ status, session, errorMessage, refreshSession, signIn, signOut }),
-    [errorMessage, refreshSession, session, signIn, signOut, status],
+    () => ({ status, session, errorMessage, refreshSession, unlock, signOut }),
+    [errorMessage, refreshSession, session, signOut, status, unlock],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,7 +1,7 @@
-import { timingSafeEqual } from 'node:crypto'
 import type { FastifyPluginAsync } from 'fastify'
 import type { RecurringRuleRepository } from '../recurring/repository.js'
 import { getPragueToday } from '../recurring/schedule.js'
+import { safeEqual } from '../security.js'
 
 export function createRecurringJobRoutes(repository: RecurringRuleRepository, secret: string): FastifyPluginAsync {
   return async function recurringJobRoutes(app) {
@@ -22,10 +22,4 @@ function requireJobSecret(secret: string) {
       return reply.code(401).send({ error: 'Unauthorized' })
     }
   }
-}
-
-function safeEqual(expected: string, provided: string) {
-  const expectedBuffer = Buffer.from(expected)
-  const providedBuffer = Buffer.from(provided)
-  return expectedBuffer.length === providedBuffer.length && timingSafeEqual(expectedBuffer, providedBuffer)
 }

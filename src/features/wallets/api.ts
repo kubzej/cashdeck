@@ -4,10 +4,16 @@ import { colorKeys, type ColorKey } from '../../lib/color-keys'
 export const walletColorKeys = colorKeys
 export type WalletColorKey = ColorKey
 
+export const walletTypes = ['cash', 'checking', 'savings', 'investment', 'pension', 'crypto', 'other'] as const
+export type WalletType = (typeof walletTypes)[number]
+
 export type Wallet = {
   id: string
   name: string
   colorKey: WalletColorKey
+  walletType: WalletType
+  countsTowardIndependence: boolean
+  availableNow: boolean
   openingBalanceCzk: number
   currentBalanceCzk?: number
   openingBalanceDate: string
@@ -16,7 +22,7 @@ export type Wallet = {
   openingBalanceLocked: boolean
 }
 
-export type CreateWalletInput = Pick<Wallet, 'name' | 'colorKey' | 'openingBalanceCzk' | 'openingBalanceDate'>
+export type CreateWalletInput = Pick<Wallet, 'name' | 'colorKey' | 'openingBalanceCzk' | 'openingBalanceDate'> & Partial<Pick<Wallet, 'walletType' | 'countsTowardIndependence' | 'availableNow'>>
 export type UpdateWalletInput = Partial<CreateWalletInput> & { isHidden?: boolean }
 
 export type BalanceAdjustmentResult = {

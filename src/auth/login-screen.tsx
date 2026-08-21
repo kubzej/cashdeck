@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { CircleAlert, LockKeyhole, Mail } from 'lucide-react'
+import { CircleAlert, LockKeyhole } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import {
   FeedbackState,
@@ -13,9 +13,8 @@ import { Input } from '../components/ui/input'
 import { useAuth } from './auth-context'
 
 export function LoginScreen() {
-  const { signIn } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const { unlock } = useAuth()
+  const [passphrase, setPassphrase] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -23,13 +22,13 @@ export function LoginScreen() {
     event.preventDefault()
     setErrorMessage(null)
 
-    if (!email.trim() || !password) {
-      setErrorMessage('Vyplň všechny údaje.')
+    if (!passphrase) {
+      setErrorMessage('Zadej heslo.')
       return
     }
 
     setIsSubmitting(true)
-    const error = await signIn(email.trim(), password)
+    const error = await unlock(passphrase)
     setErrorMessage(error)
     setIsSubmitting(false)
   }
@@ -44,36 +43,19 @@ export function LoginScreen() {
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
           <Field invalid={Boolean(errorMessage)}>
-            <FieldLabel>Email</FieldLabel>
-            <div className="auth-input-wrap">
-              <Mail aria-hidden="true" />
-              <Input
-                type="email"
-                name="email"
-                autoComplete="email"
-                inputMode="email"
-                placeholder="ty@example.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-          </Field>
-
-          <Field invalid={Boolean(errorMessage)}>
             <FieldLabel>Heslo</FieldLabel>
             <div className="auth-input-wrap">
               <LockKeyhole aria-hidden="true" />
               <Input
                 type="password"
-                name="password"
+                name="passphrase"
                 autoComplete="current-password"
                 placeholder="Tvoje heslo"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                value={passphrase}
+                onChange={(event) => setPassphrase(event.target.value)}
                 disabled={isSubmitting}
                 required
+                autoFocus
               />
             </div>
           </Field>
@@ -82,14 +64,14 @@ export function LoginScreen() {
             <FeedbackState status="error" layout="inline">
               <FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon>
               <FeedbackStateContent>
-                <FeedbackStateTitle>Nelze se přihlásit</FeedbackStateTitle>
+                <FeedbackStateTitle>Nelze odemknout</FeedbackStateTitle>
                 <FeedbackStateDescription>{errorMessage}</FeedbackStateDescription>
               </FeedbackStateContent>
             </FeedbackState>
           ) : null}
 
           <Button type="submit" size="lg" className="auth-submit" loading={isSubmitting}>
-            Přihlásit se
+            Odemknout
           </Button>
         </form>
       </section>

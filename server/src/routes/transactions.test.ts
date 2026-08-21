@@ -18,6 +18,9 @@ const config: ServerConfig = {
   host: '127.0.0.1',
   neonAuthUrl: 'https://auth.test/neondb/auth',
   port: 8000,
+  sessionSigningSecret: 'test-session-signing-secret-32-characters-long',
+  appAccessPassphrase: 'test-passphrase',
+  appUserId: 'test-user-id',
 }
 
 const transaction = {

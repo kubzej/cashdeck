@@ -1,4 +1,5 @@
-import { CalendarClock, ChevronRight, FolderCog, LogOut, Tags, UserRound } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CalendarClock, CheckCircle2, ChevronRight, FolderCog, LogOut, Sparkles, Tags, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/auth-context'
 import { Button } from '../../components/ui/button'
 import {
@@ -9,21 +10,27 @@ import {
   ListItemDescription,
   ListItemTitle,
 } from '../../components/ui/list'
+import { getIndependenceSettings } from '../independence/api'
 import './settings.css'
 
-export function SettingsScreen({ onOpenCategories, onOpenLabels, onOpenRecurring }: { onOpenCategories: () => void; onOpenLabels: () => void; onOpenRecurring: () => void }) {
-  const { session, signOut } = useAuth()
+export function SettingsScreen({ onOpenCategories, onOpenLabels, onOpenRecurring, onOpenIndependence }: { onOpenCategories: () => void; onOpenLabels: () => void; onOpenRecurring: () => void; onOpenIndependence: () => void }) {
+  const { signOut } = useAuth()
+  const [isIndependenceConfigured, setIsIndependenceConfigured] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    void getIndependenceSettings().then((result) => setIsIndependenceConfigured(result.settings !== null)).catch(() => setIsIndependenceConfigured(null))
+  }, [])
 
   return (
     <section className="settings-screen" aria-label="Nastavení aplikace">
       <section className="settings-section" aria-labelledby="session-title">
         <h2 id="session-title">Účet</h2>
         <List gap="sm">
-          <ListItem variant="quiet" size="spacious" className="surface-row settings-account-row" aria-label="Přihlášený účet">
+          <ListItem variant="quiet" size="spacious" className="surface-row settings-account-row" aria-label="Přístup k aplikaci">
             <UserRound className="settings-row-icon settings-row-icon--muted" aria-hidden="true" />
             <ListItemContent>
-              <ListItemTitle>Přihlášený účet</ListItemTitle>
-              <ListItemDescription>{session?.user.email ?? ''}</ListItemDescription>
+              <ListItemTitle>Přístup k aplikaci</ListItemTitle>
+              <ListItemDescription>Chráněno heslem</ListItemDescription>
             </ListItemContent>
           </ListItem>
         </List>
@@ -52,6 +59,16 @@ export function SettingsScreen({ onOpenCategories, onOpenLabels, onOpenRecurring
             <ListItemContent>
               <ListItemTitle>Opakování</ListItemTitle>
               <ListItemDescription>Pravidelné transakce a převody</ListItemDescription>
+            </ListItemContent>
+            <ListItemActions><ChevronRight aria-hidden="true" /></ListItemActions>
+          </ListItem>
+          <ListItem render={<button type="button" aria-label="Nastavení nezávislosti" onClick={onOpenIndependence} />} interactive variant="quiet" size="spacious" className="surface-row settings-navigation-row">
+            <Sparkles className="settings-row-icon settings-row-icon--primary" aria-hidden="true" />
+            <ListItemContent>
+              <ListItemTitle>Nezávislost</ListItemTitle>
+              <ListItemDescription>
+                {isIndependenceConfigured ? <span className="settings-navigation-row__configured"><CheckCircle2 aria-hidden="true" />Nastaveno</span> : 'Zatím nenastaveno'}
+              </ListItemDescription>
             </ListItemContent>
             <ListItemActions><ChevronRight aria-hidden="true" /></ListItemActions>
           </ListItem>

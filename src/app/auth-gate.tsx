@@ -20,7 +20,7 @@ function AuthLoadingState() {
 }
 
 function AuthUnavailableState() {
-  return <main className="auth-state-screen"><FeedbackState status="error" layout="panel" className="auth-state-feedback"><FeedbackStateIcon><WifiOff aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Nelze načíst přihlášení</FeedbackStateTitle><FeedbackStateDescription>Neon Auth není pro toto prostředí nastavený.</FeedbackStateDescription></FeedbackStateContent></FeedbackState></main>
+  return <main className="auth-state-screen"><FeedbackState status="error" layout="panel" className="auth-state-feedback"><FeedbackStateIcon><WifiOff aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Nelze načíst přihlášení</FeedbackStateTitle><FeedbackStateDescription>Cashdeck API není pro toto prostředí nastavené.</FeedbackStateDescription></FeedbackStateContent></FeedbackState></main>
 }
 
 function AuthErrorState({ message, onRetry }: { message: string | null; onRetry: () => Promise<void> }) {

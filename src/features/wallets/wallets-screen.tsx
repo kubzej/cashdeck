@@ -10,6 +10,7 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { formatCzk } from '../../lib/format-czk'
 import { listWallets, reorderWallets, updateWallet, type Wallet } from './api'
 import { SortableWalletRow } from './sortable-wallet-row'
+import { WalletTypeIcon } from './wallet-type-icon'
 import './wallets.css'
 
 export function WalletsScreen({ onCreate, onSelect, onManage }: { onCreate: () => void; onSelect: (wallet: Wallet) => void; onManage: (wallet: Wallet) => void }) {
@@ -115,7 +116,7 @@ export function WalletsScreen({ onCreate, onSelect, onManage }: { onCreate: () =
           <span>Skryté peněženky ({hiddenWallets.length})</span>
         </Button>
         {showHidden ? <List gap="sm">{hiddenWallets.map((wallet) => <ListItem key={wallet.id} variant="quiet" size="spacious" className="wallet-row wallet-row--hidden surface-row">
-          <WalletCards className={`wallet-icon color-key--${wallet.colorKey}`} aria-hidden="true" />
+          <WalletTypeIcon walletType={wallet.walletType} className={`wallet-icon color-key--${wallet.colorKey}`} />
           <ListItemContent className="wallet-row__content">
             <ListItemTitle className="wallet-name">{wallet.name}</ListItemTitle>
             <span className="wallet-balance">{formatCzk(wallet.currentBalanceCzk ?? wallet.openingBalanceCzk)}</span>

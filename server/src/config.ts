@@ -7,9 +7,19 @@ export type ServerConfig = {
   databaseUrl: string
   frontendOrigin: string
   host: string
-  neonAuthUrl: string
+  // Kept for a possible future revert — see the note on `sessionSigningSecret` below.
+  // No longer read by the active auth guard, so it's optional at boot.
+  neonAuthUrl?: string
   port: number
   recurringJobSecret?: string
+  // Local passphrase-unlock auth, replacing Neon Auth's email/password sign-in as of
+  // 2026-08-21: Neon Auth's session cookie doesn't survive in an installed iOS PWA
+  // (standalone display mode) — https://github.com/neondatabase/neon/issues/12934.
+  // `src/lib/auth-client.ts` and the `@neondatabase/auth` dependency are kept in the repo
+  // in case that gets fixed and it's worth switching back.
+  sessionSigningSecret: string
+  appAccessPassphrase: string
+  appUserId: string
 }
 
 export function loadConfig(): ServerConfig {
@@ -26,10 +36,7 @@ export function loadConfig(): ServerConfig {
     throw new Error('DATABASE_URL is required in server/.env.local.')
   }
 
-  const neonAuthUrl = process.env.NEON_AUTH_URL?.replace(/\/+$/, '')
-  if (!neonAuthUrl) {
-    throw new Error('NEON_AUTH_URL is required in server/.env.local.')
-  }
+  const neonAuthUrl = process.env.NEON_AUTH_URL?.replace(/\/+$/, '') || undefined
 
   const frontendOrigin = process.env.FRONTEND_ORIGIN
   if (!frontendOrigin) {
@@ -41,6 +48,21 @@ export function loadConfig(): ServerConfig {
     throw new Error('PORT must be a valid TCP port.')
   }
 
+  const sessionSigningSecret = process.env.SESSION_SIGNING_SECRET
+  if (!sessionSigningSecret || sessionSigningSecret.length < 32) {
+    throw new Error('SESSION_SIGNING_SECRET is required in server/.env.local and must contain at least 32 characters.')
+  }
+
+  const appAccessPassphrase = process.env.APP_ACCESS_PASSPHRASE
+  if (!appAccessPassphrase) {
+    throw new Error('APP_ACCESS_PASSPHRASE is required in server/.env.local.')
+  }
+
+  const appUserId = process.env.APP_USER_ID
+  if (!appUserId) {
+    throw new Error('APP_USER_ID is required in server/.env.local.')
+  }
+
   return {
     databaseUrl,
     frontendOrigin,
@@ -48,6 +70,9 @@ export function loadConfig(): ServerConfig {
     neonAuthUrl,
     port,
     recurringJobSecret: parseRecurringJobSecret(process.env.RECURRING_JOB_SECRET),
+    sessionSigningSecret,
+    appAccessPassphrase,
+    appUserId,
   }
 }
 

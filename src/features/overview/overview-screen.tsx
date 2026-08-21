@@ -237,7 +237,7 @@ function ChartEmpty() { return <div className="overview-chart overview-chart--em
 
 function getPrimaryMetric(metrics: OverviewMetrics, mode: OverviewMode) {
   if (mode === 'income') return { label: 'Příjmy v období', amountCzk: metrics.flow.incomeCzk, tone: 'positive' as const, signed: true }
-  if (mode === 'expense') return { label: 'Výdaje v období', amountCzk: metrics.flow.expenseCzk, tone: 'negative' as const, signed: true }
+  if (mode === 'expense') return { label: 'Výdaje v období', amountCzk: -metrics.flow.expenseCzk, tone: 'negative' as const, signed: true }
   if (mode === 'cashflow') return { label: 'Cashflow v období', amountCzk: metrics.flow.cashflowCzk, tone: metrics.flow.cashflowCzk >= 0 ? 'positive' as const : 'negative' as const, signed: true }
   return { label: 'Celkové bohatství', amountCzk: metrics.wealth.amountCzk, tone: metrics.wealth.amountCzk >= 0 ? 'positive' as const : 'negative' as const, signed: false }
 }
