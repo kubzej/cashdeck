@@ -17,7 +17,7 @@ export type Wallet = {
 }
 
 export type CreateWalletInput = Pick<Wallet, 'name' | 'colorKey' | 'openingBalanceCzk' | 'openingBalanceDate'>
-export type UpdateWalletInput = Partial<CreateWalletInput>
+export type UpdateWalletInput = Partial<CreateWalletInput> & { isHidden?: boolean }
 
 export type BalanceAdjustmentResult = {
   adjustment: {
@@ -30,8 +30,9 @@ export type BalanceAdjustmentResult = {
   currentBalanceCzk: number
 }
 
-export async function listWallets() {
-  return apiRequest<{ items: Wallet[] }>('/wallets')
+export async function listWallets({ includeHidden = false }: { includeHidden?: boolean } = {}) {
+  const query = includeHidden ? '?includeHidden=true' : ''
+  return apiRequest<{ items: Wallet[] }>(`/wallets${query}`)
 }
 
 export async function createWallet(input: CreateWalletInput) {

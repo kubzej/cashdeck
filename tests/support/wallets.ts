@@ -46,7 +46,9 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
     if (await fulfillFailure(route, failures)) return
 
     if (request.method() === 'GET' && pathname === '/api/wallets') {
-      await route.fulfill(json({ items: wallets }))
+      const includeHidden = url.searchParams.get('includeHidden') === 'true'
+      const items = includeHidden ? wallets : wallets.filter((wallet) => !wallet.isHidden)
+      await route.fulfill(json({ items }))
       return
     }
 
