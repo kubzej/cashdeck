@@ -1,0 +1,45 @@
+{
+  "name": "Field",
+  "import": "import { Field, FieldLabel, FieldControl, FieldDescription, FieldError } from \"@/components/ui/field\"",
+  "description": "A labelled form field that wires the label, description, error, and invalid state to its control automatically.",
+  "parts": {
+    "Field": {
+      "description": "The root. Wraps a label + control + optional description/error and links them.",
+      "props": {
+        "invalid": {
+          "type": "boolean",
+          "default": false,
+          "description": "Marks the field invalid — sets aria-invalid on the control and reveals the error."
+        },
+        "disabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "name": {
+          "type": "string",
+          "description": "Field name, forwarded to the control (useful with a form)."
+        }
+      }
+    },
+    "FieldError": {
+      "description": "The error message. Shown when it matches the field's validity.",
+      "props": {
+        "match": {
+          "type": "boolean | ValidityStateKey",
+          "description": "true → always show (use for a custom message); or a validity key like \"valueMissing\"."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not hand-wire id/htmlFor/aria-describedby — Field does it. Just nest label + control.",
+    "Do not put a bare <label> or manual error <p> inside; use FieldLabel / FieldError.",
+    "Do not restyle text sizes/colors via className; they come from tokens.",
+    "Show an error with FieldError, not colour on the input alone."
+  ],
+  "example": "<Field>\n  <FieldLabel>Email</FieldLabel>\n  <Input type=\"email\" />\n  <FieldDescription>We'll never share it.</FieldDescription>\n</Field>",
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Interactive targets should remain at least 44px. Layouts should fit parent width without horizontal overflow on mobile."
+  }
+}

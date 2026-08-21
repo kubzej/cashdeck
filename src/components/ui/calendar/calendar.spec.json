@@ -1,0 +1,155 @@
+{
+  "name": "Calendar",
+  "description": "Single-date calendar grid and popover date picker for form dates and lightweight filters.",
+  "import": "import { Calendar, DatePicker } from \"@/components/ui/calendar\"",
+  "parts": {
+    "Calendar": {
+      "description": "Inline month grid for selecting one calendar day.",
+      "props": {
+        "value": {
+          "type": "Date",
+          "description": "Controlled selected date."
+        },
+        "defaultValue": {
+          "type": "Date",
+          "description": "Initial selected date for uncontrolled usage."
+        },
+        "onValueChange": {
+          "type": "(date: Date) => void",
+          "description": "Called when a selectable day is picked."
+        },
+        "month": {
+          "type": "Date",
+          "description": "Controlled visible month."
+        },
+        "defaultMonth": {
+          "type": "Date",
+          "description": "Initial visible month."
+        },
+        "onMonthChange": {
+          "type": "(month: Date) => void",
+          "description": "Called when previous or next month navigation changes the visible month."
+        },
+        "minDate": {
+          "type": "Date",
+          "description": "First selectable day."
+        },
+        "maxDate": {
+          "type": "Date",
+          "description": "Last selectable day."
+        },
+        "disabledDates": {
+          "type": "Date[] | (date: Date) => boolean",
+          "description": "Additional disabled days."
+        },
+        "locale": {
+          "type": "string",
+          "description": "BCP 47 locale used for month and aria labels.",
+          "default": "en-US"
+        },
+        "startOfWeek": {
+          "type": "0 | 1 | 2 | 3 | 4 | 5 | 6",
+          "description": "First day of the week, where 0 is Sunday and 1 is Monday.",
+          "default": "0"
+        },
+        "showOutsideDays": {
+          "type": "boolean",
+          "description": "Show days from adjacent months in the fixed six-week grid.",
+          "default": "true"
+        },
+        "className": {
+          "type": "string",
+          "description": "Additional classes for the calendar root."
+        }
+      }
+    },
+    "DatePicker": {
+      "description": "Popover trigger plus Calendar for selecting one date from a form field.",
+      "props": {
+        "value": {
+          "type": "Date",
+          "description": "Controlled selected date."
+        },
+        "defaultValue": {
+          "type": "Date",
+          "description": "Initial selected date for uncontrolled usage."
+        },
+        "onValueChange": {
+          "type": "(date: Date) => void",
+          "description": "Called when a date is picked. The popover closes after selection."
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional hidden input name. Submitted value is yyyy-mm-dd."
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Trigger text before a date is selected.",
+          "default": "Pick a date"
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Disable the trigger and block opening."
+        },
+        "locale": {
+          "type": "string",
+          "description": "Locale used for display labels and calendar aria labels.",
+          "default": "en-US"
+        },
+        "startOfWeek": {
+          "type": "0 | 1 | 2 | 3 | 4 | 5 | 6",
+          "description": "First day of the week passed to Calendar."
+        },
+        "minDate": {
+          "type": "Date",
+          "description": "First selectable date."
+        },
+        "maxDate": {
+          "type": "Date",
+          "description": "Last selectable date."
+        },
+        "disabledDates": {
+          "type": "Date[] | (date: Date) => boolean",
+          "description": "Additional disabled dates."
+        },
+        "formatDate": {
+          "type": "(date: Date) => string",
+          "description": "Custom trigger label formatter."
+        },
+        "triggerClassName": {
+          "type": "string",
+          "description": "Additional classes for the date picker trigger."
+        },
+        "calendarClassName": {
+          "type": "string",
+          "description": "Additional classes for the popup Calendar."
+        },
+        "side": {
+          "type": "\"top\" | \"right\" | \"bottom\" | \"left\"",
+          "description": "Popover side.",
+          "default": "bottom"
+        },
+        "align": {
+          "type": "\"start\" | \"center\" | \"end\"",
+          "description": "Popover alignment.",
+          "default": "start"
+        },
+        "className": {
+          "type": "string",
+          "description": "Additional classes for the DatePicker wrapper."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use Calendar as an event planner or scheduler grid.",
+    "Do not use DatePicker for long relative ranges when preset chips plus two date inputs are clearer.",
+    "Do not store raw Date objects directly in APIs; convert at the app boundary.",
+    "Do not hide required labels inside placeholder text."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Day buttons, month navigation, and the DatePicker trigger are all 44px. On narrow mobile layouts, put DatePicker in a full-width Field and avoid multi-month popups."
+  },
+  "example": "<DatePicker name=\"publishDate\" placeholder=\"Publish date\" onValueChange={setDate} />"
+}

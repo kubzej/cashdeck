@@ -1,0 +1,46 @@
+{
+  "name": "Feedback state",
+  "import": "import { FeedbackState, FeedbackStateIcon, FeedbackStateContent, FeedbackStateTitle, FeedbackStateDescription, FeedbackStateActions } from \"@/components/ui/feedback-state\"",
+  "description": "A status-driven block for the state of a region — loading, error, success, info/pending — as a page, panel, or compact inline row.",
+  "props": {
+    "status": {
+      "type": "enum",
+      "values": [
+        "neutral",
+        "loading",
+        "info",
+        "success",
+        "error"
+      ],
+      "default": "neutral",
+      "exhaustive": true,
+      "description": "Tints the icon and sets the ARIA role (error → alert, else status)."
+    },
+    "layout": {
+      "type": "enum",
+      "values": [
+        "page",
+        "panel",
+        "inline"
+      ],
+      "default": "panel",
+      "exhaustive": true,
+      "description": "page = fills the whole region, panel = a card-sized block, inline = a compact status row."
+    },
+    "render": {
+      "type": "ReactElement",
+      "description": "Change the root element."
+    }
+  },
+  "forbidden": [
+    "Do not use FeedbackState for a message beside existing content; that's Alert.",
+    "Do not use it as a rich first-run onboarding screen; that's Empty state.",
+    "Do not add a prominent border — the soft fill is the container.",
+    "Do not signal status with color alone; keep the icon and text meaningful."
+  ],
+  "example": "<FeedbackState status=\"error\" layout=\"panel\">\n  <FeedbackStateIcon><CircleAlert /></FeedbackStateIcon>\n  <FeedbackStateContent>\n    <FeedbackStateTitle>Couldn't load the page</FeedbackStateTitle>\n    <FeedbackStateDescription>Check your connection and try again.</FeedbackStateDescription>\n  </FeedbackStateContent>\n  <FeedbackStateActions>\n    <Button>Retry</Button>\n  </FeedbackStateActions>\n</FeedbackState>",
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Interactive targets should remain at least 44px. Layouts should fit parent width without horizontal overflow on mobile."
+  }
+}

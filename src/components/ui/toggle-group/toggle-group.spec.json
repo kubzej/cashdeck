@@ -1,0 +1,151 @@
+{
+  "name": "Toggle group",
+  "import": "import { Toggle, ToggleGroup, ToggleGroupItem } from \"@/components/ui/toggle-group\"",
+  "description": "Pressed buttons and segmented controls for toolbar state, display modes, and compact choices.",
+  "parts": {
+    "Toggle": {
+      "description": "A standalone two-state button. Use it for toolbar actions such as formatting or compact view toggles.",
+      "props": {
+        "pressed": {
+          "type": "boolean",
+          "description": "Controlled pressed state."
+        },
+        "defaultPressed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Initial uncontrolled pressed state."
+        },
+        "onPressedChange": {
+          "type": "(pressed, details) => void",
+          "description": "Called when pressed state changes."
+        },
+        "variant": {
+          "type": "enum",
+          "values": ["default", "solid", "ghost"],
+          "default": "default",
+          "description": "Pressed-state treatment. Default uses a soft surface; solid uses the primary color; ghost stays quiet."
+        },
+        "size": {
+          "type": "enum",
+          "values": ["sm", "default", "lg", "icon"],
+          "default": "default",
+          "description": "Density. Every size keeps at least a 44px touch target."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Prevents interaction."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "Short label or icon. Icon-only toggles need aria-label."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "ToggleGroup": {
+      "description": "Shared state wrapper for related toggle items.",
+      "props": {
+        "type": {
+          "type": "enum",
+          "values": ["single", "multiple"],
+          "default": "single",
+          "description": "Single allows one pressed item; multiple allows any number of pressed items."
+        },
+        "value": {
+          "type": "string | string[]",
+          "description": "Controlled value. Use a string for single groups and string[] for multiple groups."
+        },
+        "defaultValue": {
+          "type": "string | string[]",
+          "description": "Initial uncontrolled value. Use a string for single groups and string[] for multiple groups."
+        },
+        "onValueChange": {
+          "type": "(value, details) => void",
+          "description": "Called when group value changes. Single groups receive a string; multiple groups receive a string array."
+        },
+        "orientation": {
+          "type": "enum",
+          "values": ["horizontal", "vertical"],
+          "default": "horizontal",
+          "description": "Keyboard and layout orientation."
+        },
+        "variant": {
+          "type": "enum",
+          "values": ["default", "solid", "ghost"],
+          "default": "default",
+          "description": "Default item variant inherited by ToggleGroupItem children."
+        },
+        "size": {
+          "type": "enum",
+          "values": ["sm", "default", "lg", "icon"],
+          "default": "default",
+          "description": "Default item size inherited by ToggleGroupItem children."
+        },
+        "width": {
+          "type": "enum",
+          "values": ["fit", "full"],
+          "default": "fit",
+          "description": "Whether the group hugs content or lets items share available width."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Disables the entire group."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "ToggleGroupItem children."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "ToggleGroupItem": {
+      "description": "A toggle button participating in a ToggleGroup.",
+      "props": {
+        "value": {
+          "type": "string",
+          "description": "Value submitted to the parent ToggleGroup."
+        },
+        "variant": {
+          "type": "enum",
+          "values": ["default", "solid", "ghost"],
+          "description": "Optional override for this item. Prefer the group-level variant."
+        },
+        "size": {
+          "type": "enum",
+          "values": ["sm", "default", "lg", "icon"],
+          "description": "Optional override for this item. Prefer the group-level size."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Prevents selecting this item."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "Short label or icon. Icon-only items need aria-label."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use ToggleGroup to switch content panels; use Tabs.",
+    "Do not use ToggleGroup for filtering a collection; use Pill.",
+    "Do not use standalone Toggle for persisted binary settings; use Switch.",
+    "Do not use ToggleGroup when native radio inputs are required for form submission; use Radio group once available.",
+    "Do not let segmented labels wrap across multiple lines."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Every Toggle and ToggleGroupItem size keeps at least a 44px touch target. Use width=\"full\" for short form choices on mobile."
+  },
+  "example": "<ToggleGroup type=\"single\" defaultValue=\"comfortable\" width=\"full\">\n  <ToggleGroupItem value=\"compact\">Compact</ToggleGroupItem>\n  <ToggleGroupItem value=\"comfortable\">Comfortable</ToggleGroupItem>\n  <ToggleGroupItem value=\"spacious\">Spacious</ToggleGroupItem>\n</ToggleGroup>"
+}

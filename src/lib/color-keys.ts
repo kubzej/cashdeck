@@ -1,0 +1,41 @@
+export const colorKeys = [
+  'slate-light', 'slate', 'slate-dark',
+  'gray-light', 'gray', 'gray-dark',
+  'red-light', 'red', 'red-dark',
+  'orange-light', 'orange', 'orange-dark',
+  'yellow-light', 'yellow', 'yellow-dark',
+  'amber-light', 'amber', 'amber-dark',
+  'lime-light', 'lime', 'lime-dark',
+  'green-light', 'green', 'green-dark',
+  'teal-light', 'teal', 'teal-dark',
+  'cyan-light', 'cyan', 'cyan-dark',
+  'sky-light', 'sky', 'sky-dark',
+  'blue-light', 'blue', 'blue-dark',
+  'indigo-light', 'indigo', 'indigo-dark',
+  'violet-light', 'violet', 'violet-dark',
+  'pink-light', 'pink', 'pink-dark',
+  'rose-light', 'rose', 'rose-dark',
+  'brown-light', 'brown', 'brown-dark',
+] as const
+
+export type ColorKey = (typeof colorKeys)[number]
+
+export const colorLabels: Record<ColorKey, string> = {
+  'slate-light': 'Světlá břidlicová', slate: 'Břidlicová', 'slate-dark': 'Tmavá břidlicová',
+  'gray-light': 'Světle šedá', gray: 'Šedá', 'gray-dark': 'Tmavě šedá',
+  'red-light': 'Světle červená', red: 'Červená', 'red-dark': 'Tmavě červená',
+  'orange-light': 'Světle oranžová', orange: 'Oranžová', 'orange-dark': 'Tmavě oranžová',
+  'yellow-light': 'Světle žlutá', yellow: 'Žlutá', 'yellow-dark': 'Tmavě žlutá',
+  'amber-light': 'Světle jantarová', amber: 'Jantarová', 'amber-dark': 'Tmavě jantarová',
+  'lime-light': 'Světle limetková', lime: 'Limetková', 'lime-dark': 'Tmavě limetková',
+  'green-light': 'Světle zelená', green: 'Zelená', 'green-dark': 'Tmavě zelená',
+  'teal-light': 'Světle tyrkysová', teal: 'Tyrkysová', 'teal-dark': 'Tmavě tyrkysová',
+  'cyan-light': 'Světle azurová', cyan: 'Azurová', 'cyan-dark': 'Tmavě azurová',
+  'sky-light': 'Světle nebeská', sky: 'Nebeská', 'sky-dark': 'Tmavě nebeská',
+  'blue-light': 'Světle modrá', blue: 'Modrá', 'blue-dark': 'Tmavě modrá',
+  'indigo-light': 'Světle indigová', indigo: 'Indigová', 'indigo-dark': 'Tmavě indigová',
+  'violet-light': 'Světle fialová', violet: 'Fialová', 'violet-dark': 'Tmavě fialová',
+  'pink-light': 'Světle růžová', pink: 'Růžová', 'pink-dark': 'Tmavě růžová',
+  'rose-light': 'Světle růžovočervená', rose: 'Růžovočervená', 'rose-dark': 'Tmavě růžovočervená',
+  'brown-light': 'Světle hnědá', brown: 'Hnědá', 'brown-dark': 'Tmavě hnědá',
+}

@@ -1,0 +1,136 @@
+{
+  "name": "Page shell",
+  "import": "import { PageShell, PageTopRail, PageIntro, PageSection, PageBackButton } from \"@/components/ui/page-shell\"",
+  "description": "Composable page content scaffold for width, rhythm, sticky controls, intro copy, sections, and back navigation.",
+  "parts": {
+    "PageShell": {
+      "description": "Page-level content wrapper used inside an app layout.",
+      "props": {
+        "width": {
+          "type": "enum",
+          "values": ["narrow", "default", "wide", "full"],
+          "default": "wide",
+          "description": "Maximum content width. On narrow mobile viewports, max-width variants naturally fill the available content track. Use full only when the page content already manages its own layout."
+        },
+        "gap": {
+          "type": "enum",
+          "values": ["sm", "md", "lg"],
+          "default": "md",
+          "description": "Vertical rhythm between direct child sections."
+        },
+        "bleed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Lets a section visually align to the app content edges. Use sparingly."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "Usually PageIntro, optional PageTopRail, and PageSection children."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "PageTopRail": {
+      "description": "Sticky row for tabs, filters, and compact page controls. Stays aligned to PageShell content by default.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Tabs, filter controls, segmented controls, or compact action rows."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "PageIntro": {
+      "description": "Page title block with optional eyebrow, subtitle, meta, leading control, and actions.",
+      "props": {
+        "title": {
+          "type": "ReactNode",
+          "description": "Primary page heading."
+        },
+        "subtitle": {
+          "type": "ReactNode",
+          "description": "Short supporting copy."
+        },
+        "eyebrow": {
+          "type": "ReactNode",
+          "description": "Small uppercase context label."
+        },
+        "meta": {
+          "type": "ReactNode",
+          "description": "Compact metadata row under the intro."
+        },
+        "leading": {
+          "type": "ReactNode",
+          "description": "A PageBackButton or other compact leading control."
+        },
+        "actions": {
+          "type": "ReactNode",
+          "description": "Page-level actions composed from kubkit Button or other controls."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        },
+        "titleClassName": {
+          "type": "string",
+          "description": "Heading layout escape hatch only."
+        }
+      }
+    },
+    "PageSection": {
+      "description": "Semantic section with consistent vertical rhythm.",
+      "props": {
+        "gap": {
+          "type": "enum",
+          "values": ["sm", "md", "lg"],
+          "default": "md",
+          "description": "Vertical rhythm inside the section."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "Section content."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "PageBackButton": {
+      "description": "Small native back button for page intros and detail pages.",
+      "props": {
+        "label": {
+          "type": "ReactNode",
+          "default": "Back",
+          "description": "Visible button label."
+        },
+        "onClick": {
+          "type": "() => void",
+          "description": "Back navigation handler."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use PageShell as the app router layout, sidebar, or mobile header.",
+    "Do not wrap every PageSection in Card.",
+    "Do not put page-level actions inside random content cards when PageIntro actions can own them.",
+    "Do not use bleed by default.",
+      "Do not put large forms or long scrolling content in PageTopRail."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "PageIntro actions wrap on small screens; PageTopRail stays sticky, scrolls horizontally when needed, and should contain touch-sized controls only. Width variants are max-widths, so narrow/default/wide can look identical on phone-sized viewports."
+  },
+  "example": "<PageShell width=\"wide\" gap=\"lg\">\n  <PageIntro title=\"Projects\" subtitle=\"Track work across your team.\" actions={<Button>Create</Button>} />\n  <PageTopRail>{/* tabs or filters */}</PageTopRail>\n  <PageSection>{/* page content */}</PageSection>\n</PageShell>"
+}

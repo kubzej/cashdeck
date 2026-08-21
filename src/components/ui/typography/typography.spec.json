@@ -1,0 +1,94 @@
+{
+  "name": "Typography",
+  "import": "import { Heading, Text, Eyebrow } from \"@/components/ui/typography\"",
+  "description": "One closed type scale — Heading for titles, Text for everything else, Eyebrow for kickers.",
+  "parts": {
+    "Heading": {
+      "description": "Section or page title. Choose level by structure, not by size.",
+      "props": {
+        "level": {
+          "type": "enum",
+          "values": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "default": "2",
+          "exhaustive": true,
+          "description": "1 = page · 2 = section · 3 = subsection · 4 = small heading."
+        },
+        "render": {
+          "type": "ReactElement",
+          "description": "Change the element (defaults to the matching h1–h4)."
+        }
+      }
+    },
+    "Text": {
+      "description": "Body, labels and values — the prop-rich one. Defaults to <span>.",
+      "props": {
+        "size": {
+          "type": "enum",
+          "values": [
+            "xs",
+            "sm",
+            "base",
+            "lg"
+          ],
+          "default": "sm",
+          "exhaustive": true,
+          "description": "Default sm — the app's baseline body size."
+        },
+        "tone": {
+          "type": "enum",
+          "values": [
+            "default",
+            "muted"
+          ],
+          "default": "default",
+          "exhaustive": true,
+          "description": "muted = secondary text (text-muted-foreground)."
+        },
+        "weight": {
+          "type": "enum",
+          "values": [
+            "normal",
+            "medium",
+            "semibold"
+          ],
+          "default": "normal",
+          "exhaustive": true
+        },
+        "numeric": {
+          "type": "boolean",
+          "default": false,
+          "description": "Tabular monospaced numerics — prices, amounts, aligned figures."
+        },
+        "render": {
+          "type": "ReactElement",
+          "description": "Change the element, e.g. `render={<p />}` for a paragraph."
+        }
+      }
+    },
+    "Eyebrow": {
+      "description": "Small uppercase muted label above a section (kicker). No variants.",
+      "props": {
+        "render": {
+          "type": "ReactElement",
+          "description": "Change the element (defaults to <p>)."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not set font size/weight/color via className; use size / weight / tone or a token.",
+    "Do not use a raw <h1>–<h4> or styled <p> for headings/body; use Heading / Text so the scale stays closed.",
+    "Do not use Heading for a small label — use Eyebrow.",
+    "Do not skip heading levels for styling; pick level by meaning, restyle via the scale."
+  ],
+  "example": "<Heading level={1}>Components</Heading>\n<Eyebrow>Foundations</Eyebrow>\n<Text tone=\"muted\">Updated just now</Text>\n<Text numeric weight=\"semibold\">1,024</Text>",
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Interactive targets should remain at least 44px. Layouts should fit parent width without horizontal overflow on mobile."
+  }
+}

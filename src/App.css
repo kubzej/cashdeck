@@ -1,0 +1,222 @@
+#root {
+  min-height: 100svh;
+}
+
+.auth-screen,
+.auth-state-screen {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 1.25rem;
+  background: color-mix(in oklab, var(--color-background) 84%, var(--color-secondary));
+  color: var(--color-foreground);
+}
+
+.auth-panel,
+.auth-state-panel {
+  display: grid;
+  width: 100%;
+  max-width: 28rem;
+  gap: 1.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
+  padding: 1.25rem;
+  box-shadow: 0 1rem 2.5rem color-mix(in oklab, var(--color-foreground) 10%, transparent);
+}
+
+.auth-brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.auth-brand-mark {
+  width: 3rem;
+  height: 3rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-input-wrap > svg {
+  position: absolute;
+  left: 0.75rem;
+  z-index: 1;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-muted-foreground);
+  pointer-events: none;
+}
+
+.auth-input-wrap input {
+  padding-left: 2.5rem;
+}
+
+.auth-submit {
+  width: 100%;
+}
+
+.auth-state-panel {
+  place-items: center;
+  text-align: center;
+}
+
+.auth-state-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.auth-state-feedback {
+  max-width: 28rem;
+}
+
+.app-shell {
+  min-height: 100svh;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.app-main {
+  display: flex;
+  min-height: 100svh;
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  flex-direction: column;
+}
+
+.brand-name,
+.screen-heading h1 {
+  margin: 0;
+}
+
+.brand-name {
+  color: var(--color-foreground);
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.app-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 1.5rem 1rem 7.5rem;
+}
+
+.app-content--form {
+  padding: 0 1rem calc(1.5rem + env(safe-area-inset-bottom));
+}
+
+.app-content--transaction-fab {
+  padding-bottom: calc(11rem + env(safe-area-inset-bottom));
+}
+
+.screen-heading {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.screen-heading h1 {
+  color: var(--color-foreground);
+  font-size: 2rem;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.screen-heading--action {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.screen-placeholder {
+  min-height: 16rem;
+  margin-block: auto;
+}
+
+.surface-row {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
+  box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 4%, transparent);
+}
+
+.surface-row[data-interactive='true']:hover {
+  border-color: color-mix(in oklab, var(--color-primary) 30%, var(--color-border));
+  background: var(--color-card);
+}
+
+.bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.125rem;
+  max-width: 28rem;
+  margin: 0 auto;
+  min-height: calc(4.75rem + env(safe-area-inset-bottom));
+  padding: 0.625rem 0.5rem calc(0.75rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in oklab, var(--color-background) 97%, transparent);
+  backdrop-filter: blur(1rem);
+  box-shadow: 0 -0.5rem 1.5rem color-mix(in oklab, var(--color-foreground) 6%, transparent);
+}
+
+.bottom-nav__item {
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow: hidden;
+  padding-inline: 0.25rem;
+  color: var(--color-muted-foreground);
+}
+
+.bottom-nav__item svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.bottom-nav__item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bottom-nav__item--active {
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: 650;
+}
+
+.transaction-fab {
+  position: fixed;
+  right: max(1rem, calc((100vw - 28rem) / 2 + 1rem));
+  bottom: calc(5.75rem + env(safe-area-inset-bottom));
+  z-index: 20;
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0.75rem 1.5rem color-mix(in oklab, var(--color-primary) 28%, transparent);
+}
+
+.transaction-fab svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}

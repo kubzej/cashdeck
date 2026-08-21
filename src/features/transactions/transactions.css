@@ -1,0 +1,153 @@
+.transactions-screen { display: grid; gap: 1.125rem; }
+.selection-summary { display: grid; gap: 0.625rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); padding: 0.875rem 1rem; color: var(--color-foreground); box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 3%, transparent); }
+.selection-summary__header { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.selection-summary__icon { display: inline-grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border-radius: var(--radius-md); background: color-mix(in oklab, var(--color-key-value, var(--color-primary)) 14%, var(--color-card)); color: var(--color-key-value, var(--color-primary)); }
+.selection-summary__icon svg { width: 1rem; height: 1rem; }
+.selection-summary__kicker { color: var(--color-muted-foreground); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.selection-summary__name { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8125rem; font-weight: 650; }
+.selection-summary__headline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+.selection-summary__amount { color: var(--color-positive); font-family: var(--font-mono); font-size: 1.5rem; font-variant-numeric: tabular-nums; font-weight: 650; line-height: 1.15; white-space: nowrap; }
+.selection-summary__amount--expense { color: var(--color-negative); }
+.selection-summary__trend { display: inline-flex; align-items: center; gap: 0.1875rem; border-radius: var(--radius-full); background: var(--color-muted); padding: 0.125rem 0.5rem; color: var(--color-muted-foreground); font-size: 0.75rem; font-weight: 600; }
+.selection-summary__trend svg { width: 0.8125rem; height: 0.8125rem; }
+.selection-summary__trend--positive { background: color-mix(in oklab, var(--color-positive) 14%, var(--color-card)); color: var(--color-positive); }
+.selection-summary__trend--negative { background: color-mix(in oklab, var(--color-negative) 14%, var(--color-card)); color: var(--color-negative); }
+.selection-summary__meta { color: var(--color-muted-foreground); font-size: 0.75rem; }
+.selection-summary__sparkline-wrap { position: relative; margin-top: 0.125rem; }
+.selection-summary__sparkline { display: flex; height: 2.25rem; align-items: end; gap: 0.1875rem; }
+.selection-summary__sparkline button { display: flex; min-width: 0; flex: 1; height: 100%; align-items: end; border: 0; background: transparent; padding: 0; cursor: pointer; }
+.selection-summary__sparkline button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.selection-summary__sparkline i { display: block; width: 100%; height: var(--bar-size); min-height: 0.1875rem; border-radius: var(--radius-sm) var(--radius-sm) 0 0; background: var(--color-primary); }
+.selection-summary__sparkline .is-positive i { background: var(--color-positive); }
+.selection-summary__sparkline .is-negative i { background: var(--color-negative); }
+.selection-summary__sparkline .is-neutral i { background: var(--color-border); }
+.selection-summary__sparkline-tooltip { position: absolute; z-index: 1; bottom: 100%; margin-bottom: 0.375rem; display: grid; min-width: 6.5rem; gap: 0.125rem; border-radius: var(--radius-sm); background: var(--color-foreground); padding: 0.375rem 0.5rem; color: var(--color-card); font-size: 0.6875rem; line-height: 1.25; text-align: center; white-space: nowrap; pointer-events: none; transform: translateX(-50%); }
+.selection-summary__sparkline-tooltip strong { font-family: var(--font-mono); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.selection-summary--loading { grid-auto-flow: column; grid-template-columns: 2.5rem 1fr; align-items: center; pointer-events: none; }
+.transactions-loading, .transaction-form-loading { display: grid; gap: 0.75rem; }
+.transactions-feedback { margin-block: auto; }
+.feed-period-pager { display: grid; gap: 0.75rem; min-width: 0; }
+.feed-period-pager__heading { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem; align-items: center; }
+.feed-period-pager__title { margin: 0; color: var(--color-foreground); font-size: 1rem; font-weight: 650; text-align: center; }
+.feed-period-pager__nav { display: inline-grid; width: 2.25rem; height: 2.25rem; place-items: center; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--color-primary); cursor: pointer; }
+.feed-period-pager__nav:hover { background: color-mix(in oklab, var(--color-primary) 8%, transparent); }
+.feed-period-pager__nav:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.feed-period-pager__nav:disabled { color: var(--color-muted-foreground); opacity: 0.28; cursor: default; }
+.feed-period-pager__nav svg { width: 1.25rem; height: 1.25rem; }
+.feed-period-pager__viewport { position: relative; min-width: 0; overflow: hidden; touch-action: pan-y; }
+.feed-period-pager__preview-page { position: absolute; top: 0; bottom: 0; width: 100%; display: grid; align-content: center; justify-items: start; gap: 0.75rem; padding: 0 1rem; background: var(--color-background); color: var(--color-muted-foreground); pointer-events: none; }
+.feed-period-pager__preview-page[data-side='left'] { right: 100%; }
+.feed-period-pager__preview-page[data-side='right'] { left: 100%; }
+.feed-period-pager__preview-page span { font-size: 0.875rem; font-weight: 650; }
+.feed-period-pager__preview-page i { display: block; width: min(15rem, 62%); height: 1rem; border-radius: var(--radius-sm); background: var(--color-muted); }
+.feed-period-pager__preview-page i:nth-of-type(2) { width: min(12rem, 48%); }
+.feed-period-pager__preview-page i:nth-of-type(3) { width: min(9rem, 36%); }
+.feed-period-pager__interaction { position: relative; z-index: 1; min-width: 100%; background: var(--color-background); transform: translateX(var(--feed-period-drag-offset, 0)); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+.feed-period-pager__interaction[data-dragging] { transition: none; }
+.feed-period-pager__page { min-width: 0; }
+.feed-period-pager__page[data-motion='from-left'] { animation: feed-period-enter-from-left 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.feed-period-pager__page[data-motion='from-right'] { animation: feed-period-enter-from-right 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+@keyframes feed-period-enter-from-left {
+  from { opacity: 0.45; transform: translateX(-1.75rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes feed-period-enter-from-right {
+  from { opacity: 0.45; transform: translateX(1.75rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-period-pager__page[data-motion], .feed-period-pager__interaction { animation: none; transition: none; }
+}
+.transaction-day { display: grid; gap: 0.5rem; }
+.feed-period-pager__page > .planned-summary + .transaction-day { margin-top: 0.5rem; }
+.transaction-day + .transaction-day { margin-top: 0.875rem; }
+.transaction-day h2 { margin: 0; color: var(--color-muted-foreground); font-size: 0.875rem; font-weight: 650; }
+.transaction-row { min-height: 0; gap: 0.625rem; padding: 0.625rem 0.75rem; border-color: color-mix(in oklab, var(--color-border) 85%, var(--color-foreground)); }
+.transaction-row__category { width: 2.5rem; height: 2.5rem; }
+.transaction-row__category { align-self: center; margin-top: 0; background: color-mix(in oklab, var(--color-key-value) 14%, var(--color-card)); color: var(--color-key-value); }
+.transaction-row .category-icon { width: 1.2rem; height: 1.2rem; }
+.transaction-row [data-slot='list-item-content'] { gap: 0.125rem; }
+.transaction-row [data-slot='list-item-title'] { display: flex; min-width: 0; align-items: baseline; gap: 0.25rem; font-size: 0.9375rem; font-weight: 650; line-height: 1.25rem; }
+.transaction-row [data-slot='list-item-title'] > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-row__wallet { overflow: hidden; color: var(--color-muted-foreground); font-size: 0.8125rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-row__amount { font-family: var(--font-mono); font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.transaction-row__amount--income { color: var(--color-positive); }
+.transaction-row__amount--expense { color: var(--color-negative); }
+.transfer-row__icon { width: 2.5rem; height: 2.5rem; align-self: center; margin-top: 0; background: color-mix(in oklab, var(--color-primary) 10%, var(--color-card)); color: var(--color-primary); }
+.transfer-row__icon svg { width: 1.2rem; height: 1.2rem; }
+.balance-adjustment-row__icon { width: 2.5rem; height: 2.5rem; align-self: center; margin-top: 0; background: var(--color-muted); color: var(--color-muted-foreground); }.balance-adjustment-row__icon svg { width: 1.2rem; height: 1.2rem; }
+.transfer-row__amount { color: var(--color-foreground); font-family: var(--font-mono); font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.transaction-row__labels { display: flex; min-width: 0; align-items: center; gap: 0.3125rem; overflow: hidden; }
+.transaction-row__label { flex: 0 0 auto; border: 1px solid color-mix(in oklab, var(--color-border) 90%, var(--color-foreground)); border-radius: var(--radius-full); padding: 0 0.3125rem; font-size: 0.625rem; line-height: 1rem; }
+.transaction-row__note { overflow: hidden; margin: 0; color: var(--color-muted-foreground); font-size: 0.6875rem; line-height: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.transactions-load-more { width: 100%; }
+
+.transaction-form-screen { display: grid; min-height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); gap: 1.25rem; padding-top: 0.5rem; }
+.transaction-form-header { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; align-items: center; }
+.transaction-form-header h1 { margin: 0; text-align: center; font-size: 1.25rem; font-weight: 650; }
+.transaction-form-header > span { width: 2.75rem; height: 2.75rem; }
+.transaction-form { display: grid; align-content: start; gap: 1.25rem; padding-bottom: 1.5rem; }
+.transaction-amount-panel { display: grid; gap: 1rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 4%, transparent); }
+.transaction-direction { width: 100%; justify-content: center; border: 1px solid color-mix(in oklab, var(--color-border) 80%, var(--color-muted)); border-radius: calc(var(--radius-lg) - 0.1875rem); background: var(--color-muted); padding: 0.25rem; }
+.transaction-direction [data-slot='toggle-group-item'] { flex: 1; color: var(--color-muted-foreground); }
+.transaction-direction [data-slot='toggle-group-item'][data-pressed] { background: var(--color-card); color: var(--color-foreground); box-shadow: 0 0.0625rem 0.1875rem color-mix(in oklab, var(--color-foreground) 12%, transparent); }
+.transaction-amount-field { gap: 0.5rem; }
+.transaction-amount { position: relative; }
+.transaction-amount input { height: 4.25rem; padding-right: 3.75rem; border-color: color-mix(in oklab, var(--color-primary) 38%, var(--color-border)); background: var(--color-card); font-size: 2rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.transaction-amount span { position: absolute; top: 50%; right: 1rem; color: var(--color-muted-foreground); font-size: 1.125rem; font-weight: 650; transform: translateY(-50%); }
+.transaction-primary-pickers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.transaction-primary-picker { gap: 0.5rem; }
+.transaction-primary-picker .transaction-picker-button { min-height: 8.25rem; height: auto; flex-direction: column; align-items: center; justify-content: center; gap: 0.875rem; border-color: var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); padding: 1rem; box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 4%, transparent); }
+.transaction-primary-picker .transaction-picker-button:hover { border-color: color-mix(in oklab, var(--color-primary) 55%, var(--color-border)); background: var(--color-card); }
+.transaction-primary-picker .transaction-picker-button[data-selected] { border-color: var(--color-primary); background: color-mix(in oklab, var(--color-primary) 8%, var(--color-card)); box-shadow: inset 0 0 0 1px var(--color-primary), 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 4%, transparent); }
+.transaction-primary-picker .transaction-picker-button > svg:first-child { width: 2rem; height: 2rem; }
+.transaction-primary-picker .transaction-picker-button .category-icon { align-self: center; }
+.transaction-primary-picker .transaction-picker-button > span { flex: initial; width: 100%; text-align: center; font-size: 0.9375rem; font-weight: 650; }
+.transaction-picker-button { width: 100%; justify-content: flex-start; gap: 0.75rem; border-color: var(--color-border); background: var(--color-card); }
+.transaction-picker-button > svg:first-child { width: 1.25rem; height: 1.25rem; }
+.transaction-picker-button > span { min-width: 0; flex: 1; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-picker-button > svg:last-child { margin-left: auto; color: var(--color-muted-foreground); }
+.transaction-picker-dialog { max-height: min(42rem, calc(100svh - 2rem)); }
+.transaction-category-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; }
+.transaction-category-option, .transaction-wallet-option, .transaction-label-option, .transaction-labels__empty { display: inline-flex; align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-card); color: var(--color-foreground); font: inherit; cursor: pointer; }
+.transaction-category-option { position: relative; min-height: 5.5rem; flex-direction: column; justify-content: center; gap: 0.5rem; padding: 0.75rem 0.5rem; font-size: 0.75rem; line-height: 1.2; text-align: center; }
+.transaction-category-option .category-icon { width: 1.5rem; height: 1.5rem; }
+.transaction-category-option[data-selected] { border-color: var(--color-primary); background: color-mix(in oklab, var(--color-primary) 8%, var(--color-card)); box-shadow: inset 0 0 0 1px var(--color-primary); }
+.transaction-category-option > svg:last-child { position: absolute; top: 0.45rem; right: 0.45rem; width: 0.875rem; height: 0.875rem; color: var(--color-primary); }
+.transaction-wallet-options, .transaction-label-options { display: grid; gap: 0.5rem; }
+.transaction-wallet-option { width: 100%; min-height: 3.5rem; gap: 0.75rem; padding: 0.75rem; text-align: left; }
+.transaction-wallet-option > span, .transaction-label-option > span { flex: 1; }
+.transaction-wallet-option > svg { width: 1.25rem; height: 1.25rem; }
+.transaction-wallet-option > svg:last-child, .transaction-label-option > svg:last-child { color: var(--color-primary); }
+.transaction-wallet-option[data-selected], .transaction-label-option[data-selected] { border-color: color-mix(in oklab, var(--color-primary) 60%, var(--color-border)); background: color-mix(in oklab, var(--color-primary) 7%, var(--color-card)); }
+.transaction-labels { display: grid; gap: 0.5rem; }
+.transaction-label-search { position: relative; }
+.transaction-label-search > svg { position: absolute; top: 50%; left: 0.875rem; z-index: 1; width: 1rem; height: 1rem; color: var(--color-muted-foreground); pointer-events: none; transform: translateY(-50%); }
+.transaction-label-search input { border-color: var(--color-border); background: var(--color-card); padding-left: 2.625rem; }
+.transaction-label-results { display: grid; gap: 0.375rem; }
+.transaction-label-result { display: flex; width: 100%; min-height: 2.5rem; align-items: center; gap: 0.625rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-card); padding: 0.5rem 0.75rem; color: var(--color-foreground); font: inherit; text-align: left; cursor: pointer; }
+.transaction-label-result > span { flex: 1; }
+.transaction-label-result > svg { width: 1rem; height: 1rem; color: var(--color-muted-foreground); }
+.transaction-label-result[data-selected] { border-color: color-mix(in oklab, var(--color-primary) 55%, var(--color-border)); background: color-mix(in oklab, var(--color-primary) 6%, var(--color-card)); }
+.transaction-label-result--create { color: var(--color-primary); }
+.transaction-label-error { margin: 0; color: var(--color-negative); font-size: 0.8125rem; }
+.transaction-label-chips { display: flex; min-height: 2.25rem; gap: 0.5rem; overflow-x: auto; padding-block: 0.125rem; }
+.transaction-label-chip { display: inline-flex; min-height: 2.25rem; flex: 0 0 auto; align-items: center; gap: 0.375rem; border: 1px solid var(--color-border); border-radius: var(--radius-full); background: var(--color-card); padding: 0 0.75rem; color: var(--color-foreground); font: inherit; font-size: 0.875rem; cursor: pointer; }
+.transaction-label-chip svg { width: 0.875rem; height: 0.875rem; color: var(--color-muted-foreground); }
+.transaction-label-chip--selected { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-primary-foreground); }
+.transaction-label-chip--selected svg { color: currentColor; }
+.transaction-details { display: grid; gap: 1rem; }
+.transaction-details input, .transaction-details [data-slot='date-picker-trigger'] { border-color: var(--color-border); background: var(--color-card); }
+.transaction-date-picker { max-width: none; }
+.transaction-form-submit { width: 100%; margin-top: 0.25rem; }
+.transaction-form-hint { margin: -0.625rem 0 0; color: var(--color-muted-foreground); font-size: 0.875rem; line-height: 1.4; }
+.transfer-amount-panel { gap: 0.75rem; }
+.transfer-amount-panel__heading { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--color-muted-foreground); font-size: 0.875rem; font-weight: 650; }
+.transfer-amount-panel__heading svg { width: 1rem; height: 1rem; }
+.transfer-wallet-pickers .transaction-primary-picker-button > svg:first-child { width: 2rem; height: 2rem; }
+.activity-add-dialog__actions { display: grid; gap: 0.625rem; }
+.activity-add-dialog__action { min-height: 4.5rem; justify-content: flex-start; gap: 0.875rem; font-size: 1rem; font-weight: 650; }
+.activity-add-dialog__action > svg { width: 1.35rem; height: 1.35rem; color: var(--color-primary); }

@@ -1,0 +1,55 @@
+{
+  "name": "Badge",
+  "import": "import { Badge } from \"@/components/ui/badge\"",
+  "description": "A compact status or metadata pill for dense product UI.",
+  "props": {
+    "children": {
+      "type": "ReactNode",
+      "description": "Short label text. May include a leading decorative icon as composition; Badge has no icon prop."
+    },
+    "variant": {
+      "type": "enum",
+      "values": [
+        "default",
+        "secondary",
+        "destructive",
+        "muted",
+        "outline",
+        "ghost",
+        "link",
+        "positive",
+        "negative",
+        "warning",
+        "info"
+      ],
+      "default": "default",
+      "description": "Visual tone for short product states. Muted is low-emphasis fill; outline is the only bordered badge variant."
+    },
+    "size": {
+      "type": "enum",
+      "values": ["xs", "sm", "default"],
+      "default": "default",
+      "description": "Density. Use xs for table/status pills instead of arbitrary text/height overrides."
+    },
+    "render": {
+      "type": "ReactElement | render function",
+      "description": "Polymorphic render target, Base UI style. Use for links only when the badge is genuinely navigational."
+    },
+    "className": {
+      "type": "string",
+      "description": "Escape hatch for layout only; do not restyle variant, size, color, or radius."
+    }
+  },
+  "forbidden": [
+    "Do not use Badge as a button; use Button or a menu item for actions.",
+    "Do not create one-off text-[10px] / h-[18px] badges; use size=\"xs\".",
+    "Do not invent custom status colors via className; use the closed tone variants or add a real variant.",
+    "Do not add custom visible borders. `outline` is the only bordered variant.",
+    "Do not imply Badge has an icon prop; icons are composed through children."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "A static badge is not a touch target. If rendered as a link, place it in a row or hit area that reaches 44px."
+  },
+  "example": "<Badge variant=\"muted\" size=\"xs\">Queued</Badge>\n<Badge variant=\"positive\">Active</Badge>\n<Badge variant=\"warning\"><Clock3 aria-hidden />Due soon</Badge>"
+}

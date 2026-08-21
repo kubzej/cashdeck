@@ -1,0 +1,37 @@
+{
+  "name": "Separator",
+  "import": "import { Separator } from \"@/components/ui/separator\"",
+  "description": "A subtle structural divider for grouping related content without adding another surface.",
+  "props": {
+    "orientation": {
+      "type": "enum",
+      "values": ["horizontal", "vertical"],
+      "default": "horizontal",
+      "description": "Axis of the divider."
+    },
+    "decorative": {
+      "type": "boolean",
+      "default": true,
+      "description": "When true, the separator is hidden from assistive technology. Set false only when the division carries meaning."
+    },
+    "className": {
+      "type": "string",
+      "description": "Layout escape hatch only: margin, width, height, flex/grid placement. Do not restyle color or thickness."
+    },
+    "render": {
+      "type": "ReactElement | render function",
+      "description": "Polymorphic render target, Base UI style. Rarely needed."
+    }
+  },
+  "forbidden": [
+    "Do not use Separator as decoration between every item in a dense list.",
+    "Do not use Separator to simulate a card border or framed page section.",
+    "Do not restyle color or thickness via className.",
+    "Do not use vertical Separator without a parent height or stretch context.",
+    "Do not make decorative separators accessible to screen readers."
+  ],
+  "responsive": {
+    "note": "Let separators follow the responsive layout. Hide or change orientation when stacked mobile layouts no longer need a divider."
+  },
+  "example": "<div className=\"space-y-4\">\n  <p>Account details</p>\n  <Separator />\n  <p>Notification preferences</p>\n</div>"
+}

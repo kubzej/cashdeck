@@ -1,0 +1,363 @@
+{
+  "generatedBy": "scripts/generate-ui-registry-index.mjs",
+  "scope": "kubkit-registry-catalog",
+  "root": "components/ui",
+  "sharedFiles": {
+    "agents": "components/ui/AGENTS.md",
+    "systemRules": "components/ui/system.rules.md"
+  },
+  "verifyInstalledFiles": true,
+  "components": {
+    "accordion": {
+      "title": "Accordion",
+      "description": "Stack of show/hide sections on Base UI. One-open-at-a-time or multiple. Token-only, hairline dividers.",
+      "importPath": "@/components/ui/accordion",
+      "folder": "components/ui/accordion",
+      "entry": "components/ui/accordion/index.tsx",
+      "spec": "components/ui/accordion/accordion.spec.json",
+      "rules": "components/ui/accordion/accordion.rules.md"
+    },
+    "alert": {
+      "title": "Alert",
+      "description": "Soft inline feedback block for product messages, warnings, and recoverable errors.",
+      "importPath": "@/components/ui/alert",
+      "folder": "components/ui/alert",
+      "entry": "components/ui/alert/index.tsx",
+      "spec": "components/ui/alert/alert.spec.json",
+      "rules": "components/ui/alert/alert.rules.md"
+    },
+    "avatar": {
+      "title": "Avatar",
+      "description": "User picture with initials/icon fallback, on Base UI Avatar. Sizes, status badge, and stacked groups.",
+      "importPath": "@/components/ui/avatar",
+      "folder": "components/ui/avatar",
+      "entry": "components/ui/avatar/index.tsx",
+      "spec": "components/ui/avatar/avatar.spec.json",
+      "rules": "components/ui/avatar/avatar.rules.md"
+    },
+    "badge": {
+      "title": "Badge",
+      "description": "Compact status/metadata pill for dense product UI surfaces and repeated rows.",
+      "importPath": "@/components/ui/badge",
+      "folder": "components/ui/badge",
+      "entry": "components/ui/badge/index.tsx",
+      "spec": "components/ui/badge/badge.spec.json",
+      "rules": "components/ui/badge/badge.rules.md"
+    },
+    "breadcrumb": {
+      "title": "Breadcrumb",
+      "description": "Navigation trail for nested pages. Semantic markup, polymorphic links via render, collapsed middle, custom separators.",
+      "importPath": "@/components/ui/breadcrumb",
+      "folder": "components/ui/breadcrumb",
+      "entry": "components/ui/breadcrumb/index.tsx",
+      "spec": "components/ui/breadcrumb/breadcrumb.spec.json",
+      "rules": "components/ui/breadcrumb/breadcrumb.rules.md"
+    },
+    "button": {
+      "title": "Button",
+      "description": "Primary interactive control built on Base UI. Token-only styling, ≥44px touch targets, polymorphic via the render prop.",
+      "importPath": "@/components/ui/button",
+      "folder": "components/ui/button",
+      "entry": "components/ui/button/index.tsx",
+      "spec": "components/ui/button/button.spec.json",
+      "rules": "components/ui/button/button.rules.md"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "description": "Single-date calendar grid and popover date picker for form dates and lightweight filters.",
+      "importPath": "@/components/ui/calendar",
+      "folder": "components/ui/calendar",
+      "entry": "components/ui/calendar/index.tsx",
+      "spec": "components/ui/calendar/calendar.spec.json",
+      "rules": "components/ui/calendar/calendar.rules.md"
+    },
+    "card": {
+      "title": "Card",
+      "description": "A borderless content surface for grouping related information and actions.",
+      "importPath": "@/components/ui/card",
+      "folder": "components/ui/card",
+      "entry": "components/ui/card/index.tsx",
+      "spec": "components/ui/card/card.spec.json",
+      "rules": "components/ui/card/card.rules.md"
+    },
+    "checkbox": {
+      "title": "Checkbox",
+      "description": "Boolean toggle with an indeterminate state, built on Base UI. Token-only.",
+      "importPath": "@/components/ui/checkbox",
+      "folder": "components/ui/checkbox",
+      "entry": "components/ui/checkbox/index.tsx",
+      "spec": "components/ui/checkbox/checkbox.spec.json",
+      "rules": "components/ui/checkbox/checkbox.rules.md"
+    },
+    "code": {
+      "title": "Code",
+      "description": "Inline code token and lightweight copyable code block for snippets, commands, and generated examples.",
+      "importPath": "@/components/ui/code",
+      "folder": "components/ui/code",
+      "entry": "components/ui/code/index.tsx",
+      "spec": "components/ui/code/code.spec.json",
+      "rules": "components/ui/code/code.rules.md"
+    },
+    "collapsible": {
+      "title": "Collapsible",
+      "description": "Single show/hide region on Base UI with a smooth height animation. Token-only, borderless.",
+      "importPath": "@/components/ui/collapsible",
+      "folder": "components/ui/collapsible",
+      "entry": "components/ui/collapsible/index.tsx",
+      "spec": "components/ui/collapsible/collapsible.spec.json",
+      "rules": "components/ui/collapsible/collapsible.rules.md"
+    },
+    "combobox": {
+      "title": "Combobox",
+      "description": "Searchable select on Base UI Combobox — type to filter a large list. Token-only, empty state, keyboard nav.",
+      "importPath": "@/components/ui/combobox",
+      "folder": "components/ui/combobox",
+      "entry": "components/ui/combobox/index.tsx",
+      "spec": "components/ui/combobox/combobox.spec.json",
+      "rules": "components/ui/combobox/combobox.rules.md"
+    },
+    "dialog": {
+      "title": "Dialog",
+      "description": "Modal dialog primitives for focused workflows, plus AlertDialog parts for required confirmations.",
+      "importPath": "@/components/ui/dialog",
+      "folder": "components/ui/dialog",
+      "entry": "components/ui/dialog/index.tsx",
+      "spec": "components/ui/dialog/dialog.spec.json",
+      "rules": "components/ui/dialog/dialog.rules.md"
+    },
+    "dropdown-menu": {
+      "title": "Dropdown menu",
+      "description": "A compact action menu for overflow controls, short navigation lists, and simple choices.",
+      "importPath": "@/components/ui/dropdown-menu",
+      "folder": "components/ui/dropdown-menu",
+      "entry": "components/ui/dropdown-menu/index.tsx",
+      "spec": "components/ui/dropdown-menu/dropdown-menu.spec.json",
+      "rules": "components/ui/dropdown-menu/dropdown-menu.rules.md"
+    },
+    "empty-state": {
+      "title": "Empty state",
+      "description": "A calm fallback block for empty collections, filtered results, and first-run setup.",
+      "importPath": "@/components/ui/empty-state",
+      "folder": "components/ui/empty-state",
+      "entry": "components/ui/empty-state/index.tsx",
+      "spec": "components/ui/empty-state/empty-state.spec.json",
+      "rules": "components/ui/empty-state/empty-state.rules.md"
+    },
+    "feedback-state": {
+      "title": "Feedback state",
+      "description": "Status-driven block for a region — loading, error, success, info/pending — in page, panel or inline layouts. Built on Base UI, token-only.",
+      "importPath": "@/components/ui/feedback-state",
+      "folder": "components/ui/feedback-state",
+      "entry": "components/ui/feedback-state/index.tsx",
+      "spec": "components/ui/feedback-state/feedback-state.spec.json",
+      "rules": "components/ui/feedback-state/feedback-state.rules.md"
+    },
+    "field": {
+      "title": "Field",
+      "description": "Labelled form field on Base UI Field — auto-wires label, description, error, and invalid state to the control.",
+      "importPath": "@/components/ui/field",
+      "folder": "components/ui/field",
+      "entry": "components/ui/field/index.tsx",
+      "spec": "components/ui/field/field.spec.json",
+      "rules": "components/ui/field/field.rules.md"
+    },
+    "input": {
+      "title": "Input",
+      "description": "Styled text input on Base UI — ≥44px, token-only, invalid state via aria-invalid.",
+      "importPath": "@/components/ui/input",
+      "folder": "components/ui/input",
+      "entry": "components/ui/input/index.tsx",
+      "spec": "components/ui/input/input.spec.json",
+      "rules": "components/ui/input/input.rules.md"
+    },
+    "label": {
+      "title": "Label",
+      "description": "A styled label. Associate with a control via htmlFor. Polymorphic via render.",
+      "importPath": "@/components/ui/label",
+      "folder": "components/ui/label",
+      "entry": "components/ui/label/index.tsx",
+      "spec": "components/ui/label/label.spec.json",
+      "rules": "components/ui/label/label.rules.md"
+    },
+    "list": {
+      "title": "List",
+      "description": "Composable repeated rows for queues, settings, files, activity, and compact summaries.",
+      "importPath": "@/components/ui/list",
+      "folder": "components/ui/list",
+      "entry": "components/ui/list/index.tsx",
+      "spec": "components/ui/list/list.spec.json",
+      "rules": "components/ui/list/list.rules.md"
+    },
+    "md-view": {
+      "title": "MD view",
+      "description": "Document/report shell with GFM markdown rendering, metadata, actions, and a reusable content viewport.",
+      "importPath": "@/components/ui/md-view",
+      "folder": "components/ui/md-view",
+      "entry": "components/ui/md-view/index.tsx",
+      "spec": "components/ui/md-view/md-view.spec.json",
+      "rules": "components/ui/md-view/md-view.rules.md"
+    },
+    "page-shell": {
+      "title": "Page shell",
+      "description": "Composable page content scaffold for width, rhythm, sticky controls, intro copy, sections, and back navigation.",
+      "importPath": "@/components/ui/page-shell",
+      "folder": "components/ui/page-shell",
+      "entry": "components/ui/page-shell/index.tsx",
+      "spec": "components/ui/page-shell/page-shell.spec.json",
+      "rules": "components/ui/page-shell/page-shell.rules.md"
+    },
+    "pill": {
+      "title": "Pill",
+      "description": "Interactive filter and sort chips for lightweight view controls.",
+      "importPath": "@/components/ui/pill",
+      "folder": "components/ui/pill",
+      "entry": "components/ui/pill/index.tsx",
+      "spec": "components/ui/pill/pill.spec.json",
+      "rules": "components/ui/pill/pill.rules.md"
+    },
+    "popover": {
+      "title": "Popover",
+      "description": "An anchored interactive surface for short forms, selectors, and rich contextual help.",
+      "importPath": "@/components/ui/popover",
+      "folder": "components/ui/popover",
+      "entry": "components/ui/popover/index.tsx",
+      "spec": "components/ui/popover/popover.spec.json",
+      "rules": "components/ui/popover/popover.rules.md"
+    },
+    "progress": {
+      "title": "Progress",
+      "description": "Determinate/indeterminate progress bar on Base UI. Sizes, optional label+value, turns positive at 100%.",
+      "importPath": "@/components/ui/progress",
+      "folder": "components/ui/progress",
+      "entry": "components/ui/progress/index.tsx",
+      "spec": "components/ui/progress/progress.spec.json",
+      "rules": "components/ui/progress/progress.rules.md"
+    },
+    "radio-group": {
+      "title": "Radio group",
+      "description": "Single-choice form control for mutually exclusive options, with compact radios and clickable option rows.",
+      "importPath": "@/components/ui/radio-group",
+      "folder": "components/ui/radio-group",
+      "entry": "components/ui/radio-group/index.tsx",
+      "spec": "components/ui/radio-group/radio-group.spec.json",
+      "rules": "components/ui/radio-group/radio-group.rules.md"
+    },
+    "select": {
+      "title": "Select",
+      "description": "Accessible single-choice listbox in a portal, built on Base UI. Token-only.",
+      "importPath": "@/components/ui/select",
+      "folder": "components/ui/select",
+      "entry": "components/ui/select/index.tsx",
+      "spec": "components/ui/select/select.spec.json",
+      "rules": "components/ui/select/select.rules.md"
+    },
+    "separator": {
+      "title": "Separator",
+      "description": "A subtle structural divider for grouping related content without adding another surface.",
+      "importPath": "@/components/ui/separator",
+      "folder": "components/ui/separator",
+      "entry": "components/ui/separator/index.tsx",
+      "spec": "components/ui/separator/separator.spec.json",
+      "rules": "components/ui/separator/separator.rules.md"
+    },
+    "sheet": {
+      "title": "Sheet",
+      "description": "A modal edge panel for mobile navigation, selectors, and compact side workflows.",
+      "importPath": "@/components/ui/sheet",
+      "folder": "components/ui/sheet",
+      "entry": "components/ui/sheet/index.tsx",
+      "spec": "components/ui/sheet/sheet.spec.json",
+      "rules": "components/ui/sheet/sheet.rules.md"
+    },
+    "skeleton": {
+      "title": "Skeleton",
+      "description": "Decorative loading placeholder for content that is still being fetched or prepared.",
+      "importPath": "@/components/ui/skeleton",
+      "folder": "components/ui/skeleton",
+      "entry": "components/ui/skeleton/index.tsx",
+      "spec": "components/ui/skeleton/skeleton.spec.json",
+      "rules": "components/ui/skeleton/skeleton.rules.md"
+    },
+    "slider": {
+      "title": "Slider",
+      "description": "Pick a number or a range by dragging, on Base UI Slider. Single or two-thumb, token-only, ≥44px touch control.",
+      "importPath": "@/components/ui/slider",
+      "folder": "components/ui/slider",
+      "entry": "components/ui/slider/index.tsx",
+      "spec": "components/ui/slider/slider.spec.json",
+      "rules": "components/ui/slider/slider.rules.md"
+    },
+    "switch": {
+      "title": "Switch",
+      "description": "Instant on/off toggle, built on Base UI. Token-only.",
+      "importPath": "@/components/ui/switch",
+      "folder": "components/ui/switch",
+      "entry": "components/ui/switch/index.tsx",
+      "spec": "components/ui/switch/switch.spec.json",
+      "rules": "components/ui/switch/switch.rules.md"
+    },
+    "table": {
+      "title": "Table",
+      "description": "Composable native table parts for dense, scannable data comparison.",
+      "importPath": "@/components/ui/table",
+      "folder": "components/ui/table",
+      "entry": "components/ui/table/index.tsx",
+      "spec": "components/ui/table/table.spec.json",
+      "rules": "components/ui/table/table.rules.md"
+    },
+    "tabs": {
+      "title": "Tabs",
+      "description": "Accessible tabbed navigation for switching between related content panels.",
+      "importPath": "@/components/ui/tabs",
+      "folder": "components/ui/tabs",
+      "entry": "components/ui/tabs/index.tsx",
+      "spec": "components/ui/tabs/tabs.spec.json",
+      "rules": "components/ui/tabs/tabs.rules.md"
+    },
+    "textarea": {
+      "title": "Textarea",
+      "description": "Multi-line text field that auto-grows — same focus/invalid treatment as Input.",
+      "importPath": "@/components/ui/textarea",
+      "folder": "components/ui/textarea",
+      "entry": "components/ui/textarea/index.tsx",
+      "spec": "components/ui/textarea/textarea.spec.json",
+      "rules": "components/ui/textarea/textarea.rules.md"
+    },
+    "toast": {
+      "title": "Toast",
+      "description": "Transient auto-dismissing feedback on Base UI Toast. Sonner-like toast() API, typed (success/error/info), Alert-like visuals.",
+      "importPath": "@/components/ui/toast",
+      "folder": "components/ui/toast",
+      "entry": "components/ui/toast/index.tsx",
+      "spec": "components/ui/toast/toast.spec.json",
+      "rules": "components/ui/toast/toast.rules.md"
+    },
+    "toggle-group": {
+      "title": "Toggle group",
+      "description": "Pressed buttons and segmented controls for toolbar state, display modes, and compact choices.",
+      "importPath": "@/components/ui/toggle-group",
+      "folder": "components/ui/toggle-group",
+      "entry": "components/ui/toggle-group/index.tsx",
+      "spec": "components/ui/toggle-group/toggle-group.spec.json",
+      "rules": "components/ui/toggle-group/toggle-group.rules.md"
+    },
+    "tooltip": {
+      "title": "Tooltip",
+      "description": "Short, non-interactive help popup for icon buttons, compact labels, and unfamiliar controls.",
+      "importPath": "@/components/ui/tooltip",
+      "folder": "components/ui/tooltip",
+      "entry": "components/ui/tooltip/index.tsx",
+      "spec": "components/ui/tooltip/tooltip.spec.json",
+      "rules": "components/ui/tooltip/tooltip.rules.md"
+    },
+    "typography": {
+      "title": "Typography",
+      "description": "Heading, Text and Eyebrow — the closed text scale. Token-only, polymorphic via render.",
+      "importPath": "@/components/ui/typography",
+      "folder": "components/ui/typography",
+      "entry": "components/ui/typography/index.tsx",
+      "spec": "components/ui/typography/typography.spec.json",
+      "rules": "components/ui/typography/typography.rules.md"
+    }
+  }
+}

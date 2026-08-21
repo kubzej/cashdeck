@@ -1,0 +1,128 @@
+{
+  "name": "Tabs",
+  "import": "import { Tabs, TabsList, TabsTrigger, TabsContent } from \"@/components/ui/tabs\"",
+  "description": "Accessible tabbed navigation for switching between related content panels.",
+  "parts": {
+    "Tabs": {
+      "description": "Root state holder built on Base UI Tabs.",
+      "props": {
+        "value": {
+          "type": "string | number | null",
+          "description": "Controlled active tab value."
+        },
+        "defaultValue": {
+          "type": "string | number | null",
+          "description": "Initial uncontrolled active tab value. Defaults to the first enabled tab."
+        },
+        "onValueChange": {
+          "type": "(value, details) => void",
+          "description": "Called when the active tab changes."
+        },
+        "orientation": {
+          "type": "enum",
+          "values": ["horizontal", "vertical"],
+          "default": "horizontal",
+          "description": "Keyboard and layout orientation."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "TabsList and matching TabsContent panels."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "TabsList": {
+      "description": "Group of tab triggers.",
+      "props": {
+        "variant": {
+          "type": "enum",
+          "values": ["default", "line"],
+          "default": "default",
+          "description": "Segmented default tabs or compact line tabs."
+        },
+        "size": {
+          "type": "enum",
+          "values": ["sm", "default"],
+          "default": "default",
+          "description": "Trigger density."
+        },
+        "activateOnFocus": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, arrow-key focus activates the tab immediately."
+        },
+        "loopFocus": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether keyboard focus wraps at the ends."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "TabsTrigger children."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "TabsTrigger": {
+      "description": "Button that activates a matching TabsContent panel.",
+      "props": {
+        "value": {
+          "type": "string | number | null",
+          "description": "Value matched by a TabsContent panel."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Prevents selecting the tab."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "Short label and optional leading icon."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "TabsContent": {
+      "description": "Panel shown when the matching trigger is active.",
+      "props": {
+        "value": {
+          "type": "string | number | null",
+          "description": "Value matched by a TabsTrigger."
+        },
+        "keepMounted": {
+          "type": "boolean",
+          "default": false,
+          "description": "Keep hidden panel DOM mounted."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "Panel content."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use Tabs for unrelated destinations; use navigation.",
+    "Do not hide required actions behind tabs.",
+    "Do not create tab labels that wrap across multiple lines.",
+    "Do not put long horizontal tab lists on mobile without a deliberate scroll container.",
+    "Do not use Tabs when a segmented toggle or filter is the real control."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Triggers keep 44px touch targets. Keep all primary tabs visible when possible; use short labels on mobile."
+  },
+  "example": "<Tabs defaultValue=\"activity\">\n  <TabsList>\n    <TabsTrigger value=\"activity\">Activity</TabsTrigger>\n    <TabsTrigger value=\"files\">Files</TabsTrigger>\n  </TabsList>\n  <TabsContent value=\"activity\">Activity panel</TabsContent>\n  <TabsContent value=\"files\">Files panel</TabsContent>\n</Tabs>"
+}

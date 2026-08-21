@@ -1,0 +1,48 @@
+{
+  "name": "Button",
+  "import": "import { Button } from \"@/components/ui/button\"",
+  "description": "The primary way to trigger an action — six variants, four sizes, a loading state, built on Base UI.",
+  "props": {
+    "variant": {
+      "type": "enum",
+      "values": ["default", "secondary", "destructive", "outline", "ghost", "link"],
+      "default": "default",
+      "exhaustive": true,
+      "description": "Visual emphasis. One primary (default) per view; rest secondary/outline/ghost."
+    },
+    "size": {
+      "type": "enum",
+      "values": ["sm", "default", "lg", "icon"],
+      "default": "default",
+      "exhaustive": true,
+      "description": "Control size. All keep a ≥44px touch target; icon is 44×44."
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Non-interactive state; also drops the button out of the tab order."
+    },
+    "loading": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shows a spinner and blocks interaction while an async action runs (sets aria-busy)."
+    },
+    "render": {
+      "type": "ReactElement",
+      "description": "Replace the underlying element to compose Button with another (e.g. a link). Use instead of wrapping.",
+      "example": "<Button render={<a href=\"/x\" />}>Go</Button>"
+    }
+  },
+  "forbidden": [
+    "Do not pass raw colors or arbitrary Tailwind values via className; use variant/size or a token.",
+    "Do not wrap Button in an <a> or <button>; use the `render` prop to change the element.",
+    "Do not shrink below the built-in size — every size keeps a ≥44px touch target on purpose.",
+    "Do not put an icon-only button in `size=default`; use `size=icon` and add an aria-label.",
+    "Do not leave a button in `loading` with no way out — always resolve the async state."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "All sizes are ≥44px tall (mobile-first / PWA). Icon buttons are 44×44. On narrow viewports prefer full-width (className=\"w-full\") over shrinking."
+  },
+  "example": "<Button variant=\"secondary\" size=\"sm\">Save</Button>"
+}

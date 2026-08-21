@@ -1,0 +1,122 @@
+{
+  "name": "Pill",
+  "import": "import { Pill, PillGroup } from \"@/components/ui/pill\"",
+  "description": "Interactive filter and sort chips for lightweight view controls.",
+  "parts": {
+    "Pill": {
+      "description": "A single interactive chip. Use it to change a filter, sort, or lightweight view mode.",
+      "props": {
+        "active": {
+          "type": "boolean",
+          "default": false,
+          "description": "Marks the chip as selected and sets aria-pressed."
+        },
+        "variant": {
+          "type": "enum",
+          "values": ["default", "quiet"],
+          "default": "default",
+          "description": "Inactive neutral surface treatment. Colored tones keep their own soft surface."
+        },
+        "tone": {
+          "type": "enum",
+          "values": ["neutral", "positive", "negative", "warning", "info"],
+          "default": "neutral",
+          "description": "Closed token color tone for the whole pill. Use this for normal semantic colors before reaching for custom classes."
+        },
+        "size": {
+          "type": "enum",
+          "values": ["sm", "default", "lg"],
+          "default": "default",
+          "description": "Visual density. All sizes keep at least a 44px touch target."
+        },
+        "count": {
+          "type": "ReactNode",
+          "description": "Optional compact count rendered after the label."
+        },
+        "direction": {
+          "type": "enum",
+          "values": ["asc", "desc"],
+          "description": "Optional sort direction indicator."
+        },
+        "indicator": {
+          "type": "enum",
+          "values": ["positive", "negative", "warning", "info", "muted"],
+          "description": "Optional token-based dot indicator. Do not pass custom colors."
+        },
+        "indicatorPosition": {
+          "type": "enum",
+          "values": ["leading", "trailing"],
+          "default": "leading",
+          "description": "Where the optional indicator dot appears."
+        },
+        "activeClassName": {
+          "type": "string",
+          "description": "Optional color/style override applied only when active. Use for app-specific category colors that are not covered by tone."
+        },
+        "inactiveClassName": {
+          "type": "string",
+          "description": "Optional color/style override applied only when inactive. Pair with activeClassName for app-specific category colors."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Base UI render prop for polymorphic targets. Prefer the default button for filters."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Disables interaction."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "Short chip label."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only; do not restyle selected state ad hoc."
+        }
+      }
+    },
+    "PillGroup": {
+      "description": "Layout wrapper for related pills.",
+      "props": {
+        "behavior": {
+          "type": "enum",
+          "values": ["wrap", "scroll"],
+          "default": "wrap",
+          "description": "Wrap onto multiple rows or keep a single horizontally scrollable row."
+        },
+        "bleed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Lets a scroll row align to mobile viewport edges. Use only when the surrounding layout needs it."
+        },
+        "align": {
+          "type": "enum",
+          "values": ["start", "center", "end"],
+          "default": "start",
+          "description": "Horizontal alignment for wrapped groups."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "Pill children."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use Pill for static status metadata; use Badge.",
+    "Do not use Pill as a main content section switch; use Tabs.",
+    "Do not use Pill for form-only segmented choice; use ToggleGroup once available.",
+    "Do not use activeClassName/inactiveClassName for one-off decoration; reserve them for repeated app-specific category colors.",
+    "Do not pass custom indicator colors; indicator remains token-based even when the Pill surface is custom-colored.",
+    "Do not put long labels in horizontally scrolling pill groups."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Every Pill size preserves at least a 44px touch target. Use PillGroup behavior=\"scroll\" for chip sets that cannot wrap cleanly on mobile."
+  },
+  "example": "const categoryColors = {\n  inactiveClassName: \"bg-sky-50 text-sky-700 hover:bg-sky-100 dark:bg-sky-950/45 dark:text-sky-300\",\n  activeClassName: \"bg-sky-600 text-white hover:bg-sky-600 dark:bg-sky-500\",\n};\n\n<PillGroup>\n  <Pill active count={12}>Open</Pill>\n  <Pill tone=\"positive\" count={4}>Ready</Pill>\n  <Pill direction=\"desc\">Newest</Pill>\n  <Pill active {...categoryColors}>Design</Pill>\n</PillGroup>"
+}

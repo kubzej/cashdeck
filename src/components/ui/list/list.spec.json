@@ -1,0 +1,137 @@
+{
+  "name": "List",
+  "description": "Composable stack of repeated rows for queues, settings, files, activity, and compact summaries.",
+  "import": "import { List, ListItem, ListItemLeading, ListItemContent, ListItemTitle, ListItemDescription, ListItemMeta, ListItemActions } from \"@/components/ui/list\"",
+  "parts": {
+    "List": {
+      "description": "Root stack for repeated list items.",
+      "props": {
+        "gap": {
+          "type": "\"sm\" | \"default\" | \"lg\"",
+          "description": "Spacing between rows.",
+          "default": "\"default\""
+        },
+        "render": {
+          "type": "RenderProp",
+          "description": "Optional Base UI render prop for polymorphic output."
+        },
+        "className": {
+          "type": "string",
+          "description": "Additional classes for the list root."
+        }
+      }
+    },
+    "ListItem": {
+      "description": "Single row with optional leading content, main content, metadata, and actions.",
+      "props": {
+        "variant": {
+          "type": "\"default\" | \"quiet\" | \"filled\"",
+          "description": "Visual weight of the row surface.",
+          "default": "\"default\""
+        },
+        "size": {
+          "type": "\"compact\" | \"default\" | \"spacious\"",
+          "description": "Row density and vertical padding.",
+          "default": "\"default\""
+        },
+        "interactive": {
+          "type": "boolean",
+          "description": "Adds pointer, hover, and focus treatment for clickable rows.",
+          "default": "false"
+        },
+        "selected": {
+          "type": "boolean",
+          "description": "Marks the row as the current selected item.",
+          "default": "false"
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Dims the row and disables pointer interaction.",
+          "default": "false"
+        },
+        "render": {
+          "type": "RenderProp",
+          "description": "Optional Base UI render prop for links, buttons, or custom elements."
+        },
+        "className": {
+          "type": "string",
+          "description": "Additional classes for the row."
+        }
+      }
+    },
+    "ListItemLeading": {
+      "description": "Icon, avatar, number, or compact status block at the start of a row.",
+      "props": {
+        "tone": {
+          "type": "\"neutral\" | \"positive\" | \"negative\" | \"warning\" | \"info\"",
+          "description": "Soft token color for the leading block.",
+          "default": "\"neutral\""
+        },
+        "render": {
+          "type": "RenderProp",
+          "description": "Optional Base UI render prop."
+        },
+        "className": {
+          "type": "string",
+          "description": "Additional classes for the leading slot."
+        }
+      }
+    },
+    "ListItemContent": {
+      "description": "Main flexible content area.",
+      "props": {
+        "className": {
+          "type": "string",
+          "description": "Additional classes for the content area."
+        }
+      }
+    },
+    "ListItemTitle": {
+      "description": "Primary row label.",
+      "props": {
+        "className": {
+          "type": "string",
+          "description": "Additional classes for the title."
+        }
+      }
+    },
+    "ListItemDescription": {
+      "description": "Secondary row text.",
+      "props": {
+        "className": {
+          "type": "string",
+          "description": "Additional classes for the description."
+        }
+      }
+    },
+    "ListItemMeta": {
+      "description": "Small wrapping metadata row.",
+      "props": {
+        "className": {
+          "type": "string",
+          "description": "Additional classes for metadata."
+        }
+      }
+    },
+    "ListItemActions": {
+      "description": "Trailing controls or badges.",
+      "props": {
+        "className": {
+          "type": "string",
+          "description": "Additional classes for actions."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use List for comparable tabular data; use Table.",
+    "Do not use List for one standalone content block; use Card.",
+    "Do not put independent cards inside list rows.",
+    "Do not rely on hover alone for selection; use selected for current rows."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Compact rows keep a 44px minimum height. Actions should stay reachable on mobile."
+  },
+  "example": "<List><ListItem><ListItemContent><ListItemTitle>Review copy</ListItemTitle><ListItemDescription>Assigned to workspace team.</ListItemDescription></ListItemContent></ListItem></List>"
+}

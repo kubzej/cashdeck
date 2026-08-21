@@ -1,0 +1,51 @@
+{
+  "name": "Input",
+  "import": "import { Input } from \"@/components/ui/input\"",
+  "description": "A single-line text field with a soft focus ring and a built-in error state.",
+  "props": {
+    "type": {
+      "type": "string",
+      "values": ["text", "email", "password", "number", "search", "tel", "url"],
+      "default": "text",
+      "description": "Native input type (+ other native types)."
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "aria-invalid": {
+      "type": "boolean",
+      "default": false,
+      "description": "Set true for an error state (red ring). Pair with a visible message."
+    },
+    "clearable": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shows a kubkit clear button when the input has a value. Also removes the native browser search clear affordance."
+    },
+    "clearLabel": {
+      "type": "string",
+      "default": "Clear input",
+      "description": "Accessible label for the clear button."
+    },
+    "onClear": {
+      "type": "()=> void",
+      "description": "Called when the clear button is pressed. Use it to clear controlled values."
+    },
+    "render": {
+      "type": "ReactElement",
+      "description": "Change the underlying element (rarely needed)."
+    }
+  },
+  "forbidden": [
+    "Do not style height, border or colors via className; those come from tokens.",
+    "Do not use a bare <input> — use Input so the focus ring and invalid state stay consistent.",
+    "Do not convey an error with color alone; set aria-invalid AND show a message.",
+    "Always pair with a Label (htmlFor) — no unlabelled inputs."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "≥44px tall for comfortable tapping; prefer full-width inputs on mobile."
+  },
+  "example": "<Input type=\"email\" placeholder=\"you@example.com\" />"
+}
