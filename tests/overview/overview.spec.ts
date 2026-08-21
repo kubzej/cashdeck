@@ -19,6 +19,39 @@ test('shows server-aggregated wealth, cashflow and breakdowns', async ({ page })
   await expect(page.getByLabel('Graf peněžního toku')).toBeVisible()
 })
 
+test('excludes transfer impact from a label\'s total, even in Celkem mode', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockOverviewApi(page, {
+    ...overviewFixture,
+    labels: [
+      { id: 'label-with-transfers', name: 'rezerva', incomeCzk: 10_000, expenseCzk: 4_000, transactionCount: 3, transferImpactCzk: 50_000, transferCount: 2 },
+    ],
+  })
+  await mockFeedApi(page)
+  await mockPlannedApi(page, [])
+  await page.goto('/')
+  await signIn(page)
+  await page.locator('.bottom-nav').getByRole('button', { name: 'Přehled', exact: true }).click()
+
+  const row = page.getByRole('button', { name: /rezerva/ })
+  await expect(row).toContainText('+6 000 Kč')
+  await expect(row).not.toContainText('56 000 Kč')
+})
+
+test('shows the error state and recovers after retrying a failed overview load', async ({ page }) => {
+  await mockAuthAndApi(page)
+  const overviewApi = await mockOverviewApi(page)
+  overviewApi.failNext({ message: 'Dočasně nedostupné.' })
+  await page.goto('/')
+  await signIn(page)
+  await page.locator('.bottom-nav').getByRole('button', { name: 'Přehled', exact: true }).click()
+
+  await expect(page.getByText('Přehled se nepodařilo načíst', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Zkusit znovu' }).click()
+
+  await expect(page.getByText('Celkové bohatství', { exact: true })).toBeVisible()
+})
+
 test('opens an exact category filter in the transaction list', async ({ page }) => {
   await openSignedInApp(page)
   await page.locator('.bottom-nav').getByRole('button', { name: 'Přehled', exact: true }).click()

@@ -41,6 +41,25 @@ test('validates, creates a label inline, and retries a failed transfer creation'
   await expect(page.getByRole('heading', { name: 'Transakce', exact: true })).toBeVisible()
 })
 
+test('rejects a transfer date before either wallet was opened', async ({ page }) => {
+  const futureWallets = [wallets[0], { ...wallets[1], openingBalanceDate: '2030-01-01' }]
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page, futureWallets)
+  await mockLabelsApi(page, [])
+  await mockTransactionsApi(page)
+  const transfersApi = await mockTransfersApi(page)
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Přidat záznam' }).click()
+  await page.getByRole('button', { name: 'Převod', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Částka', exact: true }).fill('1000')
+
+  await page.getByRole('button', { name: 'Uložit převod' }).click()
+  await expect(page.getByText('Datum nemůže být před založením peněženky.', { exact: true })).toBeVisible()
+  expect(transfersApi.transfers()).toEqual([])
+})
+
 const wallets = [
   { id: 'wallet-1', name: 'Běžný účet', colorKey: 'teal', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 0, isHidden: false, openingBalanceLocked: false },
   { id: 'wallet-2', name: 'Spoření', colorKey: 'blue', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 1, isHidden: false, openingBalanceLocked: false },

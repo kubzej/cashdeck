@@ -1,7 +1,6 @@
-import { Buffer } from 'node:buffer'
 import type { Pool, PoolClient } from 'pg'
 import { DomainError } from '../management/domain.js'
-import type { TransactionInput, TransactionListInput, TransactionUpdateInput } from './domain.js'
+import type { TransactionInput, TransactionUpdateInput } from './domain.js'
 
 export type TransactionLabel = {
   id: string
@@ -23,22 +22,10 @@ export type Transaction = {
   labels: TransactionLabel[]
 }
 
-export type TransactionPage = {
-  items: Transaction[]
-  nextCursor: string | null
-}
-
 export type TransactionRepository = {
-  listTransactions(userId: string, input: TransactionListInput): Promise<TransactionPage>
   createTransaction(userId: string, input: TransactionInput): Promise<Transaction>
   updateTransaction(userId: string, transactionId: string, input: TransactionUpdateInput): Promise<Transaction | null>
   deleteTransaction(userId: string, transactionId: string): Promise<boolean>
-}
-
-type TransactionCursor = {
-  transactionDate: string
-  createdAt: string
-  id: string
 }
 
 type TransactionRow = {
@@ -61,37 +48,6 @@ type Queryable = Pick<Pool, 'query'> | Pick<PoolClient, 'query'>
 
 export function createTransactionRepository(pool: Pool): TransactionRepository {
   return {
-    async listTransactions(userId, input) {
-      const cursor = input.cursor ? decodeCursor(input.cursor) : null
-      const values: unknown[] = [userId]
-      const filters = ['t.user_id = $1']
-      if (input.walletId) {
-        values.push(input.walletId)
-        filters.push(`t.wallet_id = $${values.length}::uuid`)
-      }
-      if (input.dateFrom) {
-        values.push(input.dateFrom)
-        filters.push(`t.transaction_date >= $${values.length}::date`)
-      }
-      if (input.dateTo) {
-        values.push(input.dateTo)
-        filters.push(`t.transaction_date <= $${values.length}::date`)
-      }
-      if (cursor) {
-        values.push(cursor.transactionDate, cursor.createdAt, cursor.id)
-        filters.push(`(t.transaction_date, t.created_at, t.id) < ($${values.length - 2}::date, $${values.length - 1}::timestamptz, $${values.length}::uuid)`)
-      }
-      values.push(input.limit + 1)
-
-      const result = await pool.query<TransactionRow>(transactionSelect(filters.join(' and '), `$${values.length}`), values)
-      const rows = result.rows.slice(0, input.limit)
-      const last = rows.at(-1)
-      return {
-        items: rows.map(toTransaction),
-        nextCursor: result.rows.length > input.limit && last ? encodeCursor(last) : null,
-      }
-    },
-
     async createTransaction(userId, input) {
       return withTransaction(pool, async (client) => {
         const created = await client.query<{ id: string }>(
@@ -254,29 +210,4 @@ async function withTransaction<T>(pool: Pool, callback: (client: PoolClient) => 
   } finally {
     client.release()
   }
-}
-
-function encodeCursor(row: TransactionRow) {
-  return Buffer.from(JSON.stringify({
-    transactionDate: row.transaction_date,
-    createdAt: row.created_at.toISOString(),
-    id: row.id,
-  } satisfies TransactionCursor)).toString('base64url')
-}
-
-function decodeCursor(cursor: string): TransactionCursor {
-  try {
-    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<TransactionCursor>
-    if (
-      typeof parsed.transactionDate === 'string'
-      && /^\d{4}-\d{2}-\d{2}$/.test(parsed.transactionDate)
-      && typeof parsed.createdAt === 'string'
-      && !Number.isNaN(new Date(parsed.createdAt).valueOf())
-      && typeof parsed.id === 'string'
-      && /^[0-9a-f-]{36}$/i.test(parsed.id)
-    ) return parsed as TransactionCursor
-  } catch {
-    // The generic validation error below intentionally does not expose parser details.
-  }
-  throw new DomainError(400, 'Kurzór transakcí není platný.')
 }

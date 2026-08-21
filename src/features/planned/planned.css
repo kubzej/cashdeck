@@ -16,10 +16,10 @@
 .planned-row [data-slot='list-item-title'] { overflow: hidden; font-size: 0.9375rem; font-weight: 650; line-height: 1.25rem; text-overflow: ellipsis; white-space: nowrap; }
 .planned-row__subtitle, .planned-row__note, .planned-row__recurring { overflow: hidden; margin: 0; color: var(--color-muted-foreground); font-size: 0.75rem; line-height: 1rem; text-overflow: ellipsis; white-space: nowrap; }
 .planned-row__labels { display: flex; min-width: 0; gap: 0.3125rem; overflow: hidden; }
-.planned-row__labels span { flex: 0 0 auto; border: 1px solid color-mix(in oklab, var(--color-border) 90%, var(--color-foreground)); border-radius: 999px; padding: 0 0.3125rem; font-size: 0.625rem; line-height: 1rem; }
+.planned-row__labels span { flex: 0 0 auto; border: 1px solid color-mix(in oklab, var(--color-border) 90%, var(--color-foreground)); border-radius: var(--radius-full); padding: 0 0.3125rem; font-size: 0.625rem; line-height: 1rem; }
 .planned-row__recurring { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--color-primary); font-weight: 600; }
 .planned-row__recurring svg { width: 0.75rem; height: 0.75rem; }
-.planned-row__amount { font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.planned-row__amount { font-family: var(--font-mono); font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .planned-row__amount--income { color: var(--color-positive); }
 .planned-row__amount--expense { color: var(--color-negative); }
 .planned-row--recurring { border-style: dashed; border-color: color-mix(in oklab, var(--color-border) 68%, var(--color-muted-foreground)); background: color-mix(in oklab, var(--color-muted) 42%, var(--color-card)); color: var(--color-muted-foreground); }
@@ -32,9 +32,7 @@
 .planned-summary__content { display: grid; gap: 0.125rem; min-width: 0; }
 .planned-summary__content strong { font-size: 0.9375rem; font-weight: 650; }
 .planned-summary__content small { color: var(--color-muted-foreground); font-size: 0.75rem; }
-.planned-summary__amount { color: var(--color-positive); font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.planned-summary__amount { color: var(--color-positive); font-family: var(--font-mono); font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .planned-summary__amount--expense { color: var(--color-negative); }
 .planned-summary > svg:last-child { width: 1rem; height: 1rem; color: var(--color-muted-foreground); }
 .planned-summary--loading { pointer-events: none; }
-.planned-summary--error { grid-template-columns: 1.25rem minmax(0, 1fr) auto; color: var(--color-negative); cursor: default; }
-.planned-summary--error > svg { width: 1.25rem; height: 1.25rem; padding: 0; background: transparent; color: currentColor; }

@@ -33,7 +33,7 @@ function createRepository(): RecurringRuleRepository {
     createRule: vi.fn().mockResolvedValue(rule),
     updateRule: vi.fn().mockResolvedValue(rule),
     deleteRule: vi.fn().mockResolvedValue(true),
-    generateDue: vi.fn().mockResolvedValue({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0 }),
+    generateDue: vi.fn().mockResolvedValue({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0, failedRuleIds: [] }),
   }
 }
 
@@ -116,7 +116,7 @@ test('runs recurring generation only with the internal job secret', async () => 
 
   const response = await app.inject({ method: 'POST', url: '/internal/jobs/recurring', headers: { 'x-cashdeck-job-secret': jobSecret } })
   expect(response.statusCode).toBe(200)
-  expect(response.json()).toEqual({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0 })
+  expect(response.json()).toEqual({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0, failedRuleIds: [] })
   expect(repository.generateDue).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
   await app.close()
 })

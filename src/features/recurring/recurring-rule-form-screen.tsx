@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ArrowLeft, ArrowRightLeft, Check, CircleAlert, ReceiptText, Tag } from 'lucide-react'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
+import { FormLoadError } from '../../components/form-load-error'
 import { Button } from '../../components/ui/button'
 import { DatePicker } from '../../components/ui/calendar'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
@@ -10,6 +11,8 @@ import { Input } from '../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Skeleton } from '../../components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group'
+import { createDecimalKeyBlocker, DECIMAL_INPUT_ERROR, sanitizeAmountInput } from '../../lib/amount-input'
+import { formatIsoDate, getPragueToday, parseIsoDate } from '../../lib/prague-date'
 import { CategoryIcon } from '../categories/category-icon'
 import { listCategories, type Category, type CategoryDirection } from '../categories/api'
 import { InlineLabelPicker } from '../labels/inline-label-picker'
@@ -109,7 +112,7 @@ export function RecurringRuleFormScreen({ rule, onCancel, onSaved, onDeleted }: 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const input = toRecurringRuleInput(values)
-    const nextErrors = validateRecurringRuleForm(values, input, today)
+    const nextErrors = validateRecurringRuleForm(values, input, today, rule)
     setErrors(nextErrors)
     setSubmissionError(null)
     if (!input || Object.keys(nextErrors).length > 0) return
@@ -155,17 +158,18 @@ export function RecurringRuleFormScreen({ rule, onCancel, onSaved, onDeleted }: 
         <FieldError match={Boolean(errors.name)}>{errors.name}</FieldError>
       </Field>
       <section className="transaction-amount-panel" aria-label="Částka a typ opakování">
-        <ToggleGroup type="single" width="full" value={values.kind} onValueChange={(value) => { if (value) setKind(value as RecurringRuleKind) }} className="transaction-direction" aria-label="Typ opakování">
+        <ToggleGroup type="single" width="full" value={values.kind} disabled={Boolean(rule)} onValueChange={(value) => { if (value) setKind(value as RecurringRuleKind) }} className="transaction-direction" aria-label="Typ opakování">
           <ToggleGroupItem value="transaction"><ReceiptText aria-hidden="true" />Transakce</ToggleGroupItem>
           <ToggleGroupItem value="transfer"><ArrowRightLeft aria-hidden="true" />Převod</ToggleGroupItem>
         </ToggleGroup>
+        {rule ? <p className="transaction-form-hint">Typ opakování nelze po vytvoření změnit — smaž pravidlo a založ nové.</p> : null}
         {values.kind === 'transaction' ? <ToggleGroup type="single" width="full" value={values.direction} onValueChange={(value) => { if (value) setDirection(value as CategoryDirection) }} className="transaction-direction" aria-label="Směr transakce">
           <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
           <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
         </ToggleGroup> : null}
         <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
           <FieldLabel>Částka</FieldLabel>
-          <div className="transaction-amount"><Input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={values.amountCzk} placeholder="0" aria-label="Částka v korunách" onChange={(event) => { const amountCzk = event.currentTarget.value.replaceAll(/[^0-9\s]/g, ''); setValues((current) => ({ ...current, amountCzk })) }} /><span>Kč</span></div>
+          <div className="transaction-amount"><Input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={values.amountCzk} placeholder="0" aria-label="Částka v korunách" onKeyDown={createDecimalKeyBlocker(() => setErrors((current) => ({ ...current, amountCzk: DECIMAL_INPUT_ERROR })))} onChange={(event) => { const { value: amountCzk, error } = sanitizeAmountInput(event.currentTarget.value); setErrors((current) => ({ ...current, amountCzk: error })); setValues((current) => ({ ...current, amountCzk })) }} /><span>Kč</span></div>
           <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
         </Field>
       </section>
@@ -197,10 +201,5 @@ function RecurringCategoryPicker({ categories, selectedCategory, onSelect }: { c
   </Dialog>
 }
 
-function FormLoadError({ onRetry }: { onRetry: () => void }) { return <FeedbackState status="error" layout="panel"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Formulář se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><Button variant="outline" onClick={onRetry}>Zkusit znovu</Button></FeedbackState> }
 function SubmissionError({ message, title = 'Opakování se nepodařilo uložit' }: { message: string; title?: string }) { return <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>{title}</FeedbackStateTitle><FeedbackStateDescription>{message}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> }
-
 function mergeLabels(selected: RecurringRule['labels'], recent: Label[]) { return [...selected, ...recent.filter((recentLabel) => !selected.some((selectedLabel) => selectedLabel.id === recentLabel.id))].slice(0, 8) }
-function getPragueToday() { const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const values = Object.fromEntries(parts.map((part) => [part.type, part.value])); return `${values.year}-${values.month}-${values.day}` }
-function parseIsoDate(value: string) { const [year, month, day] = value.split('-').map(Number); return new Date(year, month - 1, day) }
-function formatIsoDate(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}` }

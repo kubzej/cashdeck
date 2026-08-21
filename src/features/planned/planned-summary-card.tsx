@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, CircleAlert, ChevronRight, RefreshCw } from 'lucide-react'
+import { CalendarClock, CircleAlert, ChevronRight } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Skeleton } from '../../components/ui/skeleton'
+import { formatCzk } from '../../lib/format-czk'
 import type { FeedFilterValue } from '../feed/feed-filters'
 import { listPlanned, type PlannedSummary } from './api'
 import { resolvePlannedRange } from './planned-range'
@@ -30,13 +32,13 @@ export function PlannedSummaryCard({ filters, selection, onOpen }: { filters: Fe
 
   if (!range || status === 'idle') return null
   if (status === 'loading') return <div className="planned-summary planned-summary--loading" aria-label="Načítání naplánovaných položek"><Skeleton className="h-6 w-6" /><div><Skeleton className="h-4 w-28" /><Skeleton className="mt-1 h-3 w-20" /></div><Skeleton className="ml-auto h-5 w-24" /></div>
-  if (status === 'error') return <div className="planned-summary planned-summary--error"><CircleAlert aria-hidden="true" /><span>Nepodařilo se načíst Naplánované</span><Button variant="ghost" size="icon" aria-label="Zkusit znovu načíst Naplánované" onClick={() => setRetryKey((current) => current + 1)}><RefreshCw aria-hidden="true" /></Button></div>
+  if (status === 'error') return <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Naplánované se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setRetryKey((current) => current + 1)}>Zkusit znovu</Button></FeedbackStateActions></FeedbackState>
   if (!summary || summary.count === 0) return null
 
   return <button type="button" className="planned-summary" onClick={onOpen}>
     <CalendarClock aria-hidden="true" />
     <span className="planned-summary__content"><strong>Naplánované</strong><small>{formatCount(summary.count)}</small></span>
-    <strong className={summary.totalCzk < 0 ? 'planned-summary__amount planned-summary__amount--expense' : 'planned-summary__amount'}>{formatSignedCzk(summary.totalCzk)}</strong>
+    <strong className={summary.totalCzk < 0 ? 'planned-summary__amount planned-summary__amount--expense' : 'planned-summary__amount'}>{formatCzk(summary.totalCzk, { signed: true })}</strong>
     <ChevronRight aria-hidden="true" />
   </button>
 }
@@ -45,9 +47,4 @@ function formatCount(count: number) {
   if (count === 1) return '1 položka'
   if (count >= 2 && count <= 4) return `${count} položky`
   return `${count} položek`
-}
-
-function formatSignedCzk(amount: number) {
-  const prefix = amount > 0 ? '+' : amount < 0 ? '-' : ''
-  return `${prefix}${new Intl.NumberFormat('cs-CZ').format(Math.abs(amount))} Kč`
 }

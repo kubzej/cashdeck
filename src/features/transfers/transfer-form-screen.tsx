@@ -3,11 +3,14 @@ import { ArrowLeft, ArrowRightLeft, CircleAlert } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { DatePicker } from '../../components/ui/calendar'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
+import { FormLoadError } from '../../components/form-load-error'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { Label as FormLabel } from '../../components/ui/label'
 import { Skeleton } from '../../components/ui/skeleton'
+import { createDecimalKeyBlocker, DECIMAL_INPUT_ERROR, parsePositiveWholeCzk, sanitizeAmountInput } from '../../lib/amount-input'
+import { formatIsoDate, getPragueToday, parseIsoDate } from '../../lib/prague-date'
 import { InlineLabelPicker } from '../labels/inline-label-picker'
 import { listLabels, type Label } from '../labels/api'
 import { listWallets, type Wallet } from '../wallets/api'
@@ -40,6 +43,7 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
 
   const sourceWallet = wallets.find((wallet) => wallet.id === values.sourceWalletId) ?? null
   const destinationWallet = wallets.find((wallet) => wallet.id === values.destinationWalletId) ?? null
+  const transferMinDate = [sourceWallet?.openingBalanceDate, destinationWallet?.openingBalanceDate].filter((date): date is string => Boolean(date)).sort().at(-1)
 
   useEffect(() => {
     let cancelled = false
@@ -78,6 +82,7 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
     if (values.sourceWalletId && values.sourceWalletId === values.destinationWalletId) nextErrors.destinationWalletId = 'Vyber jinou cílovou peněženku.'
     if (amountCzk === null) nextErrors.amountCzk = 'Zadej celý počet korun větší než nula.'
     if (!values.transferDate) nextErrors.transferDate = 'Vyber datum.'
+    else if (transferMinDate && values.transferDate < transferMinDate) nextErrors.transferDate = 'Datum nemůže být před založením peněženky.'
     setErrors(nextErrors)
     setSubmissionError(null)
     if (Object.keys(nextErrors).length > 0 || amountCzk === null) return
@@ -123,7 +128,7 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
         <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
           <FieldLabel>Částka</FieldLabel>
           <div className="transaction-amount">
-            <Input autoFocus type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={values.amountCzk} placeholder="0" aria-label="Částka v korunách" onChange={(event) => { const amountCzk = event.currentTarget.value.replaceAll(/[^0-9\s]/g, ''); setValues((current) => ({ ...current, amountCzk })) }} />
+            <Input autoFocus type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={values.amountCzk} placeholder="0" aria-label="Částka v korunách" onKeyDown={createDecimalKeyBlocker(() => setErrors((current) => ({ ...current, amountCzk: DECIMAL_INPUT_ERROR })))} onChange={(event) => { const { value: amountCzk, error } = sanitizeAmountInput(event.currentTarget.value); setErrors((current) => ({ ...current, amountCzk: error })); setValues((current) => ({ ...current, amountCzk })) }} />
             <span>Kč</span>
           </div>
           <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
@@ -145,7 +150,7 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
       <section className="transaction-details" aria-label="Další podrobnosti">
         <Field invalid={Boolean(errors.transferDate)}>
           <FieldLabel>Datum</FieldLabel>
-          <DatePicker className="transaction-date-picker" value={parseIsoDate(values.transferDate)} onValueChange={(date) => setValues((current) => ({ ...current, transferDate: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} />
+          <DatePicker className="transaction-date-picker" value={parseIsoDate(values.transferDate)} minDate={transferMinDate ? parseIsoDate(transferMinDate) : undefined} onValueChange={(date) => setValues((current) => ({ ...current, transferDate: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} />
           <FieldError match={Boolean(errors.transferDate)}>{errors.transferDate}</FieldError>
         </Field>
         <Field>
@@ -160,11 +165,6 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
   </section>
 }
 
-function FormLoadError({ onRetry }: { onRetry: () => void }) { return <FeedbackState status="error" layout="panel"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Formulář se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><Button variant="outline" onClick={onRetry}>Zkusit znovu</Button></FeedbackState> }
 function SubmissionError({ message, isEdit = false, isDelete = false }: { message: string; isEdit?: boolean; isDelete?: boolean }) { return <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>{isDelete ? 'Převod se nepodařilo smazat' : `Převod se nepodařilo ${isEdit ? 'upravit' : 'uložit'}`}</FeedbackStateTitle><FeedbackStateDescription>{message}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> }
 function initialValues(transfer?: Transfer): TransferFormValues { return { sourceWalletId: transfer?.sourceWalletId ?? '', destinationWalletId: transfer?.destinationWalletId ?? '', amountCzk: transfer ? String(transfer.amountCzk) : '', transferDate: transfer?.transferDate ?? getPragueToday(), note: transfer?.note ?? '', labelIds: transfer?.labels.map((label) => label.id) ?? [] } }
 function mergeLabels(selected: Transfer['labels'], recent: Label[]) { return [...selected, ...recent.filter((recentLabel) => !selected.some((selectedLabel) => selectedLabel.id === recentLabel.id))].slice(0, 8) }
-function parsePositiveWholeCzk(value: string) { const normalized = value.replaceAll(' ', '').replaceAll('\u00a0', ''); if (!/^\d+$/.test(normalized)) return null; const amount = Number(normalized); return Number.isSafeInteger(amount) && amount > 0 ? amount : null }
-function getPragueToday() { const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const values = Object.fromEntries(parts.map((part) => [part.type, part.value])); return `${values.year}-${values.month}-${values.day}` }
-function parseIsoDate(value: string) { const [year, month, day] = value.split('-').map(Number); return new Date(year, month - 1, day) }
-function formatIsoDate(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}` }

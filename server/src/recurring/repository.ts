@@ -1,6 +1,6 @@
 import type { Pool, PoolClient } from 'pg'
 import { DomainError } from '../management/domain.js'
-import type { RecurringRuleInput, RecurringRuleKind } from './domain.js'
+import { assertForwardSchedule, type RecurringRuleInput, type RecurringRuleKind } from './domain.js'
 import { getNextOccurrenceDate, getPragueToday, isRecurringOccurrenceDue, isRecurringRuleEnded, type RecurringFrequency } from './schedule.js'
 
 export type RecurringRuleLabel = { id: string; name: string }
@@ -34,6 +34,7 @@ export type RecurringGenerationResult = {
   processedRules: number
   generatedTransactions: number
   generatedTransfers: number
+  failedRuleIds: string[]
 }
 
 export type RecurringRuleRepository = {
@@ -119,6 +120,36 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
     async updateRule(userId, ruleId, input, today = getPragueToday()) {
       return withTransaction(pool, async (client) => {
         await assertLabelsExist(client, userId, input.labelIds)
+        const current = await client.query<{ kind: RecurringRuleKind; next_occurrence_date: string; schedule_anchor_date: string; ends_on: string | null }>(
+          `select kind,
+                  to_char(next_occurrence_date, 'YYYY-MM-DD') as next_occurrence_date,
+                  to_char(schedule_anchor_date, 'YYYY-MM-DD') as schedule_anchor_date,
+                  to_char(ends_on, 'YYYY-MM-DD') as ends_on
+           from recurring_rules
+           where user_id = $1 and id = $2
+           for update`,
+          [userId, ruleId],
+        )
+        const existing = current.rows[0]
+        if (!existing) return null
+        if (input.kind !== existing.kind) throw new DomainError(400, 'Typ opakování nelze po vytvoření změnit.')
+
+        // Only re-validate the schedule as forward-looking when it's actually being changed.
+        // An ended rule's frozen schedule (next_occurrence_date > ends_on, possibly in the past)
+        // must stay editable for its other fields without this rejecting the unchanged dates.
+        const scheduleChanged = input.nextOccurrenceDate !== existing.next_occurrence_date || input.endsOn !== existing.ends_on
+        if (scheduleChanged) assertForwardSchedule(input.nextOccurrenceDate, input.endsOn, today)
+
+        // The anchor only moves when the caller actually changed the next occurrence date.
+        // Editing unrelated fields (name, amount, labels, ...) must not re-anchor the schedule,
+        // or a drifted next_occurrence_date (e.g. 31st -> 28th after a short month) would
+        // permanently overwrite the original calendar-day intent.
+        const scheduleAnchorDate = input.nextOccurrenceDate === existing.next_occurrence_date
+          ? existing.schedule_anchor_date
+          : input.nextOccurrenceDate
+
+        const status = isRecurringRuleEnded({ nextOccurrenceDate: input.nextOccurrenceDate, endsOn: input.endsOn }) ? 'ended' : 'active'
+
         const updated = await client.query<{ id: string }>(
           `update recurring_rules
            set name = $3,
@@ -134,14 +165,14 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
              schedule_anchor_date = $13,
              next_occurrence_date = $14,
              ends_on = $15,
-             status = 'active'
+             status = $16::recurring_rule_status
            where user_id = $1 and id = $2
            returning id`,
-          [userId, ruleId, ...ruleValues(userId, input).slice(1)],
+          [userId, ruleId, ...ruleValues(userId, input).slice(1, -3), scheduleAnchorDate, input.nextOccurrenceDate, input.endsOn, status],
         )
         if (!updated.rows[0]) return null
         await replaceRuleLabels(client, userId, ruleId, input.labelIds)
-        await materializeDueOccurrences(client, today, ruleId)
+        if (status === 'active') await materializeDueOccurrences(client, today, ruleId)
         return requireRule(client, userId, ruleId)
       })
     },
@@ -155,7 +186,30 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
     },
 
     async generateDue(today) {
-      return withTransaction(pool, (client) => materializeDueOccurrences(client, today))
+      const due = await pool.query<{ id: string }>(
+        `select id from recurring_rules
+         where status = 'active'
+           and next_occurrence_date <= $1::date
+           and (ends_on is null or next_occurrence_date <= ends_on)
+         order by next_occurrence_date asc, id asc`,
+        [today],
+      )
+
+      // Each rule commits in its own transaction: one rule hitting an error (or the
+      // per-run occurrence limit) must not roll back the occurrences already generated
+      // and committed for every other rule in this run.
+      const result: RecurringGenerationResult = { processedRules: 0, generatedTransactions: 0, generatedTransfers: 0, failedRuleIds: [] }
+      for (const { id: ruleId } of due.rows) {
+        try {
+          const ruleResult = await withTransaction(pool, (client) => materializeDueOccurrences(client, today, ruleId))
+          result.processedRules += ruleResult.processedRules
+          result.generatedTransactions += ruleResult.generatedTransactions
+          result.generatedTransfers += ruleResult.generatedTransfers
+        } catch {
+          result.failedRuleIds.push(ruleId)
+        }
+      }
+      return result
     },
   }
 }
@@ -177,7 +231,7 @@ async function materializeDueOccurrences(client: PoolClient, today: string, rule
     [today, ruleId],
   )
 
-  const result: RecurringGenerationResult = { processedRules: 0, generatedTransactions: 0, generatedTransfers: 0 }
+  const result: RecurringGenerationResult = { processedRules: 0, generatedTransactions: 0, generatedTransfers: 0, failedRuleIds: [] }
   for (const rule of dueRules.rows) {
     let nextOccurrenceDate = rule.next_occurrence_date
     let generatedForRule = 0

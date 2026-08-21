@@ -80,8 +80,8 @@ export function CategoriesScreen({ onBack }: { onBack: () => void }) {
     void loadCategories()
   }
 
-  if (view === 'new') return <CategoryFormScreen direction={activeDirection} onCancel={() => setView('list')} onSaved={finishForm} />
-  if (view === 'edit' && selectedCategory) return <CategoryFormScreen category={selectedCategory} direction={selectedCategory.direction} onCancel={() => setView('list')} onSaved={finishForm} onDeleted={finishForm} />
+  if (view === 'new') return <CategoryFormScreen direction={activeDirection} existingNames={categories.filter((category) => category.direction === activeDirection).map((category) => category.name)} onCancel={() => setView('list')} onSaved={finishForm} />
+  if (view === 'edit' && selectedCategory) return <CategoryFormScreen category={selectedCategory} direction={selectedCategory.direction} existingNames={categories.filter((category) => category.direction === selectedCategory.direction && category.id !== selectedCategory.id).map((category) => category.name)} onCancel={() => setView('list')} onSaved={finishForm} onDeleted={finishForm} />
 
   const expenseCategories = categories.filter((category) => category.direction === 'expense')
   const incomeCategories = categories.filter((category) => category.direction === 'income')

@@ -13,6 +13,11 @@ constraints, not suggestions.
   arbitrary media queries.
 - Respect PWA safe areas — use `env(safe-area-inset-*)` for full-bleed / fixed UI (notches).
 - Layouts flow/stack/wrap on mobile; never depend on horizontal space a phone lacks.
+- **Cashdeck exception:** this product is deliberately iPhone-portrait-only for
+  all of v1 (product decision, not a Kubkit default). Do not add `sm:`/`md:`/
+  `lg:`/`xl:` breakpoints or desktop-specific layouts here — that would be
+  scope creep against the product boundary, not a fix. Everything else in this
+  section (touch targets, safe areas, flow/stack layout) still applies.
 
 ## 2. Closed token layer (no arbitrary values)
 

@@ -7,7 +7,7 @@ export type TransactionApiMock = {
   transactions: () => Transaction[]
 }
 
-type TransactionRequestMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+type TransactionRequestMethod = 'POST' | 'PATCH' | 'DELETE'
 type TransactionApiFailure = { status: number; message: string }
 type QueuedTransactionApiFailure = TransactionApiFailure & { remaining: number }
 
@@ -24,15 +24,6 @@ export async function mockTransactionsApi(page: Page, initialTransactions: Trans
     const pathname = url.pathname
 
     if (await fulfillFailure(route, failures)) return
-
-    if (request.method() === 'GET' && pathname === '/api/transactions') {
-      const limit = Number(url.searchParams.get('limit') ?? '50')
-      const start = Number(url.searchParams.get('cursor')?.replace('cursor-', '') ?? '0')
-      const items = transactions.slice(start, start + limit)
-      const nextCursor = start + limit < transactions.length ? `cursor-${start + limit}` : null
-      await route.fulfill(json({ items, nextCursor }))
-      return
-    }
 
     if (request.method() === 'POST' && pathname === '/api/transactions') {
       const input = request.postDataJSON() as CreateTransactionInput

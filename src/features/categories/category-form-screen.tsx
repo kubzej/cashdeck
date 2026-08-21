@@ -17,7 +17,7 @@ type CategoryFormValues = {
   iconKey: CategoryIconKey
 }
 
-export function CategoryFormScreen({ category, direction, onCancel, onSaved, onDeleted }: { category?: Category; direction: CategoryDirection; onCancel: () => void; onSaved: () => void; onDeleted?: () => void }) {
+export function CategoryFormScreen({ category, direction, existingNames, onCancel, onSaved, onDeleted }: { category?: Category; direction: CategoryDirection; existingNames: string[]; onCancel: () => void; onSaved: () => void; onDeleted?: () => void }) {
   const [values, setValues] = useState<CategoryFormValues>({
     name: category?.name ?? '',
     colorKey: category?.colorKey ?? 'teal',
@@ -32,7 +32,9 @@ export function CategoryFormScreen({ category, direction, onCancel, onSaved, onD
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors: Partial<Record<keyof CategoryFormValues, string>> = {}
-    if (!values.name.trim()) nextErrors.name = 'Zadej název kategorie.'
+    const normalizedName = values.name.trim().replace(/\s+/g, ' ')
+    if (!normalizedName) nextErrors.name = 'Zadej název kategorie.'
+    else if (existingNames.some((name) => name.toLocaleLowerCase('cs-CZ') === normalizedName.toLocaleLowerCase('cs-CZ'))) nextErrors.name = 'Kategorie s tímto názvem už existuje.'
     setErrors(nextErrors)
     setSubmissionError(null)
     if (Object.keys(nextErrors).length > 0) return

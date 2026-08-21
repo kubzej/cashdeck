@@ -24,7 +24,7 @@
   display: grid;
   width: 1.125rem;
   height: 1.125rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   place-items: center;
   background: var(--color-key-value);
 }

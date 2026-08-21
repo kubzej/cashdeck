@@ -65,7 +65,7 @@ export function createTransferRepository(pool: Pool): TransferRepository {
       }
       values.push(input.limit + 1)
 
-      const result = await pool.query<TransferRow>(transferSelect(filters.join(' and '), `$${values.length}`), values)
+      const result = await pool.query<TransferRow>(transferSelect(filters.join(' and '), `$${values.length}`, true), values)
       const rows = result.rows.slice(0, input.limit)
       const last = rows.at(-1)
       return { items: rows.map(toTransfer), nextCursor: result.rows.length > input.limit && last ? encodeCursor(last) : null }
@@ -131,13 +131,20 @@ export function createTransferRepository(pool: Pool): TransferRepository {
   }
 }
 
-function transferSelect(filters: string, limit: string) {
+function transferSelect(filters: string, limit: string, excludeHiddenWallets = false) {
+  const hiddenFilter = excludeHiddenWallets
+    ? `
+      and not source_wallet_filter.is_hidden
+      and not destination_wallet_filter.is_hidden`
+    : ''
   return `with page as (
     select tr.id, tr.source_wallet_id, tr.destination_wallet_id, tr.amount_czk,
       to_char(tr.transfer_date, 'YYYY-MM-DD') as transfer_date,
       tr.note, tr.created_at
     from transfers tr
-    where ${filters}
+    join wallets source_wallet_filter on source_wallet_filter.user_id = tr.user_id and source_wallet_filter.id = tr.source_wallet_id
+    join wallets destination_wallet_filter on destination_wallet_filter.user_id = tr.user_id and destination_wallet_filter.id = tr.destination_wallet_id
+    where ${filters}${hiddenFilter}
     order by tr.transfer_date desc, tr.created_at desc, tr.id desc
     limit ${limit}
   )

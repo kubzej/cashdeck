@@ -2,7 +2,6 @@ import { lazy, Suspense, useState, type ComponentType } from 'react'
 import { BarChart3, Plus, ReceiptText, Settings2, WalletCards } from 'lucide-react'
 import { useAuth } from '../auth/auth-context'
 import { Button } from '../components/ui/button'
-import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../components/ui/empty-state'
 import { CategoriesScreen } from '../features/categories/categories-screen'
 import { LabelsScreen } from '../features/labels/labels-screen'
 import { PlannedScreen } from '../features/planned/planned-screen'
@@ -19,6 +18,7 @@ import { type Wallet } from '../features/wallets/api'
 import { WalletFormScreen } from '../features/wallets/wallet-form-screen'
 import { WalletsScreen } from '../features/wallets/wallets-screen'
 import type { OverviewSelection } from '../features/overview/overview-screen'
+import { OverviewSkeleton } from '../features/overview/overview-skeleton'
 
 const OverviewScreen = lazy(() => import('../features/overview/overview-screen').then((module) => ({ default: module.OverviewScreen })))
 
@@ -96,7 +96,7 @@ export function AppShell() {
               <h1>{activeItem?.label}</h1>
               {activeNav === 'wallets' ? <Button variant="ghost" size="icon" aria-label="Přidat peněženku" onClick={() => setWalletView('new')}><Plus aria-hidden="true" /></Button> : null}
             </div>
-          {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} onOpenRecurring={() => setSettingsView('recurring')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setPlannedFilters(null); setFeedSelection(null); setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} initialFilters={plannedFilters ?? undefined} fixedSelection={feedSelection ?? undefined} onResetFilters={() => { setTransactionWalletId(null); setPlannedFilters(null); setFeedSelection(null) }} onOpenPlanned={(filters) => { setPlannedFilters(filters); setTransactionView('planned') }} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('list'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('list'); setTransferView('edit') }} /> : activeNav === 'overview' ? <Suspense fallback={<OverviewRouteSkeleton />}><OverviewScreen onOpenTransactions={(filters, selection) => { setPlannedFilters(filters); setFeedSelection(selection); setTransactionWalletId(null); setActiveNav('transactions') }} /></Suspense> : null}
+          {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} onOpenRecurring={() => setSettingsView('recurring')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setPlannedFilters(null); setFeedSelection(null); setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} initialFilters={plannedFilters ?? undefined} fixedSelection={feedSelection ?? undefined} onResetFilters={() => { setTransactionWalletId(null); setPlannedFilters(null); setFeedSelection(null) }} onOpenPlanned={(filters) => { setPlannedFilters(filters); setTransactionView('planned') }} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('list'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('list'); setTransferView('edit') }} /> : activeNav === 'overview' ? <Suspense fallback={<OverviewSkeleton />}><OverviewScreen onOpenTransactions={(filters, selection) => { setPlannedFilters(filters); setFeedSelection(selection); setTransactionWalletId(null); setActiveNav('transactions') }} /></Suspense> : null}
           </> : null}
         </main>
         {!isDetailScreen && activeNav === 'transactions' ? <Button size="icon" className="transaction-fab" aria-label="Přidat záznam" onClick={() => setIsAddActivityOpen(true)}><Plus aria-hidden="true" /></Button> : null}
@@ -107,4 +107,3 @@ export function AppShell() {
   )
 }
 
-function OverviewRouteSkeleton() { return <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><BarChart3 aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Načítám přehled</EmptyStateTitle><EmptyStateDescription>Připravuji souhrn financí.</EmptyStateDescription></EmptyState> }

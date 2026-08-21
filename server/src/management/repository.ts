@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer'
 import type { Pool, PoolClient } from 'pg'
-import { defaultCategorySeeds, type CategoryDirection, type CategoryIconKey, type ColorKey, DomainError } from './domain.js'
+import type { CategoryDirection, CategoryIconKey, ColorKey } from './domain.js'
+import { DomainError } from './domain.js'
 import { getPragueToday } from '../recurring/schedule.js'
 
 export type Wallet = {
@@ -75,7 +76,6 @@ type LabelCursor = {
 }
 
 export type ManagementRepository = {
-  bootstrap(userId: string): Promise<{ seeded: boolean }>
   listWallets(userId: string, includeHidden: boolean): Promise<Wallet[]>
   getWallet(userId: string, walletId: string): Promise<Wallet | null>
   createWallet(userId: string, input: CreateWalletInput): Promise<Wallet>
@@ -211,13 +211,19 @@ const walletSelect = `
   left join wallet_deltas on wallet_deltas.wallet_id = w.id
 `
 
+function toSafeCzk(value: string | number): number {
+  const parsed = Number(value)
+  if (!Number.isSafeInteger(parsed)) throw new Error(`Částka ${value} Kč přesahuje bezpečný rozsah pro celé číslo.`)
+  return parsed
+}
+
 function toWallet(row: WalletRow): Wallet {
   return {
     id: row.id,
     name: row.name,
     colorKey: row.color_key,
-    openingBalanceCzk: Number(row.opening_balance_czk),
-    currentBalanceCzk: Number(row.current_balance_czk),
+    openingBalanceCzk: toSafeCzk(row.opening_balance_czk),
+    currentBalanceCzk: toSafeCzk(row.current_balance_czk),
     openingBalanceDate: row.opening_balance_date,
     sortOrder: row.sort_order,
     isHidden: row.is_hidden,
@@ -242,46 +248,6 @@ function toLabel(row: LabelRow): Label {
 
 export function createManagementRepository(pool: Pool): ManagementRepository {
   return {
-    async bootstrap(userId) {
-      return withTransaction(pool, async (client) => {
-        await client.query(
-          `insert into user_settings (user_id)
-           values ($1)
-           on conflict (user_id) do nothing`,
-          [userId],
-        )
-
-        const settings = await client.query<{ default_categories_seeded_at: Date | null }>(
-          `select default_categories_seeded_at
-           from user_settings
-           where user_id = $1
-           for update`,
-          [userId],
-        )
-
-        if (settings.rows[0]?.default_categories_seeded_at) {
-          return { seeded: false }
-        }
-
-        for (const category of defaultCategorySeeds()) {
-          await client.query(
-            `insert into categories (user_id, name, direction, icon_key, color_key, sort_order)
-             values ($1, $2, $3, $4, $5, $6)
-             on conflict (user_id, direction, normalized_name) do nothing`,
-            [userId, category.name, category.direction, category.iconKey, category.colorKey, category.sortOrder],
-          )
-        }
-
-        await client.query(
-          `update user_settings
-           set default_categories_seeded_at = now()
-           where user_id = $1`,
-          [userId],
-        )
-
-        return { seeded: true }
-      })
-    },
 
     async listWallets(userId, includeHidden) {
       const result = await pool.query<WalletRow>(

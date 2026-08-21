@@ -6,6 +6,7 @@ import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStat
 import { Input } from '../../components/ui/input'
 import { List, ListItem, ListItemContent, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
+import { SEARCH_DEBOUNCE_MS } from '../../lib/search-debounce'
 import { LabelFormScreen } from './label-form-screen'
 import { listLabels, type Label } from './api'
 import './labels.css'
@@ -35,7 +36,7 @@ export function LabelsScreen({ onBack }: { onBack: () => void }) {
       } catch {
         if (!cancelled) setStatus('error')
       }
-    }, query ? 200 : 0)
+    }, query ? SEARCH_DEBOUNCE_MS : 0)
 
     return () => {
       cancelled = true

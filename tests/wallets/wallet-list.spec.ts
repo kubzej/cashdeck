@@ -44,6 +44,11 @@ test('reorders wallets with the drag handle and saves the new order', async ({ p
 
   await expect(page.getByRole('listitem').first()).toContainText('Hotovost')
   await expect.poll(() => walletApi.wallets().map((wallet) => wallet.id)).toEqual(['wallet-2', 'wallet-1'])
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Peněženky' }).click()
+  await expect(page.getByRole('listitem').first()).toContainText('Hotovost')
+  await expect(page.getByRole('listitem').nth(1)).toContainText('AirBank')
 })
 
 test('shows the current balance instead of the opening balance', async ({ page }) => {

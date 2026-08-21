@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { formatFeedPeriodTitle, getFeedToday, resolveFeedDateRange, shiftFeedPeriod, type FeedPeriod } from './feed-filters'
+import { formatFeedPeriodTitle, resolveFeedDateRange, shiftFeedPeriod, type FeedPeriod } from './feed-filters'
+import { getPragueToday } from '../../lib/prague-date'
 
 export function FeedPeriodPager({ period, periodAnchor, earliestActivityDate, onNavigate, children }: { period: Exclude<FeedPeriod, 'all' | 'custom'>; periodAnchor: string; earliestActivityDate: string | null; onNavigate: (periodAnchor: string) => void; children: ReactNode }) {
   const navigationLocked = useRef(false)
@@ -16,7 +17,7 @@ export function FeedPeriodPager({ period, periodAnchor, earliestActivityDate, on
   const nextAnchor = shiftFeedPeriod(periodAnchor, period, 1)
   const hasPrevious = earliestActivityDate !== null && resolveFeedDateRange({ walletIds: [], period, periodAnchor: previousAnchor, customDateFrom: '', customDateTo: '', search: '' }).dateTo! >= earliestActivityDate
   const nextRange = resolveFeedDateRange({ walletIds: [], period, periodAnchor: nextAnchor, customDateFrom: '', customDateTo: '', search: '' })
-  const hasNext = nextRange.dateFrom! <= getFeedToday()
+  const hasNext = nextRange.dateFrom! <= getPragueToday()
 
   useEffect(() => {
     navigationLocked.current = false

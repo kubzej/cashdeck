@@ -13,6 +13,8 @@ test('edits a recurring rule and retries a failed update', async ({ page }) => {
   await expect(page.getByLabel('Název')).toHaveValue('Nájem')
   await expect(page.getByRole('textbox', { name: 'Částka', exact: true })).toHaveValue('18000')
   await expect(page.getByLabel('Poznámka')).toHaveValue('Původní poznámka')
+  await expect(page.getByRole('button', { name: 'Transakce', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Převod', exact: true })).toBeDisabled()
   await page.getByLabel('Název').fill('Nájem po úpravě')
   await page.getByRole('textbox', { name: 'Částka', exact: true }).fill('19500')
   await page.getByRole('button', { name: 'Domov' }).click()

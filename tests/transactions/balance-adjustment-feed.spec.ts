@@ -11,7 +11,6 @@ const adjustment: FeedItem = {
   amountCzk: 1544,
   operation: 'add',
   adjustmentDate: '2026-08-21',
-  note: null,
 }
 
 test('shows a balance reconciliation as a read-only audit item in the transaction history', async ({ page }) => {

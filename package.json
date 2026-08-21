@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "packageManager": "pnpm@11.13.1",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "pnpm typecheck && vite build",

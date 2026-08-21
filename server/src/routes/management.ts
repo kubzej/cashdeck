@@ -26,11 +26,6 @@ import type {
 
 export function createManagementRoutes(repository: ManagementRepository, requireAuth: AuthGuard): FastifyPluginAsync {
   return async function managementRoutes(app) {
-    app.post('/api/bootstrap', { preHandler: requireAuth }, async (request, reply) => {
-      const result = await repository.bootstrap(request.authUser.id)
-      return reply.code(200).send(result)
-    })
-
     app.get('/api/wallets', { preHandler: requireAuth }, async (request) => {
       const query = asRecord(request.query)
       assertOnlyKeys(query, ['includeHidden'])

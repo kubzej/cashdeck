@@ -28,13 +28,32 @@ export const overviewFixture: OverviewMetrics = {
   ],
 }
 
+export type OverviewApiMock = {
+  requests: () => URL[]
+  failNext: (failure?: { status?: number; message?: string }) => void
+}
+
 export async function mockOverviewApi(page: Page, fixture: OverviewMetrics = overviewFixture) {
   const requests: URL[] = []
+  let queuedFailure: { status: number; message: string } | null = null
+
   await page.route('http://api.test/api/overview**', async (route) => {
     expect(route.request().headers().authorization).toBe('Bearer token-1')
     const url = new URL(route.request().url())
+    if (queuedFailure) {
+      const failure = queuedFailure
+      queuedFailure = null
+      await route.fulfill({ contentType: 'application/json', status: failure.status, body: JSON.stringify({ message: failure.message }) })
+      return
+    }
     requests.push(url)
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(fixture) })
   })
-  return { requests: () => requests }
+
+  return {
+    requests: () => requests,
+    failNext(failure = {}) {
+      queuedFailure = { status: failure.status ?? 500, message: failure.message ?? 'Dočasně nedostupné.' }
+    },
+  } satisfies OverviewApiMock
 }

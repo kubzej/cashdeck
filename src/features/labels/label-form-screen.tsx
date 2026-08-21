@@ -18,7 +18,7 @@ export function LabelFormScreen({ label, onCancel, onSaved, onDeleted }: { label
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const normalizedName = name.trim().toLocaleLowerCase('cs-CZ')
+    const normalizedName = name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('cs-CZ')
     if (!normalizedName) {
       setNameError('Zadej název štítku.')
       return

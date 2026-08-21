@@ -5,6 +5,7 @@ import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } fr
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List, ListItem, ListItemActions, ListItemContent, ListItemLeading, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
+import { formatCzk } from '../../lib/format-czk'
 import { CategoryIcon } from '../categories/category-icon'
 import type { FeedFilterValue } from '../feed/feed-filters'
 import type { Transaction } from '../transactions/api'
@@ -118,9 +119,8 @@ function getAmountClass(item: PlannedItem) {
 
 function formatItemAmount(item: PlannedItem) {
   const value = item.kind === 'transaction' ? (item.direction === 'income' ? item.amountCzk : -item.amountCzk) : item.impactCzk
-  const prefix = value > 0 ? '+' : value < 0 ? '-' : ''
-  const displayAmount = item.kind === 'transfer' && value === 0 ? item.amountCzk : Math.abs(value)
-  return `${prefix}${new Intl.NumberFormat('cs-CZ').format(displayAmount)} Kč`
+  if (item.kind === 'transfer' && value === 0) return formatCzk(item.amountCzk)
+  return formatCzk(value, { signed: true })
 }
 
 function formatDate(value: string) {

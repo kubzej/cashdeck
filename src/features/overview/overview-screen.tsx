@@ -3,12 +3,13 @@ import { BarChart3, CircleAlert, Landmark, RefreshCw, Tags } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { EmptyState, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
-import { Skeleton } from '../../components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group'
+import { formatCzk } from '../../lib/format-czk'
 import { CategoryIcon } from '../categories/category-icon'
 import type { CategoryColorKey, CategoryIconKey } from '../categories/api'
 import { createDefaultFeedFilters, FeedFilters, isNavigablePeriod, resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
 import { FeedPeriodPager } from '../feed/feed-period-pager'
+import { OverviewSkeleton } from './overview-skeleton'
 import { listWallets, type Wallet } from '../wallets/api'
 import { getOverview, type OverviewCategory, type OverviewLabel, type OverviewMetrics } from './api'
 import './overview.css'
@@ -112,7 +113,7 @@ function CategoryBreakdown({ categories, mode, onOpenTransactions }: { categorie
   return <><CategoryDonut categories={categories} /><div className="overview-breakdown-list">{categories.map((category) => <button type="button" className="overview-breakdown-row" key={category.id} onClick={() => onOpenTransactions({ type: 'category', id: category.id, name: category.name })}>
     <span className={`overview-breakdown-row__icon color-key--${category.colorKey}`}><CategoryIcon iconKey={category.iconKey as CategoryIconKey} colorKey={category.colorKey as CategoryColorKey} /></span>
     <span className="overview-breakdown-row__content"><span className="overview-breakdown-row__name">{category.name}</span><span className="overview-breakdown-row__meta">{formatTransactionCount(category.transactionCount)}</span><span className="overview-breakdown-row__bar"><i style={{ '--overview-bar-size': `${Math.max(5, category.amountCzk / maxAmount * 100)}%` } as CSSProperties} /></span></span>
-    <strong className={category.direction === 'income' ? 'is-positive' : mode === 'total' ? 'is-negative' : 'is-negative'}>{category.direction === 'income' ? '+' : '-'}{formatMoney(category.amountCzk)}</strong>
+    <strong className={category.direction === 'income' ? 'is-positive' : mode === 'total' ? 'is-negative' : 'is-negative'}>{category.direction === 'income' ? '+' : '-'}{formatCzk(category.amountCzk)}</strong>
   </button>)}</div></>
 }
 
@@ -200,9 +201,9 @@ function WealthChart({ points }: { points: OverviewMetrics['wealthSeries'] }) {
     <line x1="0" x2="300" y1="132" y2="132" /><line x1="0" x2="300" y1="82" y2="82" /><line x1="0" x2="300" y1="32" y2="32" /><polyline points={coordinates.join(' ')} />
     {coordinates.map((coordinate, index) => {
       const { x, y } = parseChartCoordinates(coordinate)
-      return <circle key={points[index].date} className="overview-chart__point-hit" cx={x} cy={y} r="9" tabIndex={0} role="button" aria-label={`${formatTooltipDate(points[index].date)}: ${formatMoney(points[index].valueCzk)}`} onFocus={() => setActiveIndex(index)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActiveIndex(index) } }} />
+      return <circle key={points[index].date} className="overview-chart__point-hit" cx={x} cy={y} r="9" tabIndex={0} role="button" aria-label={`${formatTooltipDate(points[index].date)}: ${formatCzk(points[index].valueCzk)}`} onFocus={() => setActiveIndex(index)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActiveIndex(index) } }} />
     })}
-    {activePoint && activeCoordinates ? <ChartSvgTooltip x={activeCoordinates.x} y={activeCoordinates.y} date={activePoint.date} value={formatMoney(activePoint.valueCzk)} /> : null}
+    {activePoint && activeCoordinates ? <ChartSvgTooltip x={activeCoordinates.x} y={activeCoordinates.y} date={activePoint.date} value={formatCzk(activePoint.valueCzk)} /> : null}
   </svg><div className="overview-chart__dates"><span>{formatChartDate(points[0].date)}</span><span>{formatChartDate(points.at(-1)?.date ?? points[0].date)}</span></div></div>
 }
 
@@ -214,7 +215,7 @@ function FlowChart({ points, mode }: { points: OverviewMetrics['flowSeries']; mo
   const activePoint = activeIndex === null ? null : points[activeIndex]
   return <div className="overview-flow-chart" aria-label="Graf peněžního toku">{activePoint && activeIndex !== null ? <ChartHtmlTooltip point={activePoint} mode={mode} index={activeIndex} count={points.length} /> : null}<div className={`overview-flow-chart__columns ${mode === 'cashflow' ? 'overview-flow-chart__columns--cashflow' : ''}`}>{points.map((point, index) => {
     const value = values[index]
-    if (mode === 'cashflow') return <button type="button" key={point.date} className="is-cashflow" aria-label={`${formatTooltipDate(point.date)}: příjmy ${formatMoney(point.incomeCzk)}, výdaje ${formatMoney(point.expenseCzk)}`} onClick={() => setActiveIndex(index)}><i className="overview-flow-chart__income" style={{ '--overview-flow-size': `${getBarSize(point.incomeCzk, max)}%` } as CSSProperties} /><i className="overview-flow-chart__expense" style={{ '--overview-flow-size': `${getBarSize(point.expenseCzk, max)}%` } as CSSProperties} /></button>
+    if (mode === 'cashflow') return <button type="button" key={point.date} className="is-cashflow" aria-label={`${formatTooltipDate(point.date)}: příjmy ${formatCzk(point.incomeCzk)}, výdaje ${formatCzk(point.expenseCzk)}`} onClick={() => setActiveIndex(index)}><i className="overview-flow-chart__income" style={{ '--overview-flow-size': `${getBarSize(point.incomeCzk, max)}%` } as CSSProperties} /><i className="overview-flow-chart__expense" style={{ '--overview-flow-size': `${getBarSize(point.expenseCzk, max)}%` } as CSSProperties} /></button>
     return <button type="button" key={point.date} className={value < 0 ? 'is-negative' : mode === 'expense' ? 'is-negative' : 'is-positive'} aria-label={`${formatTooltipDate(point.date)}: ${formatFlowValue(value, mode)}`} onClick={() => setActiveIndex(index)}><i style={{ '--overview-flow-size': `${Math.max(5, Math.abs(value) / max * 100)}%` } as CSSProperties} /></button>
   })}</div><div className="overview-chart__dates"><span>{formatChartDate(points[0].date)}</span><span>{formatChartDate(points.at(-1)?.date ?? points[0].date)}</span></div></div>
 }
@@ -228,12 +229,11 @@ function ChartSvgTooltip({ x, y, date, value }: { x: number; y: number; date: st
 function ChartHtmlTooltip({ point, mode, index, count }: { point: OverviewMetrics['flowSeries'][number]; mode: Exclude<OverviewMode, 'total'>; index: number; count: number }) {
   const cashflow = point.incomeCzk - point.expenseCzk
   const edge = count === 1 ? undefined : index === 0 ? 'start' : index === count - 1 ? 'end' : undefined
-  return <div className="overview-flow-chart__tooltip" data-edge={edge} style={{ left: `${count === 1 ? 50 : index / (count - 1) * 100}%` }}><span>{formatTooltipDate(point.date)}</span>{mode === 'cashflow' ? <><strong className="is-positive">+ Příjmy {formatMoney(point.incomeCzk)}</strong><strong className="is-negative">- Výdaje {formatMoney(point.expenseCzk)}</strong><strong>Cashflow {formatFlowValue(cashflow, mode)}</strong></> : <strong>{formatFlowValue(mode === 'income' ? point.incomeCzk : point.expenseCzk, mode)}</strong>}</div>
+  return <div className="overview-flow-chart__tooltip" data-edge={edge} style={{ left: `${count === 1 ? 50 : index / (count - 1) * 100}%` }}><span>{formatTooltipDate(point.date)}</span>{mode === 'cashflow' ? <><strong className="is-positive">+ Příjmy {formatCzk(point.incomeCzk)}</strong><strong className="is-negative">- Výdaje {formatCzk(point.expenseCzk)}</strong><strong>Cashflow {formatFlowValue(cashflow, mode)}</strong></> : <strong>{formatFlowValue(mode === 'income' ? point.incomeCzk : point.expenseCzk, mode)}</strong>}</div>
 }
 
 function ChartEmpty() { return <div className="overview-chart overview-chart--empty"><BarChart3 aria-hidden="true" /><span>V tomto období zatím nejsou data pro graf.</span></div> }
 
-function OverviewSkeleton() { return <div className="overview-skeleton" aria-label="Načítání přehledu"><Skeleton className="h-11 w-full" /><Skeleton className="h-32 w-full" /><Skeleton className="h-52 w-full" /><Skeleton className="h-24 w-full" /><Skeleton className="h-48 w-full" /></div> }
 
 function getPrimaryMetric(metrics: OverviewMetrics, mode: OverviewMode) {
   if (mode === 'income') return { label: 'Příjmy v období', amountCzk: metrics.flow.incomeCzk, tone: 'positive' as const, signed: true }
@@ -244,13 +244,13 @@ function getPrimaryMetric(metrics: OverviewMetrics, mode: OverviewMode) {
 
 type LabelDisplay = OverviewLabel & { amountCzk: number; magnitudeCzk: number }
 function getLabelDisplay(label: OverviewLabel, mode: OverviewMode): LabelDisplay {
+  // Transfers are neutral to label totals in every mode, including "Celkem" — they affect
+  // overall wealth, but never a label's income/expense/cashflow attribution.
   const amountCzk = mode === 'income'
     ? label.incomeCzk
     : mode === 'expense'
       ? -label.expenseCzk
-      : mode === 'cashflow'
-        ? label.incomeCzk - label.expenseCzk
-        : label.incomeCzk - label.expenseCzk + label.transferImpactCzk
+      : label.incomeCzk - label.expenseCzk
   return { ...label, amountCzk, magnitudeCzk: Math.abs(amountCzk) }
 }
 function formatLabelCount(transactionCount: number, transferCount: number) {
@@ -258,10 +258,9 @@ function formatLabelCount(transactionCount: number, transferCount: number) {
   return `${count} ${count === 1 ? 'položka' : count >= 2 && count <= 4 ? 'položky' : 'položek'}`
 }
 function isOverviewMode(value: string) : value is OverviewMode { return value === 'total' || value === 'income' || value === 'expense' || value === 'cashflow' }
-function formatMoney(value: number) { return `${new Intl.NumberFormat('cs-CZ').format(Math.abs(value))} Kč` }
-function formatSignedMoney(value: number, signed: boolean) { return `${signed ? value >= 0 ? '+' : '-' : value < 0 ? '-' : ''}${formatMoney(value)}` }
+function formatSignedMoney(value: number, signed: boolean) { return `${signed ? value >= 0 ? '+' : '-' : value < 0 ? '-' : ''}${formatCzk(value)}` }
 function formatPercent(value: number) { return new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 1 }).format(value) + ' %' }
-function formatFlowValue(value: number, mode: Exclude<OverviewMode, 'total'>) { return `${mode === 'expense' ? '-' : value < 0 ? '-' : value > 0 ? '+' : ''}${formatMoney(value)}` }
+function formatFlowValue(value: number, mode: Exclude<OverviewMode, 'total'>) { return `${mode === 'expense' ? '-' : value < 0 ? '-' : value > 0 ? '+' : ''}${formatCzk(value)}` }
 function getBarSize(value: number, max: number) { return value === 0 ? 0 : Math.max(5, value / max * 100) }
 function formatCompactMoney(value: number) { return new Intl.NumberFormat('cs-CZ', { notation: 'compact', maximumFractionDigits: 1 }).format(value) + ' Kč' }
 function formatTransactionCount(value: number) { return `${value} ${value === 1 ? 'transakce' : value >= 2 && value <= 4 ? 'transakce' : 'transakcí'}` }

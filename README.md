@@ -1,49 +1,23 @@
 # Cashdeck
 
-Private Czech personal-finance PWA for iPhone. Cashdeck is being built as a
-simpler, performance-focused replacement for Spendee.
+Cashdeck is a mobile app for tracking wallets, income and expenses, transfers
+between accounts, labels, recurring transactions, and an overview of where your
+money goes.
 
-## Project status
-
-The repository currently contains:
-
-- React + TypeScript + Vite;
-- Kubkit-owned theme tokens plus the base Button, form, page-shell, state,
-  list, selection, dialog, and navigation components;
-- Lucide icons;
-- light/dark theme shell;
-- portrait PWA manifest and service-worker build configuration;
-- Playwright foundation smoke test and a Vitest runner for future pure logic;
-- local project rules and CI foundation;
-- a clean mobile shell with the four Cashdeck destinations.
-
-The previous database and authentication integration was intentionally removed.
-It will be rebuilt as a backend-first architecture: browser to Cashdeck API,
-Cashdeck API to Neon Postgres. Financial screens and production deployment
-remain deferred.
-
-## Commands
+## Getting started
 
 ```bash
-cd /Users/jakub/Documents/Projects/cashdeck
 pnpm install
-pnpm dev
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm test:e2e
-pnpm build
+pnpm dev        # starts the app
+pnpm server:dev # starts the API
 ```
 
-Playwright is not part of the normal development server. Run `pnpm test:e2e`
-only when adding or changing browser tests, or when you want to verify a full
-user flow locally. It starts its own temporary Vite server on port `4173`.
+## Other commands
 
-Stop the local frontend with `Ctrl-C`; the Playwright command manages and stops
-its own temporary server automatically.
-
-## Design rules
-
-Read `AGENTS.md` and the Kubkit rules in `src/components/ui/` before changing
-the UI. The detailed product and phase plans live in the Alethea knowledge
-repository under the Cashdeck plan.
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test         # frontend/backend unit tests
+pnpm test:e2e     # end-to-end tests
+pnpm build        # production build
+```

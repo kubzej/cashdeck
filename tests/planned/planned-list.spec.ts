@@ -51,3 +51,30 @@ test('keeps future manual and recurring items in Naplanovane, with only manual i
   if (!returnedRequest) throw new Error('Naplánované se po návratu z editoru znovu nenačetlo.')
   expect(returnedRequest.search).toBe(initialRequest.search)
 })
+
+test('shows future transfers in Naplanovane, greyed and non-interactive only when recurring', async ({ page }) => {
+  const destination = { id: 'wallet-2', name: 'Spořicí účet', colorKey: 'blue', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 1, isHidden: false, openingBalanceLocked: false }
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page, [wallet, destination])
+  await mockCategoriesApi(page, [category])
+  await mockLabelsApi(page, [])
+  await mockTransactionsApi(page)
+  await mockFeedApi(page, [])
+  await mockPlannedApi(page, [
+    { kind: 'transfer', id: 'planned-transfer-manual-1', origin: 'manual', recurringRuleId: null, recurringRuleName: null, sourceWalletId: wallet.id, sourceWalletName: wallet.name, destinationWalletId: destination.id, destinationWalletName: destination.name, amountCzk: 2000, impactCzk: 0, transferDate: '2026-08-24', note: null, labels: [] },
+    { kind: 'transfer', id: 'rule-2:2026-08-30', origin: 'recurring', recurringRuleId: 'rule-2', recurringRuleName: null, sourceWalletId: wallet.id, sourceWalletName: wallet.name, destinationWalletId: destination.id, destinationWalletName: destination.name, amountCzk: 5000, impactCzk: 0, transferDate: '2026-08-30', note: null, labels: [] },
+  ])
+
+  await page.goto('/')
+  await signIn(page)
+  await page.getByRole('button', { name: /Naplánované/ }).click()
+  await expect(page.getByRole('heading', { name: 'Naplánované', exact: true })).toBeVisible()
+
+  const manualTransfer = page.getByRole('button', { name: /Moneta do Spořicí účet/ })
+  await expect(manualTransfer).toContainText('Převod')
+
+  const recurringTransfer = page.locator('.planned-row--recurring').filter({ hasText: 'Moneta do Spořicí účet' })
+  await expect(recurringTransfer).toContainText('Opakování')
+  await expect(recurringTransfer).not.toHaveAttribute('data-interactive', 'true')
+  await expect(page.getByRole('button', { name: /5\s?000 Kč/ })).toHaveCount(0)
+})

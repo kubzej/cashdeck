@@ -44,7 +44,6 @@ export type FeedBalanceAdjustment = {
   amountCzk: number
   operation: 'add' | 'subtract'
   adjustmentDate: string
-  note: string | null
 }
 
 export type FeedItem = FeedTransaction | FeedTransfer | FeedBalanceAdjustment
@@ -140,7 +139,6 @@ export function createFeedRepository(pool: Pool): FeedRepository {
         )`)
         adjustmentFilters.push(`(
           adjustment_wallet.name ilike '%' || ${parameter} || '%'
-          or coalesce(adjustment.note, '') ilike '%' || ${parameter} || '%'
           or 'Vyrovnání zůstatku' ilike '%' || ${parameter} || '%'
         )`)
       }
@@ -241,7 +239,7 @@ function feedSelect(transactionFilters: string, transferFilters: string, adjustm
     where ${transferFilters}
     union all
     select 'balance_adjustment'::text as kind, adjustment.id, adjustment.adjustment_date as activity_date, adjustment.created_at,
-      adjustment.amount_czk, adjustment.note, adjustment.wallet_id, null::uuid as category_id,
+      adjustment.amount_czk, null::text as note, adjustment.wallet_id, null::uuid as category_id,
       null::uuid as source_wallet_id, null::uuid as destination_wallet_id, adjustment.operation::text as adjustment_operation
     from balance_adjustments adjustment
     join wallets adjustment_wallet on adjustment_wallet.user_id = adjustment.user_id and adjustment_wallet.id = adjustment.wallet_id
@@ -306,7 +304,7 @@ function toFeedItem(row: FeedRow, selectedWalletIds: string[] | null): FeedItem 
   const labels = parseLabels(row.labels)
   if (row.kind === 'balance_adjustment') {
     if (!row.wallet_id || !row.wallet_name || !row.adjustment_operation) throw new Error('Neúplný řádek vyrovnání zůstatku ve feedu.')
-    return { kind: 'balance_adjustment', id: row.id, walletId: row.wallet_id, walletName: row.wallet_name, amountCzk: Number(row.amount_czk), operation: row.adjustment_operation, adjustmentDate: row.activity_date, note: row.note }
+    return { kind: 'balance_adjustment', id: row.id, walletId: row.wallet_id, walletName: row.wallet_name, amountCzk: Number(row.amount_czk), operation: row.adjustment_operation, adjustmentDate: row.activity_date }
   }
   if (row.kind === 'transaction') {
     if (!row.wallet_id || !row.wallet_name || !row.category_id || !row.category_name || !row.category_icon_key || !row.category_color_key || !row.direction) throw new Error('Neúplný řádek transakce ve feedu.')

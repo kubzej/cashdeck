@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { GripVertical, Pencil, Scale, WalletCards } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { ListItem, ListItemActions, ListItemContent, ListItemTitle } from '../../components/ui/list'
+import { formatCzk } from '../../lib/format-czk'
 import { type Wallet } from './api'
 import { BalanceAdjustmentDialog } from './balance-adjustment-dialog'
 
@@ -65,10 +66,4 @@ export function SortableWalletRow({ wallet, disabled, onSelect, onManage, onAdju
       {isAdjusting ? <BalanceAdjustmentDialog wallet={wallet} onOpenChange={setIsAdjusting} onAdjusted={onAdjusted} /> : null}
     </ListItem>
   )
-}
-
-function formatCzk(value: number) {
-  return new Intl.NumberFormat('cs-CZ', {
-    style: 'currency', currency: 'CZK', maximumFractionDigits: 0,
-  }).format(value)
 }

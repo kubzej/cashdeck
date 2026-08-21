@@ -5,6 +5,7 @@ import { DatePicker } from '../../components/ui/calendar'
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { Field, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
+import { formatIsoDate, getPragueToday, parseIsoDate } from '../../lib/prague-date'
 import type { Wallet } from '../wallets/api'
 import './feed-filters.css'
 
@@ -22,7 +23,7 @@ export type FeedFilterValue = {
 export type FeedDateRange = { dateFrom?: string; dateTo?: string }
 
 export function createDefaultFeedFilters(): FeedFilterValue {
-  const today = getFeedToday()
+  const today = getPragueToday()
   const currentMonth = getMonthRange(today)
   return { walletIds: [], period: 'month', periodAnchor: today, customDateFrom: currentMonth.dateFrom, customDateTo: currentMonth.dateTo, search: '' }
 }
@@ -46,7 +47,7 @@ export function FeedFilters({ wallets, value, onChange, showSearch = true, ariaL
     </div> : null}
     <div className="feed-filters__controls">
       <WalletFilterDialog wallets={visibleWallets} selectedWalletIds={value.walletIds} label={walletLabel} onApply={(walletIds) => onChange({ ...value, walletIds })} />
-      <PeriodFilterDialog value={value} label={getPeriodLabel(value.period)} onApply={(next) => onChange({ ...value, ...next, periodAnchor: next.period !== value.period && isNavigablePeriod(next.period) ? getFeedToday() : value.periodAnchor })} />
+      <PeriodFilterDialog value={value} label={getPeriodLabel(value.period)} onApply={(next) => onChange({ ...value, ...next, periodAnchor: next.period !== value.period && isNavigablePeriod(next.period) ? getPragueToday() : value.periodAnchor })} />
       {showReset && onReset ? <Button variant="ghost" size="icon" className="feed-filter-reset" aria-label="Zrušit všechny filtry" onClick={onReset}><X aria-hidden="true" /></Button> : null}
     </div>
   </section>
@@ -144,13 +145,5 @@ function getPeriodLabel(period: FeedPeriod) {
   return 'Vlastní období'
 }
 
-export function getFeedToday() {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  return `${values.year}-${values.month}-${values.day}`
-}
-
 function getMonthRange(today: string) { const [year, month] = today.split('-').map(Number); return { dateFrom: `${year}-${String(month).padStart(2, '0')}-01`, dateTo: formatIsoDate(new Date(year, month, 0)) } }
 function getWeekRange(today: string) { const date = parseIsoDate(today); const day = (date.getDay() + 6) % 7; const from = new Date(date); from.setDate(date.getDate() - day); const to = new Date(from); to.setDate(from.getDate() + 6); return { dateFrom: formatIsoDate(from), dateTo: formatIsoDate(to) } }
-function parseIsoDate(value: string) { const [year, month, day] = value.split('-').map(Number); return new Date(year, month - 1, day) }
-function formatIsoDate(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}` }

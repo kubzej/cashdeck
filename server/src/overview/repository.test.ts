@@ -33,3 +33,34 @@ test('caps overview aggregates at today and never loads recurring forecasts', as
   expect(result.wealth).toEqual({ amountCzk: 428_600, changeCzk: 21_400 })
   expect(result.flow).toEqual({ incomeCzk: 74_500, expenseCzk: 53_100, cashflowCzk: 21_400 })
 })
+
+test('shows a past period\'s own ending balance, not today\'s — a later transaction never leaks into it', async () => {
+  // "Today" is August, but the browsed period is March: dateTo must stay March 31st (never get
+  // clamped up to today), and the wealth SQL must bound by that exact date, not by "today".
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-08-21T12:00:00+02:00'))
+  const query = vi.fn()
+    .mockResolvedValueOnce({ rows: [{ earliest_activity_date: '2025-01-01' }] })
+    .mockResolvedValueOnce({ rows: [{ wealth_czk: '100000', change_czk: '5000' }] })
+    .mockResolvedValueOnce({ rows: [{ income_czk: '5000', expense_czk: '0' }] })
+    .mockResolvedValueOnce({ rows: [{ bucket_date: '2026-03-31', value_czk: '100000' }] })
+    .mockResolvedValueOnce({ rows: [{ bucket_date: '2026-03-31', income_czk: '5000', expense_czk: '0' }] })
+    .mockResolvedValueOnce({ rows: [] })
+    .mockResolvedValueOnce({ rows: [] })
+  const repository = createOverviewRepository({ query } as unknown as Pool)
+
+  const result = await repository.getOverview('user-1', {
+    walletIds: null,
+    period: 'month',
+    dateFrom: '2026-03-01',
+    dateTo: '2026-03-31',
+  })
+
+  expect(result.range).toEqual({ dateFrom: '2026-03-01', dateTo: '2026-03-31', earliestActivityDate: '2025-01-01', granularity: 'day' })
+  for (const [, parameters] of query.mock.calls.slice(1)) {
+    expect(parameters).toEqual(['user-1', null, '2026-03-01', '2026-03-31'])
+  }
+  const [wealthSql] = query.mock.calls[1]
+  expect(String(wealthSql)).toContain('event_date <= $4::date')
+  expect(result.wealth.amountCzk).toBe(100_000)
+})

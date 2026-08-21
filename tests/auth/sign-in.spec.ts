@@ -19,3 +19,14 @@ test('signs in and verifies the backend session with the bearer token', async ({
 
   await expect(page.getByRole('navigation', { name: 'Hlavní navigace' })).toBeVisible()
 })
+
+test('keeps the session across a page reload instead of bouncing back to the login screen', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await page.goto('/')
+  await signIn(page)
+
+  await page.reload()
+
+  await expect(page.getByRole('navigation', { name: 'Hlavní navigace' })).toBeVisible()
+  await expect(page.getByLabel('Email')).toHaveCount(0)
+})

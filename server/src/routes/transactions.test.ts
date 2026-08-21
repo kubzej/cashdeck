@@ -35,7 +35,6 @@ const transaction = {
 
 function createRepository(): TransactionRepository {
   return {
-    listTransactions: vi.fn().mockResolvedValue({ items: [transaction], nextCursor: null }),
     createTransaction: vi.fn().mockResolvedValue(transaction),
     updateTransaction: vi.fn().mockResolvedValue(transaction),
     deleteTransaction: vi.fn().mockResolvedValue(true),
@@ -56,25 +55,6 @@ async function createTestApp(repository = createRepository()) {
   })
   return { app, repository }
 }
-
-test('scopes paginated transaction listing to the verified user', async () => {
-  const { app, repository } = await createTestApp()
-  const response = await app.inject({
-    method: 'GET',
-    url: `/api/transactions?walletId=${walletId}&dateFrom=2026-08-01&dateTo=2026-08-31&limit=25`,
-    headers: { authorization: 'Bearer test-token' },
-  })
-
-  expect(response.statusCode).toBe(200)
-  expect(repository.listTransactions).toHaveBeenCalledWith(userId, {
-    walletId,
-    dateFrom: '2026-08-01',
-    dateTo: '2026-08-31',
-    cursor: null,
-    limit: 25,
-  })
-  await app.close()
-})
 
 test('validates complete transaction creation before it reaches the repository', async () => {
   const { app, repository } = await createTestApp()
@@ -124,7 +104,7 @@ test('updates labels independently and deletes only the verified user transactio
   await app.close()
 })
 
-test('rejects zero amounts, duplicate labels, invalid ranges, and anonymous writes', async () => {
+test('rejects zero and negative amounts, duplicate labels, and anonymous writes', async () => {
   const { app, repository } = await createTestApp()
   const zeroAmount = await app.inject({
     method: 'POST',
@@ -134,6 +114,15 @@ test('rejects zero amounts, duplicate labels, invalid ranges, and anonymous writ
   })
   expect(zeroAmount.statusCode).toBe(400)
 
+  const negativeAmount = await app.inject({
+    method: 'POST',
+    url: '/api/transactions',
+    headers: { authorization: 'Bearer test-token' },
+    payload: { walletId, categoryId, amountCzk: -5, transactionDate: '2026-08-20', note: null, labelIds: [] },
+  })
+  expect(negativeAmount.statusCode).toBe(400)
+  expect(repository.createTransaction).not.toHaveBeenCalled()
+
   const duplicateLabels = await app.inject({
     method: 'POST',
     url: '/api/transactions',
@@ -141,13 +130,6 @@ test('rejects zero amounts, duplicate labels, invalid ranges, and anonymous writ
     payload: { walletId, categoryId, amountCzk: 1, transactionDate: '2026-08-20', note: null, labelIds: [labelId, labelId] },
   })
   expect(duplicateLabels.statusCode).toBe(400)
-
-  const invalidRange = await app.inject({
-    method: 'GET',
-    url: '/api/transactions?dateFrom=2026-09-01&dateTo=2026-08-01',
-    headers: { authorization: 'Bearer test-token' },
-  })
-  expect(invalidRange.statusCode).toBe(400)
 
   const anonymous = await app.inject({ method: 'POST', url: '/api/transactions' })
   expect(anonymous.statusCode).toBe(401)

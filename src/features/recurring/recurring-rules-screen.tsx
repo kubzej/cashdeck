@@ -5,6 +5,8 @@ import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } fr
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List, ListItem, ListItemActions, ListItemContent, ListItemDescription, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
+import { formatCzk } from '../../lib/format-czk'
+import { parseIsoDate } from '../../lib/prague-date'
 import { RecurringRuleFormScreen } from './recurring-rule-form-screen'
 import { listRecurringRules, type RecurringRule } from './api'
 import './recurring.css'
@@ -84,7 +86,7 @@ function RecurringRuleRow({ rule, onSelect }: { rule: RecurringRule; onSelect: (
       {rule.labels.length > 0 ? <div className="recurring-row__labels" aria-label="Štítky">{rule.labels.map((label) => <span key={label.id} className="recurring-row__label">{label.name}</span>)}</div> : null}
       {rule.note ? <ListItemDescription className="recurring-row__note">{rule.note}</ListItemDescription> : null}
     </ListItemContent>
-    <ListItemActions className={`recurring-row__amount recurring-row__amount--${isTransfer ? 'transfer' : direction}`}>{amountPrefix}{formatCzk(rule.amountCzk)} Kč</ListItemActions>
+    <ListItemActions className={`recurring-row__amount recurring-row__amount--${isTransfer ? 'transfer' : direction}`}>{amountPrefix}{formatCzk(rule.amountCzk)}</ListItemActions>
   </ListItem>
 }
 
@@ -101,11 +103,3 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }).format(parseIsoDate(value))
 }
 
-function formatCzk(value: number) {
-  return new Intl.NumberFormat('cs-CZ').format(value)
-}
-
-function parseIsoDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number)
-  return new Date(year, month - 1, day)
-}

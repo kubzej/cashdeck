@@ -12,4 +12,10 @@ test('shows the signed-in email and signs out', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Cashdeck', exact: true })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Hlavní navigace' })).not.toBeVisible()
+
+  // A reload must not silently restore the session from a stale client-side token — logout has
+  // to actually invalidate it server-side, not just flip local UI state.
+  await page.reload()
+  await expect(page.getByLabel('Email')).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Hlavní navigace' })).not.toBeVisible()
 })

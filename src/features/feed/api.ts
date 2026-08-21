@@ -12,7 +12,6 @@ export type FeedBalanceAdjustment = {
   amountCzk: number
   operation: 'add' | 'subtract'
   adjustmentDate: string
-  note: string | null
 }
 export type FeedItem = FeedTransaction | FeedTransfer | FeedBalanceAdjustment
 

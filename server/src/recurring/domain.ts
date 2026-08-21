@@ -33,6 +33,17 @@ export type RecurringRuleInput = {
   endsOn: string | null
 }
 
+// Only enforced when a schedule is actually new or being deliberately changed — see callers.
+// An ended rule's frozen historical schedule (`endsOn < nextOccurrenceDate`, possibly in the
+// past) must remain editable for its other fields (name, amount, labels, ...) without this
+// re-validating a schedule nobody is touching.
+export function assertForwardSchedule(nextOccurrenceDate: string, endsOn: string | null, today: string) {
+  if (nextOccurrenceDate < today) throw new DomainError(400, 'Další výskyt musí být dnes nebo v budoucnu.')
+  if (endsOn !== null && endsOn < nextOccurrenceDate) {
+    throw new DomainError(400, 'Konec opakování nesmí být před dalším výskytem.')
+  }
+}
+
 export function parseRecurringRule(body: unknown, today = getPragueToday()): RecurringRuleInput {
   const value = asRecord(body)
   assertOnlyKeys(value, [
@@ -42,12 +53,7 @@ export function parseRecurringRule(body: unknown, today = getPragueToday()): Rec
 
   const kind = parseKind(value.kind)
   const nextOccurrenceDate = parseCalendarDate(value.nextOccurrenceDate, 'Další výskyt')
-  if (nextOccurrenceDate < today) throw new DomainError(400, 'Další výskyt musí být dnes nebo v budoucnu.')
-
   const endsOn = parseOptionalDate(value.endsOn, 'Konec opakování')
-  if (endsOn !== null && endsOn < nextOccurrenceDate) {
-    throw new DomainError(400, 'Konec opakování nesmí být před dalším výskytem.')
-  }
 
   const input: RecurringRuleInput = {
     name: parseName(value.name),

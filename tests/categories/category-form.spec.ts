@@ -52,6 +52,21 @@ test('edits the category name, icon, and color without exposing its locked direc
   })
 })
 
+test('rejects a category name that already exists in the same direction, case-insensitively', async ({ page }) => {
+  const category: CategoryFixture = { id: 'category-1', name: 'Domov', direction: 'expense', iconKey: 'house', colorKey: 'teal', sortOrder: 0 }
+  await mockAuthAndApi(page)
+  const categoryApi = await mockCategoriesApi(page, [category])
+  await page.goto('/')
+  await signIn(page)
+  await openCategories(page)
+
+  await page.getByRole('button', { name: 'Přidat výdajovou kategorii' }).click()
+  await page.getByLabel('Název').fill('domov')
+  await page.getByRole('button', { name: 'Uložit kategorii' }).click()
+  await expect(page.getByText('Kategorie s tímto názvem už existuje.', { exact: true })).toBeVisible()
+  expect(categoryApi.categories()).toHaveLength(1)
+})
+
 async function openCategories(page: Parameters<typeof mockAuthAndApi>[0]) {
   await page.getByRole('button', { name: 'Nastavení' }).click()
   await page.getByRole('button', { name: /Kategorie/ }).click()

@@ -5,8 +5,12 @@ import { getPragueToday } from '../recurring/schedule.js'
 
 export function createRecurringJobRoutes(repository: RecurringRuleRepository, secret: string): FastifyPluginAsync {
   return async function recurringJobRoutes(app) {
-    app.post('/internal/jobs/recurring', { preHandler: requireJobSecret(secret) }, async () => {
-      return repository.generateDue(getPragueToday())
+    app.post('/internal/jobs/recurring', { preHandler: requireJobSecret(secret) }, async (request) => {
+      const result = await repository.generateDue(getPragueToday())
+      if (result.failedRuleIds.length > 0) {
+        request.log.error({ failedRuleIds: result.failedRuleIds }, 'Some recurring rules failed to generate their due occurrences')
+      }
+      return result
     })
   }
 }

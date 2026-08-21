@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { DomainError } from '../management/domain.js'
-import { parseRecurringRule } from './domain.js'
+import { assertForwardSchedule, parseRecurringRule } from './domain.js'
 
 const walletId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef123'
 const categoryId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef124'
@@ -47,11 +47,24 @@ test('rejects a past next occurrence and malformed rule payloads', () => {
     ...overrides,
   }, '2026-08-20')
 
-  expect(() => create({ nextOccurrenceDate: '2026-08-19' })).toThrow(DomainError)
-  expect(() => create({ endsOn: '2026-08-19' })).toThrow(DomainError)
   expect(() => create({ frequency: 'custom_days', customIntervalDays: 0 })).toThrow(DomainError)
   expect(() => create({ frequency: 'custom_days', customIntervalDays: null })).toThrow(DomainError)
   expect(() => create({ kind: 'transfer', sourceWalletId: walletId, destinationWalletId: walletId })).toThrow(DomainError)
   expect(() => create({ labelIds: [labelId, labelId] })).toThrow(DomainError)
   expect(() => create({ sourceWalletId: destinationWalletId })).toThrow(DomainError)
+})
+
+test('assertForwardSchedule rejects a past next occurrence or an end date before it', () => {
+  expect(() => assertForwardSchedule('2026-08-19', null, '2026-08-20')).toThrow(DomainError)
+  expect(() => assertForwardSchedule('2026-08-20', '2026-08-19', '2026-08-20')).toThrow(DomainError)
+  expect(() => assertForwardSchedule('2026-08-20', '2026-08-20', '2026-08-20')).not.toThrow()
+  expect(() => assertForwardSchedule('2026-08-20', null, '2026-08-20')).not.toThrow()
+})
+
+test('a rule creation route must call assertForwardSchedule itself — parseRecurringRule no longer rejects a past/inconsistent schedule on its own, so an update can preserve an ended rule\'s frozen dates', () => {
+  expect(parseRecurringRule({
+    name: 'Nájem', kind: 'transaction', amountCzk: 1000, walletId, categoryId,
+    note: null, labelIds: [], frequency: 'monthly', customIntervalDays: null,
+    nextOccurrenceDate: '2026-09-20', endsOn: '2026-08-20',
+  }, '2026-08-21')).toMatchObject({ nextOccurrenceDate: '2026-09-20', endsOn: '2026-08-20' })
 })

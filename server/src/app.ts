@@ -56,8 +56,9 @@ export async function createApp({ config, database, managementRepository, feedRe
       return reply.code(error.statusCode).send({ error: error.message })
     }
 
-    if (isConflictError(error)) {
-      return reply.code(409).send({ error: 'Změna je v konfliktu s existujícími daty.' })
+    const conflictMessage = mapConflictError(error)
+    if (conflictMessage) {
+      return reply.code(409).send({ error: conflictMessage })
     }
 
     request.log.error({ err: error }, 'Cashdeck API request failed')
@@ -82,9 +83,43 @@ export async function createApp({ config, database, managementRepository, feedRe
   return app
 }
 
-function isConflictError(error: unknown) {
-  return typeof error === 'object'
-    && error !== null
-    && 'code' in error
-    && ['23503', '23505', '23514', 'P0001'].includes(String(error.code))
+const DUPLICATE_NAME_MESSAGES: Record<string, string> = {
+  wallets_user_id_normalized_name_unique: 'Peněženka s tímto názvem už existuje.',
+  categories_user_id_direction_normalized_name_unique: 'Kategorie s tímto názvem už v tomto směru existuje.',
+  labels_user_id_normalized_name_unique: 'Štítek s tímto názvem už existuje.',
+}
+
+const DELETE_BLOCKED_MESSAGES: Record<string, string> = {
+  transactions_wallet_same_user_fkey: 'Peněženku nelze smazat, obsahuje transakce.',
+  transactions_category_same_user_fkey: 'Kategorii nelze smazat, je použita v transakcích.',
+  transfers_source_wallet_same_user_fkey: 'Peněženku nelze smazat, obsahuje převody.',
+  transfers_destination_wallet_same_user_fkey: 'Peněženku nelze smazat, obsahuje převody.',
+  balance_adjustments_wallet_same_user_fkey: 'Peněženku nelze smazat, obsahuje vyrovnání zůstatku.',
+  recurring_rules_transaction_wallet_same_user_fkey: 'Peněženku nelze smazat, je použita v opakujícím se pravidle.',
+  recurring_rules_source_wallet_same_user_fkey: 'Peněženku nelze smazat, je použita v opakujícím se pravidle.',
+  recurring_rules_destination_wallet_same_user_fkey: 'Peněženku nelze smazat, je použita v opakujícím se pravidle.',
+  recurring_rules_category_same_user_fkey: 'Kategorii nelze smazat, je použita v opakujícím se pravidle.',
+}
+
+const RAISED_MESSAGE_TRANSLATIONS: Array<{ match: string; message: string }> = [
+  { match: 'Wallet opening balance cannot change after linked financial records exist', message: 'Počáteční zůstatek nelze změnit, peněženka už má pohyby.' },
+  { match: 'Category direction cannot be changed', message: 'Směr kategorie nelze po vytvoření změnit.' },
+  { match: 'Transaction date cannot be before the wallet opening balance date', message: 'Datum transakce nemůže být před datem založení peněženky.' },
+  { match: 'Transfer date cannot be before either wallet opening balance date', message: 'Datum převodu nemůže být před datem založení peněženky.' },
+  { match: 'Balance adjustment date cannot be before the wallet opening balance date', message: 'Datum vyrovnání zůstatku nemůže být před datem založení peněženky.' },
+]
+
+function mapConflictError(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return null
+  const code = String((error as { code: unknown }).code)
+  const constraint = 'constraint' in error ? String((error as { constraint: unknown }).constraint ?? '') : ''
+  const message = 'message' in error ? String((error as { message: unknown }).message ?? '') : ''
+
+  const raised = RAISED_MESSAGE_TRANSLATIONS.find((entry) => message.includes(entry.match))
+  if (raised) return raised.message
+
+  if (code === '23505') return DUPLICATE_NAME_MESSAGES[constraint] ?? 'Tento název už existuje.'
+  if (code === '23503') return DELETE_BLOCKED_MESSAGES[constraint] ?? 'Tuto položku nelze smazat, je stále používaná.'
+  if (code === '23514' || code === 'P0001') return 'Změna je v konfliktu s existujícími daty.'
+  return null
 }

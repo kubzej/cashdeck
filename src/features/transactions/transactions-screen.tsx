@@ -5,6 +5,8 @@ import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } fr
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List, ListItem, ListItemActions, ListItemContent, ListItemLeading, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
+import { formatCzk } from '../../lib/format-czk'
+import { SEARCH_DEBOUNCE_MS } from '../../lib/search-debounce'
 import { CategoryIcon } from '../categories/category-icon'
 import { getFeedBounds, listFeed, type FeedBalanceAdjustment, type FeedItem, type FeedTransfer } from '../feed/api'
 import { createDefaultFeedFilters, FeedFilters, isNavigablePeriod, resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
@@ -29,7 +31,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
   const moreRequest = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => setDebouncedSearch(filters.search.trim()), 250)
+    const timeout = window.setTimeout(() => setDebouncedSearch(filters.search.trim()), SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timeout)
   }, [filters.search])
 
@@ -125,22 +127,22 @@ function hasDefaultFilters(filters: FeedFilterValue) {
 }
 
 function TransactionRow({ transaction, onSelect }: { transaction: Transaction; onSelect: (transaction: Transaction) => void }) {
-  const amount = new Intl.NumberFormat('cs-CZ').format(transaction.amountCzk)
-  return <ListItem variant="quiet" size="default" interactive className="transaction-row surface-row" onClick={() => onSelect(transaction)}><ListItemLeading className={`transaction-row__category color-key--${transaction.categoryColorKey}`}><CategoryIcon iconKey={transaction.categoryIconKey} colorKey={transaction.categoryColorKey} /></ListItemLeading><ListItemContent><ListItemTitle><span>{transaction.categoryName}</span><span className="transaction-row__wallet">v {transaction.walletName}</span></ListItemTitle>{transaction.labels.length > 0 ? <div className="transaction-row__labels">{transaction.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transaction.note ? <p className="transaction-row__note">{transaction.note}</p> : null}</ListItemContent><ListItemActions><strong className={transaction.direction === 'income' ? 'transaction-row__amount transaction-row__amount--income' : 'transaction-row__amount transaction-row__amount--expense'}>{transaction.direction === 'income' ? '+' : '-'}{amount} Kč</strong></ListItemActions></ListItem>
+  const amount = formatCzk(transaction.amountCzk)
+  return <ListItem variant="quiet" size="default" interactive className="transaction-row surface-row" onClick={() => onSelect(transaction)}><ListItemLeading className={`transaction-row__category color-key--${transaction.categoryColorKey}`}><CategoryIcon iconKey={transaction.categoryIconKey} colorKey={transaction.categoryColorKey} /></ListItemLeading><ListItemContent><ListItemTitle><span>{transaction.categoryName}</span><span className="transaction-row__wallet">v {transaction.walletName}</span></ListItemTitle>{transaction.labels.length > 0 ? <div className="transaction-row__labels">{transaction.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transaction.note ? <p className="transaction-row__note">{transaction.note}</p> : null}</ListItemContent><ListItemActions><strong className={transaction.direction === 'income' ? 'transaction-row__amount transaction-row__amount--income' : 'transaction-row__amount transaction-row__amount--expense'}>{transaction.direction === 'income' ? '+' : '-'}{amount}</strong></ListItemActions></ListItem>
 }
 
 function TransferRow({ transfer, onSelect }: { transfer: FeedTransfer; onSelect: (transfer: Transfer) => void }) {
-  const amount = new Intl.NumberFormat('cs-CZ').format(transfer.amountCzk)
+  const amount = formatCzk(transfer.amountCzk)
   const impact = transfer.impactCzk
   const amountClass = impact > 0 ? 'transfer-row__amount transaction-row__amount--income' : impact < 0 ? 'transfer-row__amount transaction-row__amount--expense' : 'transfer-row__amount'
   const amountPrefix = impact > 0 ? '+' : impact < 0 ? '-' : ''
-  return <ListItem variant="quiet" size="default" interactive className="transaction-row transfer-row surface-row" onClick={() => onSelect(transfer)}><ListItemLeading className="transfer-row__icon"><ArrowRightLeft aria-hidden="true" /></ListItemLeading><ListItemContent><ListItemTitle><span>Převod</span><span className="transaction-row__wallet">z {transfer.sourceWalletName} do {transfer.destinationWalletName}</span></ListItemTitle>{transfer.labels.length > 0 ? <div className="transaction-row__labels">{transfer.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transfer.note ? <p className="transaction-row__note">{transfer.note}</p> : null}</ListItemContent><ListItemActions><strong className={amountClass}>{amountPrefix}{amount} Kč</strong></ListItemActions></ListItem>
+  return <ListItem variant="quiet" size="default" interactive className="transaction-row transfer-row surface-row" onClick={() => onSelect(transfer)}><ListItemLeading className="transfer-row__icon"><ArrowRightLeft aria-hidden="true" /></ListItemLeading><ListItemContent><ListItemTitle><span>Převod</span><span className="transaction-row__wallet">z {transfer.sourceWalletName} do {transfer.destinationWalletName}</span></ListItemTitle>{transfer.labels.length > 0 ? <div className="transaction-row__labels">{transfer.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transfer.note ? <p className="transaction-row__note">{transfer.note}</p> : null}</ListItemContent><ListItemActions><strong className={amountClass}>{amountPrefix}{amount}</strong></ListItemActions></ListItem>
 }
 
 function BalanceAdjustmentRow({ adjustment }: { adjustment: FeedBalanceAdjustment }) {
-  const amount = new Intl.NumberFormat('cs-CZ').format(adjustment.amountCzk)
+  const amount = formatCzk(adjustment.amountCzk)
   const isAddition = adjustment.operation === 'add'
-  return <ListItem variant="quiet" size="default" className="transaction-row balance-adjustment-row surface-row"><ListItemLeading className="balance-adjustment-row__icon"><Scale aria-hidden="true" /></ListItemLeading><ListItemContent><ListItemTitle><span>Vyrovnání zůstatku</span><span className="transaction-row__wallet">v {adjustment.walletName}</span></ListItemTitle>{adjustment.note ? <p className="transaction-row__note">{adjustment.note}</p> : null}</ListItemContent><ListItemActions><strong className={isAddition ? 'transaction-row__amount transaction-row__amount--income' : 'transaction-row__amount transaction-row__amount--expense'}>{isAddition ? '+' : '-'}{amount} Kč</strong></ListItemActions></ListItem>
+  return <ListItem variant="quiet" size="default" className="transaction-row balance-adjustment-row surface-row"><ListItemLeading className="balance-adjustment-row__icon"><Scale aria-hidden="true" /></ListItemLeading><ListItemContent><ListItemTitle><span>Vyrovnání zůstatku</span><span className="transaction-row__wallet">v {adjustment.walletName}</span></ListItemTitle></ListItemContent><ListItemActions><strong className={isAddition ? 'transaction-row__amount transaction-row__amount--income' : 'transaction-row__amount transaction-row__amount--expense'}>{isAddition ? '+' : '-'}{amount}</strong></ListItemActions></ListItem>
 }
 
 function groupActivities(activities: FeedItem[]) {

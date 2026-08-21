@@ -4,6 +4,7 @@ import { expect, test, vi } from 'vitest'
 import { createApp } from '../app.js'
 import type { AuthGuard } from '../auth.js'
 import type { ServerConfig } from '../config.js'
+import { DomainError } from '../management/domain.js'
 import type { ManagementRepository } from '../management/repository.js'
 
 const userId = 'user-1'
@@ -21,7 +22,6 @@ const config: ServerConfig = {
 
 function createRepository(): ManagementRepository {
   return {
-    bootstrap: vi.fn().mockResolvedValue({ seeded: true }),
     listWallets: vi.fn().mockResolvedValue([]),
     getWallet: vi.fn().mockResolvedValue(null),
     createWallet: vi.fn().mockResolvedValue({ id: walletId, name: 'AirBank' }),
@@ -59,20 +59,20 @@ async function createTestApp(repository = createRepository()) {
   return { app, repository }
 }
 
-test('protects management routes and bootstraps only the verified user', async () => {
+test('protects management routes and scopes them to the verified user', async () => {
   const { app, repository } = await createTestApp()
 
-  const unauthorized = await app.inject({ method: 'POST', url: '/api/bootstrap' })
+  const unauthorized = await app.inject({ method: 'GET', url: '/api/wallets' })
   expect(unauthorized.statusCode).toBe(401)
 
   const response = await app.inject({
-    method: 'POST',
-    url: '/api/bootstrap',
+    method: 'GET',
+    url: '/api/wallets',
     headers: { authorization: 'Bearer test-token' },
   })
 
   expect(response.statusCode).toBe(200)
-  expect(repository.bootstrap).toHaveBeenCalledWith(userId)
+  expect(repository.listWallets).toHaveBeenCalledWith(userId, false)
   await app.close()
 })
 
@@ -315,16 +315,28 @@ test('rejects category direction changes and maps lifecycle and opening-date con
   expect(invalidUpdate.statusCode).toBe(400)
   expect(repository.updateCategory).not.toHaveBeenCalled()
 
-  repository.deleteWallet.mockRejectedValueOnce({ code: '23503' })
+  repository.deleteWallet.mockRejectedValueOnce({ code: '23503', constraint: 'transactions_wallet_same_user_fkey' })
   const conflict = await app.inject({
     method: 'DELETE',
     url: `/api/wallets/${walletId}`,
     headers: { authorization: 'Bearer test-token' },
   })
   expect(conflict.statusCode).toBe(409)
-  expect(conflict.json()).toEqual({ error: 'Změna je v konfliktu s existujícími daty.' })
+  expect(conflict.json()).toEqual({ error: 'Peněženku nelze smazat, obsahuje transakce.' })
 
-  repository.updateWallet.mockRejectedValueOnce({ code: '23514' })
+  repository.deleteWallet.mockRejectedValueOnce({ code: '23503' })
+  const unknownConflict = await app.inject({
+    method: 'DELETE',
+    url: `/api/wallets/${walletId}`,
+    headers: { authorization: 'Bearer test-token' },
+  })
+  expect(unknownConflict.statusCode).toBe(409)
+  expect(unknownConflict.json()).toEqual({ error: 'Tuto položku nelze smazat, je stále používaná.' })
+
+  repository.updateWallet.mockRejectedValueOnce({
+    code: 'P0001',
+    message: 'Wallet opening balance cannot change after linked financial records exist',
+  })
   const openingDateConflict = await app.inject({
     method: 'PATCH',
     url: `/api/wallets/${walletId}`,
@@ -332,7 +344,48 @@ test('rejects category direction changes and maps lifecycle and opening-date con
     payload: { openingBalanceDate: '2026-08-20' },
   })
   expect(openingDateConflict.statusCode).toBe(409)
-  expect(openingDateConflict.json()).toEqual({ error: 'Změna je v konfliktu s existujícími daty.' })
+  expect(openingDateConflict.json()).toEqual({ error: 'Počáteční zůstatek nelze změnit, peněženka už má pohyby.' })
+
+  repository.createWallet.mockRejectedValueOnce({ code: '23505', constraint: 'wallets_user_id_normalized_name_unique' })
+  const duplicateName = await app.inject({
+    method: 'POST',
+    url: '/api/wallets',
+    headers: { authorization: 'Bearer test-token' },
+    payload: { name: 'Běžný účet', colorKey: 'blue', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01' },
+  })
+  expect(duplicateName.statusCode).toBe(409)
+  expect(duplicateName.json()).toEqual({ error: 'Peněženka s tímto názvem už existuje.' })
+  await app.close()
+})
+
+test('rejects a client-supplied userId instead of silently ignoring it, and never scopes a write by it', async () => {
+  const { app, repository } = await createTestApp()
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/wallets',
+    headers: { authorization: 'Bearer test-token' },
+    payload: { userId: 'someone-elses-account', name: 'AirBank', colorKey: 'teal', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01' },
+  })
+
+  expect(response.statusCode).toBe(400)
+  expect(response.json()).toEqual({ error: 'Pole userId není podporované.' })
+  expect(repository.createWallet).not.toHaveBeenCalled()
+  await app.close()
+})
+
+test('rejects reordering wallets with a stale or incomplete id set', async () => {
+  const { app, repository } = await createTestApp()
+  repository.reorderWallets.mockRejectedValueOnce(new DomainError(409, 'Pořadí peněženek neodpovídá aktuálním datům.'))
+
+  const response = await app.inject({
+    method: 'PUT',
+    url: '/api/wallets/order',
+    headers: { authorization: 'Bearer test-token' },
+    payload: { walletIds: [walletId] },
+  })
+  expect(response.statusCode).toBe(409)
+  expect(response.json()).toEqual({ error: 'Pořadí peněženek neodpovídá aktuálním datům.' })
   await app.close()
 })
 

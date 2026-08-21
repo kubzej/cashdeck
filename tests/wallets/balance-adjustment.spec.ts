@@ -39,6 +39,28 @@ test('reconciles a wallet from its actual balance without adding a manual transa
   await expect.poll(() => walletApi.wallets()[0]?.currentBalanceCzk).toBe(125000)
 })
 
+test('reconciles a wallet downward when the actual balance is lower than recorded', async ({ page }) => {
+  await mockAuthAndApi(page)
+  const walletApi = await mockWalletsApi(page, [wallet])
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Peněženky' }).click()
+  await page.getByRole('button', { name: 'Vyrovnat zůstatek peněženky Běžný účet' }).click()
+
+  const actualBalance = page.getByLabel('Skutečný zůstatek', { exact: true })
+  await actualBalance.pressSequentially('120000')
+  await expect(actualBalance).toHaveValue('120000')
+  await expect(page.getByText('Odečte se 3 456 Kč.', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Vyrovnat zůstatek', exact: true }).click()
+
+  await expect(page.getByRole('heading', { name: 'Vyrovnat zůstatek' })).not.toBeVisible()
+  await expect(page.getByRole('listitem').filter({ hasText: 'Běžný účet' })).toContainText('120 000 Kč')
+  await expect.poll(() => walletApi.wallets()[0]?.currentBalanceCzk).toBe(120000)
+  const adjustment = walletApi.lastRequestBody('POST') as { actualBalanceCzk: number }
+  expect(adjustment.actualBalanceCzk).toBe(120000)
+})
+
 test('does not create a reconciliation when the wallet balance already matches', async ({ page }) => {
   await mockAuthAndApi(page)
   const walletApi = await mockWalletsApi(page, [wallet])

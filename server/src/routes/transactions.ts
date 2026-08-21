@@ -3,17 +3,12 @@ import type { AuthGuard } from '../auth.js'
 import { DomainError, parseUuid } from '../management/domain.js'
 import {
   parseCreateTransaction,
-  parseTransactionListQuery,
   parseUpdateTransaction,
 } from '../transactions/domain.js'
 import type { TransactionRepository } from '../transactions/repository.js'
 
 export function createTransactionRoutes(repository: TransactionRepository, requireAuth: AuthGuard): FastifyPluginAsync {
   return async function transactionRoutes(app) {
-    app.get('/api/transactions', { preHandler: requireAuth }, async (request) => {
-      return repository.listTransactions(request.authUser.id, parseTransactionListQuery(request.query))
-    })
-
     app.post('/api/transactions', { preHandler: requireAuth }, async (request, reply) => {
       const transaction = await repository.createTransaction(request.authUser.id, parseCreateTransaction(request.body))
       return reply.code(201).send(transaction)

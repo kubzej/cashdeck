@@ -5,11 +5,14 @@ import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, Dial
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldDescription, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
+import { createDecimalKeyBlocker } from '../../lib/amount-input'
+import { formatCzk } from '../../lib/format-czk'
 import { createBalanceAdjustment, type Wallet } from './api'
 
 export function BalanceAdjustmentDialog({ wallet, onOpenChange, onAdjusted }: { wallet: Wallet; onOpenChange: (open: boolean) => void; onAdjusted: () => void }) {
   const recordedBalance = wallet.currentBalanceCzk ?? wallet.openingBalanceCzk
   const [actualBalance, setActualBalance] = useState(() => formatWholeNumber(recordedBalance))
+  const [hasDecimalInput, setHasDecimalInput] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const parsedActualBalance = useMemo(() => parseWholeCzk(actualBalance), [actualBalance])
@@ -17,7 +20,7 @@ export function BalanceAdjustmentDialog({ wallet, onOpenChange, onAdjusted }: { 
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (parsedActualBalance === null || difference === 0) return
+    if (hasDecimalInput || parsedActualBalance === null || difference === 0) return
     setSubmissionError(null)
     setIsSubmitting(true)
     try {
@@ -31,7 +34,7 @@ export function BalanceAdjustmentDialog({ wallet, onOpenChange, onAdjusted }: { 
     }
   }
 
-  const isInvalid = actualBalance.trim() !== '' && parsedActualBalance === null
+  const isInvalid = hasDecimalInput || (actualBalance.trim() !== '' && parsedActualBalance === null)
 
   return <Dialog open onOpenChange={onOpenChange}>
     <DialogContent size="sm" className="balance-adjustment-dialog" showCloseButton={false}>
@@ -44,16 +47,16 @@ export function BalanceAdjustmentDialog({ wallet, onOpenChange, onAdjusted }: { 
           <div className="balance-adjustment-dialog__recorded"><Scale aria-hidden="true" /><span>Evidovaný zůstatek</span><strong>{formatCzk(recordedBalance)}</strong></div>
           <Field invalid={isInvalid}>
             <FieldLabel>Skutečný zůstatek</FieldLabel>
-            <Input autoFocus inputMode="numeric" pattern="-?[0-9 ]*" value={actualBalance} placeholder="0" aria-label="Skutečný zůstatek v korunách" onFocus={(event) => event.currentTarget.select()} onChange={(event) => setActualBalance(event.currentTarget.value.replaceAll(/[^0-9\s-]/g, ''))} />
+            <Input autoFocus inputMode="numeric" pattern="-?[0-9 ]*" value={actualBalance} placeholder="0" aria-label="Skutečný zůstatek v korunách" onFocus={(event) => event.currentTarget.select()} onKeyDown={createDecimalKeyBlocker(() => setHasDecimalInput(true))} onChange={(event) => { const raw = event.currentTarget.value; setHasDecimalInput(/[.,]/.test(raw)); setActualBalance(raw.replaceAll(/[^0-9\s-]/g, '')) }} />
             <FieldDescription>Zadej aktuální stav z banky nebo hotovosti.</FieldDescription>
-            <FieldError match={isInvalid}>Zadej celý počet korun.</FieldError>
+            <FieldError match={isInvalid}>{hasDecimalInput ? 'Zadej celé koruny bez desetinných míst.' : 'Zadej celý počet korun.'}</FieldError>
           </Field>
           {difference !== null && !isInvalid ? <p className={`balance-adjustment-dialog__difference ${difference === 0 ? 'balance-adjustment-dialog__difference--same' : difference > 0 ? 'balance-adjustment-dialog__difference--add' : 'balance-adjustment-dialog__difference--subtract'}`}>{difference === 0 ? 'Zůstatek už souhlasí.' : difference > 0 ? `Přidá se ${formatCzk(difference)}.` : `Odečte se ${formatCzk(Math.abs(difference))}.`}</p> : null}
           {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Vyrovnání se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
         </DialogBody>
         <DialogFooter>
           <DialogClose render={<Button type="button" variant="ghost" disabled={isSubmitting} />}>Zrušit</DialogClose>
-          <Button type="submit" loading={isSubmitting} disabled={parsedActualBalance === null || difference === 0}>Vyrovnat zůstatek</Button>
+          <Button type="submit" loading={isSubmitting} disabled={hasDecimalInput || parsedActualBalance === null || difference === 0}>Vyrovnat zůstatek</Button>
         </DialogFooter>
       </form>
     </DialogContent>
@@ -68,4 +71,3 @@ function parseWholeCzk(value: string) {
 }
 
 function formatWholeNumber(value: number) { return new Intl.NumberFormat('cs-CZ').format(value) }
-function formatCzk(value: number) { return `${formatWholeNumber(value)} Kč` }
