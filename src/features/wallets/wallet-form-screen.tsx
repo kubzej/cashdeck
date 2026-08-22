@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { CircleAlert, Eye, EyeOff, Sparkles } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { ColorPicker } from '../../components/color-picker'
@@ -147,24 +147,26 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
           <WalletTypePicker value={values.walletType} ariaLabel="Typ peněženky" onValueChange={(walletType) => setValues((current) => ({ ...current, walletType }))} />
         </fieldset>
         {showIndependenceFields ? (
-          <Card render={<fieldset />} padding="none" className="wallet-independence-field">
-            <legend><Sparkles aria-hidden="true" /> Nezávislost</legend>
-            <Field>
-              <FieldLabel>Počítá se do nezávislosti?</FieldLabel>
-              <ToggleGroup type="single" width="full" value={values.countsTowardIndependence ? 'yes' : 'no'} className="wallet-independence-toggle" aria-label="Počítá se do nezávislosti?" onValueChange={(next) => { if (!next) return; const countsTowardIndependence = next === 'yes'; setValues((current) => ({ ...current, countsTowardIndependence, availableNow: countsTowardIndependence ? current.availableNow : false })) }}>
-                <ToggleGroupItem value="no">Ne</ToggleGroupItem>
-                <ToggleGroupItem value="yes">Ano</ToggleGroupItem>
-              </ToggleGroup>
-            </Field>
-            {values.countsTowardIndependence ? <Field>
-              <FieldLabel>Dostupné hned?</FieldLabel>
-              <ToggleGroup type="single" width="full" value={values.availableNow ? 'yes' : 'no'} className="wallet-independence-toggle" aria-label="Dostupné hned?" onValueChange={(next) => { if (next) setValues((current) => ({ ...current, availableNow: next === 'yes' })) }}>
-                <ToggleGroupItem value="no">Ne</ToggleGroupItem>
-                <ToggleGroupItem value="yes">Ano</ToggleGroupItem>
-              </ToggleGroup>
-              <FieldDescription>Vypni, pokud jsou peníze zamčené (např. penzijní spoření před 60 lety).</FieldDescription>
-            </Field> : null}
-          </Card>
+          <div className="wallet-independence-group" role="group" aria-labelledby="wallet-independence-title">
+            <h2 id="wallet-independence-title" className="wallet-independence-title">Nezávislost</h2>
+            <Card padding="none" className="wallet-independence-field">
+              <Field>
+                <FieldLabel>Počítá se do nezávislosti?</FieldLabel>
+                <ToggleGroup type="single" width="full" value={values.countsTowardIndependence ? 'yes' : 'no'} className="wallet-independence-toggle" aria-label="Počítá se do nezávislosti?" onValueChange={(next) => { if (!next) return; const countsTowardIndependence = next === 'yes'; setValues((current) => ({ ...current, countsTowardIndependence, availableNow: countsTowardIndependence ? current.availableNow : false })) }}>
+                  <ToggleGroupItem value="no">Ne</ToggleGroupItem>
+                  <ToggleGroupItem value="yes">Ano</ToggleGroupItem>
+                </ToggleGroup>
+              </Field>
+              {values.countsTowardIndependence ? <Field>
+                <FieldLabel>Dostupné hned?</FieldLabel>
+                <ToggleGroup type="single" width="full" value={values.availableNow ? 'yes' : 'no'} className="wallet-independence-toggle" aria-label="Dostupné hned?" onValueChange={(next) => { if (next) setValues((current) => ({ ...current, availableNow: next === 'yes' })) }}>
+                  <ToggleGroupItem value="no">Ne</ToggleGroupItem>
+                  <ToggleGroupItem value="yes">Ano</ToggleGroupItem>
+                </ToggleGroup>
+                <FieldDescription>Vypni, pokud jsou peníze zamčené (např. penzijní spoření před 60 lety).</FieldDescription>
+              </Field> : null}
+            </Card>
+          </div>
         ) : null}
         <Field invalid={Boolean(errors.openingBalanceCzk)}>
           <FieldLabel>Počáteční zůstatek</FieldLabel>
