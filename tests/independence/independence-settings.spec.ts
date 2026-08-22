@@ -118,28 +118,6 @@ test('backspacing a prefilled parameter value does not crash the page', async ({
   expect(pageErrors).toEqual([])
 })
 
-test('shows an unconfigured/configured indicator on the Nastavení row', async ({ page }) => {
-  await mockAuthAndApi(page)
-  await mockWalletsApi(page, [wallet])
-  await mockIndependenceApi(page)
-  await page.goto('/')
-  await signIn(page)
-
-  await page.getByRole('button', { name: 'Nastavení', exact: true }).click()
-  await expect(page.getByText('Zatím nenastaveno', { exact: true })).toBeVisible()
-
-  await page.getByRole('button', { name: 'Nastavení nezávislosti' }).click()
-  await page.getByLabel('Výběrová sazba (%)').fill('4')
-  await page.getByLabel('Očekávaný reálný výnos (%)').fill('4')
-  await page.getByLabel('Míra inflace (%)').fill('2.5')
-  await page.getByRole('button', { name: 'Uložit nastavení' }).click()
-  await expect(page.getByText('Nastavení uloženo', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Zpět do nastavení' }).click()
-
-  await expect(page.getByText('Nastaveno', { exact: true })).toBeVisible()
-  await expect(page.getByText('Zatím nenastaveno', { exact: true })).toHaveCount(0)
-})
-
 test('adds, edits, and deletes an irregular expense', async ({ page }) => {
   await mockAuthAndApi(page)
   await mockWalletsApi(page, [wallet])

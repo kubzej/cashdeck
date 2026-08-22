@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowLeft, CircleAlert } from 'lucide-react'
+import { CircleAlert } from 'lucide-react'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
+import { ScreenHeader } from '../../components/screen-header'
 import { Button } from '../../components/ui/button'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldError, FieldLabel } from '../../components/ui/field'
@@ -54,11 +55,13 @@ export function LabelFormScreen({ label, onCancel, onSaved, onDeleted }: { label
 
   return (
     <section className="label-form-screen" aria-labelledby="label-form-title">
-      <header className="label-form-header">
-        <Button variant="ghost" size="icon" aria-label="Zpět na štítky" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
-        <h1 id="label-form-title">{label ? 'Upravit štítek' : 'Nový štítek'}</h1>
-        {label ? <DeleteConfirmationDialog title="Smazat štítek?" description={`Štítek „${label.name}“ bude trvale smazán.`} triggerLabel="Smazat štítek" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : <span aria-hidden="true" />}
-      </header>
+      <ScreenHeader
+        title={label ? 'Upravit štítek' : 'Nový štítek'}
+        titleId="label-form-title"
+        backLabel="Zpět na štítky"
+        onBack={onCancel}
+        action={label ? <DeleteConfirmationDialog title="Smazat štítek?" description={`Štítek „${label.name}“ bude trvale smazán.`} triggerLabel="Smazat štítek" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+      />
       <form className="label-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Štítek se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
         <Field invalid={Boolean(nameError)}>

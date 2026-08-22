@@ -18,7 +18,7 @@ function ComboboxInput({
     <ComboboxPrimitive.Input
       data-slot="combobox-input"
       className={cn(
-        "focus-ring flex h-11 w-full min-w-0 rounded-md border border-input bg-transparent px-3 text-sm transition-colors placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+        "focus-ring flex h-11 w-full min-w-0 rounded-md border border-transparent bg-card shadow-sm px-3 text-sm transition-colors placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}

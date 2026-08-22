@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { ArrowLeft, CalendarClock, CircleAlert, Plus, RefreshCw } from 'lucide-react'
+import { CalendarClock, CircleAlert, Plus, RefreshCw } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { ScreenHeader } from '../../components/screen-header'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List } from '../../components/ui/list'
@@ -77,11 +78,13 @@ export function RecurringRulesScreen({ onBack }: { onBack: () => void }) {
   if (view === 'edit' && selectedRule) return <RecurringRuleFormScreen rule={selectedRule} onCancel={() => setView('list')} onSaved={finishForm} onDeleted={finishForm} />
 
   return <section className="recurring-screen" aria-labelledby="recurring-title">
-    <header className="recurring-header">
-      <Button variant="ghost" size="icon" aria-label="Zpět do nastavení" onClick={onBack}><ArrowLeft aria-hidden="true" /></Button>
-      <h1 id="recurring-title">Opakování</h1>
-      <Button variant="ghost" size="icon" aria-label="Přidat opakování" onClick={() => setView('new')}><Plus aria-hidden="true" /></Button>
-    </header>
+    <ScreenHeader
+      title="Opakování"
+      titleId="recurring-title"
+      backLabel="Zpět do nastavení"
+      onBack={onBack}
+      action={<Button variant="ghost" size="icon" aria-label="Přidat opakování" onClick={() => setView('new')}><Plus aria-hidden="true" /></Button>}
+    />
     {status === 'ready' ? <RecurringCostSummary rules={rules} /> : null}
     {reorderError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Pořadí se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{reorderError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
     <RecurringRulePanel
@@ -109,11 +112,14 @@ function RecurringRulePanel({ rules, status, isReordering, sensors, onDragEnd, o
   if (status === 'error') return <FeedbackState status="error" layout="panel" className="recurring-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Opakování se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={onRetry}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState>
   if (rules.length === 0) return <EmptyState variant="quiet" size="lg" className="recurring-empty"><EmptyStateIcon><CalendarClock aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Bez opakování</EmptyStateTitle><EmptyStateDescription>Přidej pravidlo pro pravidelnou transakci nebo převod.</EmptyStateDescription></EmptyState>
 
-  return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-    <SortableContext items={rules.map((rule) => rule.id)} strategy={verticalListSortingStrategy}>
-      <List gap="sm" className="recurring-list" aria-label="Seznam opakování">
-        {rules.map((rule) => <SortableRecurringRuleRow key={rule.id} rule={rule} disabled={isReordering} onSelect={onSelect} />)}
-      </List>
-    </SortableContext>
-  </DndContext>
+  return <div className="recurring-list-section">
+    <h2 className="recurring-list-heading">Jednotlivá opakování</h2>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={rules.map((rule) => rule.id)} strategy={verticalListSortingStrategy}>
+        <List gap="sm" className="recurring-list" aria-label="Seznam opakování">
+          {rules.map((rule) => <SortableRecurringRuleRow key={rule.id} rule={rule} disabled={isReordering} onSelect={onSelect} />)}
+        </List>
+      </SortableContext>
+    </DndContext>
+  </div>
 }

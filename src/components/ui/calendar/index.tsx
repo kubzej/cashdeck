@@ -159,7 +159,7 @@ function Calendar({
         <BaseButton
           data-slot="calendar-prev"
           type="button"
-          aria-label="Previous month"
+          aria-label="Předchozí měsíc"
           className="focus-ring inline-flex size-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
           onClick={() => updateMonth(addMonths(visibleMonth, -1))}
         >
@@ -175,7 +175,7 @@ function Calendar({
         <BaseButton
           data-slot="calendar-next"
           type="button"
-          aria-label="Next month"
+          aria-label="Následující měsíc"
           className="focus-ring inline-flex size-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
           onClick={() => updateMonth(addMonths(visibleMonth, 1))}
         >
@@ -297,7 +297,7 @@ function DatePicker({
           type="button"
           disabled={disabled}
           className={cn(
-            "focus-ring flex h-11 w-full items-center justify-between gap-3 rounded-md border border-input bg-transparent px-3 text-left text-sm transition-colors hover:bg-muted/45 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30",
+            "focus-ring flex h-11 w-full items-center justify-between gap-3 rounded-md border border-transparent bg-card shadow-sm px-3 text-left text-sm transition-colors hover:bg-muted/45 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30",
             !selectedDate && "text-muted-foreground",
             triggerClassName,
           )}

@@ -50,7 +50,7 @@ test('edits every wallet field and preserves the updated opening-balance date', 
   await page.getByLabel('Červená', { exact: true }).click()
   await page.getByLabel('Počáteční zůstatek').fill('250000')
   await page.getByRole('button', { name: '15. 1. 2022' }).click()
-  await page.getByRole('button', { name: 'Next month' }).click()
+  await page.getByRole('button', { name: 'Následující měsíc' }).click()
   await page.getByRole('button', { name: '1. 2. 2022', exact: true }).click()
   walletApi.failNext('PATCH', { message: 'Změny se nepodařilo uložit.' })
   await page.getByRole('button', { name: 'Uložit změny' }).click()

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { ArrowLeft, ArrowRightLeft, Check, CircleAlert, ReceiptText, Tag } from 'lucide-react'
+import { ArrowRightLeft, Check, CircleAlert, ReceiptText, Tag } from 'lucide-react'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { FormLoadError } from '../../components/form-load-error'
+import { ScreenHeader } from '../../components/screen-header'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { DatePicker } from '../../components/ui/calendar'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
@@ -144,11 +146,13 @@ export function RecurringRuleFormScreen({ rule, onCancel, onSaved, onDeleted }: 
   }
 
   return <section className="transaction-form-screen" aria-labelledby="recurring-form-title">
-    <header className="transaction-form-header">
-      <Button variant="ghost" size="icon" aria-label="Zpět na opakování" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
-      <h1 id="recurring-form-title">{rule ? 'Upravit opakování' : 'Nové opakování'}</h1>
-      {rule ? <DeleteConfirmationDialog title="Smazat opakování?" description="Pravidlo bude smazáno, dříve vytvořené transakce a převody zůstanou." triggerLabel="Smazat opakování" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : <span aria-hidden="true" />}
-    </header>
+    <ScreenHeader
+      title={rule ? 'Upravit opakování' : 'Nové opakování'}
+      titleId="recurring-form-title"
+      backLabel="Zpět na opakování"
+      onBack={onCancel}
+      action={rule ? <DeleteConfirmationDialog title="Smazat opakování?" description="Pravidlo bude smazáno, dříve vytvořené transakce a převody zůstanou." triggerLabel="Smazat opakování" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+    />
     {status === 'error' ? <FormLoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
     {status !== 'error' ? <form className="transaction-form" noValidate onSubmit={(event) => void handleSubmit(event)}>
       {submissionError ? <SubmissionError message={submissionError} /> : null}
@@ -157,22 +161,22 @@ export function RecurringRuleFormScreen({ rule, onCancel, onSaved, onDeleted }: 
         <Input autoFocus value={values.name} maxLength={120} placeholder="Např. Nájem" onChange={(event) => { const name = event.currentTarget.value; setValues((current) => ({ ...current, name })) }} />
         <FieldError match={Boolean(errors.name)}>{errors.name}</FieldError>
       </Field>
-      <section className="transaction-amount-panel" aria-label="Částka a typ opakování">
-        <ToggleGroup type="single" width="full" value={values.kind} disabled={Boolean(rule)} onValueChange={(value) => { if (value) setKind(value as RecurringRuleKind) }} className="transaction-direction" aria-label="Typ opakování">
-          <ToggleGroupItem value="transaction"><ReceiptText aria-hidden="true" />Transakce</ToggleGroupItem>
-          <ToggleGroupItem value="transfer"><ArrowRightLeft aria-hidden="true" />Převod</ToggleGroupItem>
-        </ToggleGroup>
-        {rule ? <p className="transaction-form-hint">Typ opakování nelze po vytvoření změnit — smaž pravidlo a založ nové.</p> : null}
-        {values.kind === 'transaction' ? <ToggleGroup type="single" width="full" value={values.direction} onValueChange={(value) => { if (value) setDirection(value as CategoryDirection) }} className="transaction-direction" aria-label="Směr transakce">
-          <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
-          <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
-        </ToggleGroup> : null}
+      <ToggleGroup type="single" width="full" value={values.kind} disabled={Boolean(rule)} onValueChange={(value) => { if (value) setKind(value as RecurringRuleKind) }} className="transaction-direction" aria-label="Typ opakování">
+        <ToggleGroupItem value="transaction"><ReceiptText aria-hidden="true" />Transakce</ToggleGroupItem>
+        <ToggleGroupItem value="transfer"><ArrowRightLeft aria-hidden="true" />Převod</ToggleGroupItem>
+      </ToggleGroup>
+      {rule ? <p className="transaction-form-hint">Typ opakování nelze po vytvoření změnit — smaž pravidlo a založ nové.</p> : null}
+      {values.kind === 'transaction' ? <ToggleGroup type="single" width="full" value={values.direction} onValueChange={(value) => { if (value) setDirection(value as CategoryDirection) }} className="transaction-direction" aria-label="Směr transakce">
+        <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
+        <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
+      </ToggleGroup> : null}
+      <Card aria-label="Částka opakování" padding="none" className="transaction-amount-panel">
         <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
           <FieldLabel>Částka</FieldLabel>
           <div className="transaction-amount"><Input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={values.amountCzk} placeholder="0" aria-label="Částka v korunách" onKeyDown={createDecimalKeyBlocker(() => setErrors((current) => ({ ...current, amountCzk: DECIMAL_INPUT_ERROR })))} onChange={(event) => { const { value: amountCzk, error } = sanitizeAmountInput(event.currentTarget.value); setErrors((current) => ({ ...current, amountCzk: error })); setValues((current) => ({ ...current, amountCzk })) }} /><span>Kč</span></div>
           <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
         </Field>
-      </section>
+      </Card>
       {values.kind === 'transaction' ? <div className="transaction-primary-pickers">
         <Field invalid={Boolean(errors.categoryId)} className="transaction-primary-picker"><FieldLabel>Kategorie</FieldLabel>{status === 'loading' ? <Skeleton className="h-36 w-full" /> : <RecurringCategoryPicker categories={selectableCategories} selectedCategory={selectedCategory} onSelect={(categoryId) => setValues((current) => ({ ...current, categoryId }))} />}<FieldError match={Boolean(errors.categoryId)}>{errors.categoryId}</FieldError></Field>
         <Field invalid={Boolean(errors.walletId)} className="transaction-primary-picker"><FieldLabel>Peněženka</FieldLabel>{status === 'loading' ? <Skeleton className="h-36 w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={selectedWallet} placeholder="Vyber peněženku" onSelect={(walletId) => setValues((current) => ({ ...current, walletId }))} buttonClassName="transaction-primary-picker-button" />}<FieldError match={Boolean(errors.walletId)}>{errors.walletId}</FieldError></Field>
@@ -197,7 +201,7 @@ function RecurringCategoryPicker({ categories, selectedCategory, onSelect }: { c
   const [open, setOpen] = useState(false)
   return <Dialog open={open} onOpenChange={setOpen}>
     <DialogTrigger render={<Button type="button" variant="outline" className="transaction-picker-button" data-selected={selectedCategory ? '' : undefined} />}>{selectedCategory ? <><CategoryIcon iconKey={selectedCategory.iconKey} colorKey={selectedCategory.colorKey} /><span>{selectedCategory.name}</span></> : <><Tag aria-hidden="true" /><span>Vyber kategorii</span></>}</DialogTrigger>
-    <DialogContent size="default" className="transaction-picker-dialog" showCloseButton={false}><DialogHeader><DialogTitle>Vyber kategorii</DialogTitle></DialogHeader><DialogBody><div className="transaction-category-grid">{categories.map((category) => <button key={category.id} className="transaction-category-option" data-selected={selectedCategory?.id === category.id || undefined} type="button" onClick={() => { onSelect(category.id); setOpen(false) }}><CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /><span>{category.name}</span>{selectedCategory?.id === category.id ? <Check aria-hidden="true" /> : null}</button>)}</div></DialogBody></DialogContent>
+    <DialogContent size="default" className="transaction-picker-dialog"><DialogHeader><DialogTitle>Vyber kategorii</DialogTitle></DialogHeader><DialogBody><div className="transaction-category-grid">{categories.map((category) => <button key={category.id} className={`transaction-category-option color-key--${category.colorKey}`} data-selected={selectedCategory?.id === category.id || undefined} type="button" onClick={() => { onSelect(category.id); setOpen(false) }}><CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /><span>{category.name}</span>{selectedCategory?.id === category.id ? <Check aria-hidden="true" /> : null}</button>)}</div></DialogBody></DialogContent>
   </Dialog>
 }
 

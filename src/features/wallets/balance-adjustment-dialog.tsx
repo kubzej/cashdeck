@@ -37,7 +37,7 @@ export function BalanceAdjustmentDialog({ wallet, onOpenChange, onAdjusted }: { 
   const isInvalid = hasDecimalInput || (actualBalance.trim() !== '' && parsedActualBalance === null)
 
   return <Dialog open onOpenChange={onOpenChange}>
-    <DialogContent size="sm" className="balance-adjustment-dialog" showCloseButton={false}>
+    <DialogContent size="sm" className="balance-adjustment-dialog">
       <form onClick={(event) => event.stopPropagation()} onSubmit={(event) => void handleSubmit(event)} noValidate>
         <DialogHeader>
           <DialogTitle>Vyrovnat zůstatek</DialogTitle>

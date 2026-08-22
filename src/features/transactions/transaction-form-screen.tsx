@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { ArrowLeft, Check, CircleAlert, Tag } from 'lucide-react'
+import { Check, CircleAlert, Tag } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { DatePicker } from '../../components/ui/calendar'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { FormLoadError } from '../../components/form-load-error'
+import { ScreenHeader } from '../../components/screen-header'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldError, FieldLabel } from '../../components/ui/field'
@@ -122,19 +124,21 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
   }
 
   return <section className="transaction-form-screen" aria-labelledby="transaction-form-title">
-    <header className="transaction-form-header">
-      <Button variant="ghost" size="icon" aria-label="Zpět na transakce" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
-      <h1 id="transaction-form-title">{transaction ? 'Upravit transakci' : 'Nová transakce'}</h1>
-      {transaction ? <DeleteConfirmationDialog title="Smazat transakci?" description="Tato transakce bude trvale smazána." triggerLabel="Smazat transakci" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : <span aria-hidden="true" />}
-    </header>
+    <ScreenHeader
+      title={transaction ? 'Upravit transakci' : 'Nová transakce'}
+      titleId="transaction-form-title"
+      backLabel="Zpět na transakce"
+      onBack={onCancel}
+      action={transaction ? <DeleteConfirmationDialog title="Smazat transakci?" description="Tato transakce bude trvale smazána." triggerLabel="Smazat transakci" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+    />
     {status === 'error' ? <FormLoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
     {status !== 'error' ? <form className="transaction-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
       {submissionError ? <SubmissionError isEdit={Boolean(transaction)} message={submissionError} /> : null}
-      <section className="transaction-amount-panel" aria-label="Částka a typ transakce">
-        <ToggleGroup type="single" value={values.direction} onValueChange={(next) => { if (next) changeDirection(next as CategoryDirection) }} className="transaction-direction" aria-label="Typ transakce">
-          <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
-          <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
-        </ToggleGroup>
+      <ToggleGroup type="single" value={values.direction} onValueChange={(next) => { if (next) changeDirection(next as CategoryDirection) }} width="full" className="transaction-direction" aria-label="Typ transakce">
+        <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
+        <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
+      </ToggleGroup>
+      <Card aria-label="Částka transakce" padding="none" className="transaction-amount-panel">
         <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
           <FieldLabel>Částka</FieldLabel>
           <div className="transaction-amount">
@@ -143,7 +147,7 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
           </div>
           <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
         </Field>
-      </section>
+      </Card>
       <div className="transaction-primary-pickers">
         <Field invalid={Boolean(errors.categoryId)} className="transaction-primary-picker">
           <FieldLabel>Kategorie</FieldLabel>
@@ -181,10 +185,10 @@ function CategoryPicker({ categories, selectedCategory, onSelect }: { categories
     <DialogTrigger render={<Button type="button" variant="outline" className="transaction-picker-button" data-selected={selectedCategory ? '' : undefined} />}>
       {selectedCategory ? <><CategoryIcon iconKey={selectedCategory.iconKey} colorKey={selectedCategory.colorKey} /><span>{selectedCategory.name}</span></> : <><Tag aria-hidden="true" /><span>Vyber kategorii</span></>}
     </DialogTrigger>
-    <DialogContent size="default" className="transaction-picker-dialog" showCloseButton={false}>
+    <DialogContent size="default" className="transaction-picker-dialog">
       <DialogHeader><DialogTitle>Vyber kategorii</DialogTitle></DialogHeader>
       <DialogBody><div className="transaction-category-grid">
-        {categories.map((category) => <button key={category.id} className="transaction-category-option" data-selected={selectedCategory?.id === category.id || undefined} type="button" onClick={() => { onSelect(category.id); setOpen(false) }}><CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /><span>{category.name}</span>{selectedCategory?.id === category.id ? <Check aria-hidden="true" /> : null}</button>)}
+        {categories.map((category) => <button key={category.id} className={`transaction-category-option color-key--${category.colorKey}`} data-selected={selectedCategory?.id === category.id || undefined} type="button" onClick={() => { onSelect(category.id); setOpen(false) }}><CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /><span>{category.name}</span>{selectedCategory?.id === category.id ? <Check aria-hidden="true" /> : null}</button>)}
       </div></DialogBody>
     </DialogContent>
   </Dialog>

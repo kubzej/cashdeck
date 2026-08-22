@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowLeft, ArrowRightLeft, CircleAlert } from 'lucide-react'
+import { ArrowRightLeft, CircleAlert } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { DatePicker } from '../../components/ui/calendar'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { FormLoadError } from '../../components/form-load-error'
+import { ScreenHeader } from '../../components/screen-header'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
@@ -115,15 +117,17 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
   }
 
   return <section className="transaction-form-screen" aria-labelledby="transfer-form-title">
-    <header className="transaction-form-header">
-      <Button variant="ghost" size="icon" aria-label="Zpět na transakce" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
-      <h1 id="transfer-form-title">{transfer ? 'Upravit převod' : 'Nový převod'}</h1>
-      {transfer ? <DeleteConfirmationDialog title="Smazat převod?" description="Tento převod bude trvale smazán." triggerLabel="Smazat převod" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : <span aria-hidden="true" />}
-    </header>
+    <ScreenHeader
+      title={transfer ? 'Upravit převod' : 'Nový převod'}
+      titleId="transfer-form-title"
+      backLabel="Zpět na transakce"
+      onBack={onCancel}
+      action={transfer ? <DeleteConfirmationDialog title="Smazat převod?" description="Tento převod bude trvale smazán." triggerLabel="Smazat převod" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+    />
     {status === 'error' ? <FormLoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
     {status !== 'error' ? <form className="transaction-form transfer-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
       {submissionError ? <SubmissionError isEdit={Boolean(transfer)} message={submissionError} /> : null}
-      <section className="transaction-amount-panel transfer-amount-panel" aria-label="Částka převodu">
+      <Card aria-label="Částka převodu" padding="none" className="transaction-amount-panel transfer-amount-panel">
         <div className="transfer-amount-panel__heading"><ArrowRightLeft aria-hidden="true" /><span>Převáděná částka</span></div>
         <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
           <FieldLabel>Částka</FieldLabel>
@@ -133,7 +137,7 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
           </div>
           <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
         </Field>
-      </section>
+      </Card>
       <div className="transaction-primary-pickers transfer-wallet-pickers">
         <Field invalid={Boolean(errors.sourceWalletId)} className="transaction-primary-picker">
           <FieldLabel>Z peněženky</FieldLabel>

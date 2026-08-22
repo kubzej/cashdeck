@@ -1,0 +1,22 @@
+{
+  "ignoreFiles": ["dist/**", "dist-server/**", "node_modules/**"],
+  "rules": {
+    "at-rule-no-unknown": [true, { "ignoreAtRules": ["theme", "utility", "custom-variant", "layer"] }],
+    "function-no-unknown": null,
+    "property-no-unknown": true,
+    "unit-no-unknown": true,
+    "block-no-empty": true,
+    "no-duplicate-selectors": true,
+    "declaration-block-no-duplicate-properties": true,
+    "function-disallowed-list": ["hsl", "hsla"],
+    "color-no-hex": null
+  },
+  "overrides": [
+    {
+      "files": ["src/features/**/*.css", "src/App.css", "src/components/**/*.css"],
+      "rules": {
+        "color-no-hex": true
+      }
+    }
+  ]
+}

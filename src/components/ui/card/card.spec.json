@@ -1,0 +1,138 @@
+{
+  "name": "Card",
+  "import": "import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from \"@/components/ui/card\"",
+  "description": "A borderless content surface for grouping related information and actions.",
+  "parts": {
+    "Card": {
+      "description": "Root grouped surface. Polymorphic through Base UI useRender.",
+      "props": {
+        "variant": {
+          "type": "enum",
+          "values": ["default", "muted", "elevated"],
+          "default": "default",
+          "description": "Visual weight of the surface."
+        },
+        "tone": {
+          "type": "enum",
+          "values": ["default", "positive", "negative", "warning", "info"],
+          "default": "default",
+          "description": "Soft semantic tint for status-aware surfaces while preserving the card structure."
+        },
+        "padding": {
+          "type": "enum",
+          "values": ["none", "sm", "default", "lg"],
+          "default": "default",
+          "description": "Vertical padding on the root. Child parts own horizontal padding."
+        },
+        "interactive": {
+          "type": "boolean",
+          "default": false,
+          "description": "Marks an interactive rendered card so focus styling and cursor are applied."
+        },
+        "render": {
+          "type": "ReactElement | render function",
+          "description": "Render as an anchor, button, or custom element while keeping kubkit styling."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only; do not add custom borders or raw colors."
+        },
+        "children": {
+          "type": "ReactNode",
+          "description": "Usually CardHeader, CardContent, and optional CardFooter."
+        }
+      }
+    },
+    "CardHeader": {
+      "description": "Top area for title text and an optional action, laid out as a slot-aware two-column grid.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Wrap title/description in a small stack and place CardAction as the last child."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "CardTitle": {
+      "description": "Heading for the grouped content.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Short title."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "CardDescription": {
+      "description": "Supporting text under the title.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Concise helper copy."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "CardAction": {
+      "description": "Optional header action area pinned to the top-right of the header grid.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "A compact kubkit Button, DropdownMenu trigger, or status badge."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "CardContent": {
+      "description": "Main content area.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "Text, metrics, forms, lists, or custom content."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    },
+    "CardFooter": {
+      "description": "Optional action row pinned after content.",
+      "props": {
+        "children": {
+          "type": "ReactNode",
+          "description": "One primary action and supporting secondary actions."
+        },
+        "className": {
+          "type": "string",
+          "description": "Layout escape hatch only."
+        }
+      }
+    }
+  },
+  "forbidden": [
+    "Do not use Card as a generic page section wrapper.",
+    "Do not nest cards inside cards.",
+    "Do not add custom visible borders to Card.",
+    "Do not make the entire Card interactive when only one child action is interactive.",
+    "Do not use tone as a substitute for Alert when the content is transient feedback or needs stronger urgency.",
+    "Do not use elevated cards in dense repeated lists."
+  ],
+  "responsive": {
+    "touchTargetPx": 44,
+    "note": "Interactive cards and card actions must keep 44px touch targets. Repeated cards should remain compact on mobile."
+  },
+  "example": "<Card>\n  <CardHeader>\n    <div className=\"grid gap-1\">\n      <CardTitle>Team activity</CardTitle>\n      <CardDescription>Recent updates from the workspace.</CardDescription>\n    </div>\n    <CardAction>\n      <Button size=\"sm\" variant=\"secondary\">View</Button>\n    </CardAction>\n  </CardHeader>\n  <CardContent>{/* grouped content */}</CardContent>\n</Card>"
+}

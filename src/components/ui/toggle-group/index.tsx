@@ -9,12 +9,12 @@ import { cn } from "@/lib/utils";
  * kubkit ToggleGroup — segmented single/multiple value control.
  */
 const toggleVariants = cva(
-  "focus-ring inline-flex min-h-11 min-w-11 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 data-[pressed]:shadow-sm [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "focus-ring inline-flex min-h-11 min-w-11 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-sm font-medium transition disabled:pointer-events-none disabled:opacity-50 data-[pressed]:shadow-sm data-[pressed]:font-semibold [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-muted/45 text-muted-foreground hover:bg-muted hover:text-foreground data-[pressed]:bg-background data-[pressed]:text-foreground",
+          "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground data-[pressed]:bg-card data-[pressed]:text-foreground",
         solid:
           "text-muted-foreground hover:bg-muted/60 hover:text-foreground data-[pressed]:bg-primary data-[pressed]:text-primary-foreground",
         ghost:
@@ -149,7 +149,7 @@ function ToggleGroup({
       }}
       orientation={orientation}
       className={cn(
-        "group/toggle-group inline-flex items-center gap-1 rounded-lg bg-muted/50 p-1 data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-stretch",
+        "group/toggle-group inline-flex items-center gap-1 rounded-full bg-muted/50 p-1 data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-stretch",
         width === "full" && "w-full",
         className,
       )}

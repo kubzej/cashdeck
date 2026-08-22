@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, CircleAlert, Plus, RefreshCw, Search, Tags } from 'lucide-react'
+import { CircleAlert, Plus, RefreshCw, Search, Tags } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { ScreenHeader } from '../../components/screen-header'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Input } from '../../components/ui/input'
@@ -67,11 +68,13 @@ export function LabelsScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <section className="labels-screen" aria-labelledby="labels-title">
-      <header className="labels-header">
-        <Button variant="ghost" size="icon" aria-label="Zpět do nastavení" onClick={onBack}><ArrowLeft aria-hidden="true" /></Button>
-        <h1 id="labels-title">Štítky</h1>
-        <Button variant="ghost" size="icon" aria-label="Přidat štítek" onClick={() => setView('new')}><Plus aria-hidden="true" /></Button>
-      </header>
+      <ScreenHeader
+        title="Štítky"
+        titleId="labels-title"
+        backLabel="Zpět do nastavení"
+        onBack={onBack}
+        action={<Button variant="ghost" size="icon" aria-label="Přidat štítek" onClick={() => setView('new')}><Plus aria-hidden="true" /></Button>}
+      />
       <div className="labels-search">
         <Search aria-hidden="true" />
         <Input value={query} clearable clearLabel="Vymazat hledání" placeholder="Hledat štítky" aria-label="Hledat štítky" onChange={(event) => setQuery(event.currentTarget.value)} onClear={() => setQuery('')} />

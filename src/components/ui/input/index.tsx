@@ -68,7 +68,7 @@ function Input({
       readOnly={readOnly}
       onChange={handleChange}
       className={cn(
-        "focus-ring invalid-ring flex h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 py-1 text-base transition-colors dark:bg-input/30",
+        "focus-ring invalid-ring flex h-11 w-full min-w-0 rounded-md border border-transparent bg-card shadow-sm px-3 py-1 text-base transition-colors dark:bg-input/30",
         "placeholder:text-muted-foreground",
         "disabled:cursor-not-allowed disabled:opacity-50",
         clearable &&

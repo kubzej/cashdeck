@@ -1,2 +1,2 @@
-.delete-confirmation-trigger { color: var(--color-negative); }
-.delete-confirmation-trigger:hover { background: color-mix(in oklab, var(--color-negative) 10%, transparent); color: var(--color-negative); }
+.delete-confirmation-trigger { color: var(--color-destructive); }
+.delete-confirmation-trigger:hover { background: color-mix(in oklab, var(--color-destructive) 10%, transparent); color: var(--color-destructive); }

@@ -7,6 +7,7 @@ import { Field, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { formatIsoDate, getPragueToday, parseIsoDate } from '../../lib/prague-date'
 import type { Wallet } from '../wallets/api'
+import { WalletTypeIcon } from '../wallets/wallet-type-icon'
 import './feed-filters.css'
 
 export type FeedPeriod = 'week' | 'month' | 'year' | 'all' | 'custom'
@@ -74,7 +75,7 @@ function WalletFilterDialog({ wallets, selectedWalletIds, label, onApply }: { wa
       <DialogHeader><DialogTitle>Peněženky</DialogTitle></DialogHeader>
       <DialogBody><div className="feed-wallet-options">
         <button type="button" className="feed-wallet-option" data-selected={draft.length === 0 || undefined} onClick={() => setDraft([])}><span>Všechny peněženky</span>{draft.length === 0 ? <Check aria-hidden="true" /> : null}</button>
-        {wallets.map((wallet) => <button type="button" key={wallet.id} className="feed-wallet-option" data-selected={draft.includes(wallet.id) || undefined} onClick={() => toggleWallet(wallet.id)}><WalletCards className={`color-key--${wallet.colorKey}`} aria-hidden="true" /><span>{wallet.name}</span>{draft.includes(wallet.id) ? <Check aria-hidden="true" /> : null}</button>)}
+        {wallets.map((wallet) => <button type="button" key={wallet.id} className={`feed-wallet-option color-key--${wallet.colorKey}`} data-selected={draft.includes(wallet.id) || undefined} onClick={() => toggleWallet(wallet.id)}><WalletTypeIcon walletType={wallet.walletType} className={`wallet-icon color-key--${wallet.colorKey}`} /><span>{wallet.name}</span>{draft.includes(wallet.id) ? <Check aria-hidden="true" /> : null}</button>)}
       </div></DialogBody>
       <DialogFooter><Button onClick={apply}>Použít filtr</Button></DialogFooter>
     </DialogContent>

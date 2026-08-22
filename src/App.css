@@ -147,15 +147,13 @@
 }
 
 .surface-row {
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-card);
   box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 4%, transparent);
 }
 
 .surface-row[data-interactive='true']:hover {
-  border-color: color-mix(in oklab, var(--color-primary) 30%, var(--color-border));
-  background: var(--color-card);
+  background: color-mix(in oklab, var(--color-primary) 6%, var(--color-card));
 }
 
 .bottom-nav {
@@ -172,8 +170,7 @@
   margin: 0 auto;
   min-height: calc(4rem + env(safe-area-inset-bottom));
   padding: 0.625rem 0.5rem calc(0.625rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in oklab, var(--color-background) 97%, transparent);
+  background: color-mix(in oklab, var(--color-background) 88%, transparent);
   backdrop-filter: blur(1rem);
   box-shadow: 0 -0.5rem 1.5rem color-mix(in oklab, var(--color-foreground) 6%, transparent);
 }
@@ -185,6 +182,15 @@
   overflow: hidden;
   padding-inline: 0.25rem;
   color: var(--color-muted-foreground);
+}
+
+.bottom-nav__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-full);
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
 .bottom-nav__item svg {
@@ -203,6 +209,11 @@
   background: transparent;
   color: var(--color-primary);
   font-weight: 650;
+}
+
+.bottom-nav__item--active .bottom-nav__icon {
+  background: color-mix(in oklab, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
 }
 
 .transaction-fab {

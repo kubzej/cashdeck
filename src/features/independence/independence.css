@@ -1,17 +1,15 @@
 .independence-settings-screen { display: grid; flex: 1; grid-template-rows: auto 1fr; gap: 1.25rem; padding-top: 0.75rem; }
-.independence-settings-header { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; align-items: center; }
-.independence-settings-header h1 { margin: 0; color: var(--color-foreground); font-size: 1.25rem; font-weight: 650; text-align: center; }
 .independence-settings-loading { display: grid; gap: 0.75rem; }
 .independence-settings-feedback { margin-block: auto; }
 .independence-settings-form { display: grid; gap: 1.5rem; padding-bottom: 1.5rem; }
-.independence-settings-section { display: grid; gap: 0.875rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1rem; }
+.independence-settings-section { display: grid; gap: 0.875rem; padding: 1rem; }
 .independence-settings-section__heading { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .independence-settings-section__heading h2 { margin: 0; color: var(--color-foreground); font-size: 0.9375rem; font-weight: 650; }
 .independence-settings-section__heading strong { color: var(--color-primary); font-family: var(--font-mono); font-size: 1rem; font-variant-numeric: tabular-nums; }
 .independence-settings-section h2 { margin: 0; color: var(--color-foreground); font-size: 0.9375rem; font-weight: 650; }
 .independence-settings-submit { width: 100%; }
 .independence-irregular-empty { margin: 0; color: var(--color-muted-foreground); font-size: 0.8125rem; }
-.independence-irregular-row__meta { color: var(--color-muted-foreground); font-size: 0.75rem; }
+.independence-irregular-row__meta, .independence-irregular-row__annual { color: var(--color-muted-foreground); font-size: 0.75rem; }
 .independence-irregular-form { display: grid; gap: 0.75rem; border-top: 1px dashed var(--color-border); padding-top: 0.875rem; }
 .independence-irregular-form__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
 
@@ -22,34 +20,33 @@
 .independence-screen-feedback { margin-block: auto; }
 .independence-screen-content { display: grid; gap: 1rem; }
 .independence-progress-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
-.independence-progress-card { display: grid; gap: 0.375rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); padding: 0.875rem; box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 3%, transparent); }
+.independence-progress-card__body { display: grid; gap: 0.375rem; }
 .independence-progress-card__label { color: var(--color-muted-foreground); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .independence-progress-card__amount { overflow: hidden; color: var(--color-foreground); font-family: var(--font-mono); font-size: 1.0625rem; font-variant-numeric: tabular-nums; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .independence-progress-card__bar { height: 0.375rem; overflow: hidden; border-radius: var(--radius-full); background: var(--color-muted); }
 .independence-progress-card__bar i { display: block; width: var(--independence-progress-size); height: 100%; border-radius: inherit; background: var(--color-primary); }
 .independence-progress-card__percent { color: var(--color-primary); font-size: 0.8125rem; font-weight: 650; }
 .independence-progress-card__years { color: var(--color-muted-foreground); font-size: 0.75rem; }
-.independence-target-card { display: grid; gap: 0.25rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); padding: 0.875rem; }
+.independence-target-card__body { display: grid; gap: 0.25rem; }
 .independence-target-card__label { color: var(--color-muted-foreground); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .independence-target-card__amount { color: var(--color-foreground); font-family: var(--font-mono); font-size: 1.375rem; font-variant-numeric: tabular-nums; font-weight: 650; }
-.independence-target-card__meta { color: var(--color-muted-foreground); font-size: 0.75rem; }
+.independence-target-card__meta { display: grid; gap: 0.125rem; color: var(--color-muted-foreground); font-size: 0.75rem; }
 .independence-wealth-by-type, .independence-sensitivity { display: grid; gap: 0.625rem; }
 .independence-wealth-by-type h2, .independence-sensitivity h2 { margin: 0; color: var(--color-foreground); font-size: 0.9375rem; font-weight: 650; }
-.independence-wealth-by-type__list { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); padding: 0.75rem; box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 3%, transparent); }
+.independence-wealth-by-type__list { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
 .independence-wealth-by-type__item { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) auto auto; align-items: center; gap: 0.5rem; }
 .independence-wealth-by-type__icon { width: 1.125rem; height: 1.125rem; color: var(--color-primary); }
 .independence-wealth-by-type__label { min-width: 0; overflow: hidden; color: var(--color-foreground); font-size: 0.8125rem; text-overflow: ellipsis; white-space: nowrap; }
 .independence-wealth-by-type__amount { color: var(--color-foreground); font-family: var(--font-mono); font-size: 0.8125rem; font-variant-numeric: tabular-nums; font-weight: 650; white-space: nowrap; }
 .independence-wealth-by-type__percent { min-width: 3rem; color: var(--color-muted-foreground); font-size: 0.75rem; text-align: right; }
-.independence-sensitivity__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
-.independence-sensitivity__item { display: grid; gap: 0.25rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); padding: 0.625rem; text-align: center; }
-.independence-sensitivity__item--own { border-color: var(--color-primary); background: color-mix(in oklab, var(--color-primary) 8%, var(--color-card)); box-shadow: inset 0 0 0 1px var(--color-primary); }
+.independence-sensitivity__list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.independence-sensitivity__item { display: grid; gap: 0.25rem; padding: 0.625rem; text-align: center; }
+[data-slot='card'].independence-sensitivity__item--own { box-shadow: inset 0 0 0 1.5px var(--color-primary); }
 .independence-sensitivity__rate { display: grid; gap: 0.125rem; color: var(--color-foreground); font-family: var(--font-mono); font-size: 0.9375rem; font-variant-numeric: tabular-nums; font-weight: 650; }
-.independence-sensitivity__own-tag { color: var(--color-primary); font-family: var(--font-sans); font-size: 0.625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
 .independence-sensitivity__years { color: var(--color-muted-foreground); font-size: 0.75rem; }
 .independence-wealth-trend { display: grid; gap: 0.625rem; }
 .independence-wealth-trend h2 { margin: 0; color: var(--color-foreground); font-size: 0.9375rem; font-weight: 650; }
-.independence-wealth-trend__chart { min-height: 12rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); padding: 0.875rem; box-shadow: 0 0.35rem 1rem color-mix(in oklab, var(--color-foreground) 4%, transparent); }
+.independence-wealth-trend__chart { min-height: 12rem; padding: 0.875rem; }
 .independence-wealth-trend__legend, .independence-wealth-trend__dates { display: flex; justify-content: space-between; color: var(--color-muted-foreground); font-size: 0.6875rem; }
 .independence-wealth-trend__chart svg { display: block; width: 100%; height: 8.75rem; overflow: visible; touch-action: manipulation; }
 .independence-wealth-trend__chart line { stroke: color-mix(in oklab, var(--color-border) 75%, transparent); stroke-width: 1; stroke-dasharray: 4 5; }

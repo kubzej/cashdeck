@@ -104,7 +104,7 @@ function SheetContent({
           {showCloseButton ? (
             <DialogPrimitive.Close
               data-slot="sheet-close"
-              aria-label="Close sheet"
+              aria-label="Zavřít panel"
               className="focus-ring absolute right-3 top-3 inline-flex size-11 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
             >
               <X aria-hidden />

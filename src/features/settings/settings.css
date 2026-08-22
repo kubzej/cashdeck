@@ -19,7 +19,6 @@
 .settings-sign-out {
   width: 100%;
   margin-top: auto;
-  border-color: color-mix(in oklab, var(--color-destructive) 35%, var(--color-border));
   color: var(--color-destructive);
 }
 
@@ -40,16 +39,4 @@
 
 .settings-navigation-row [data-slot='list-item-actions'] {
   color: var(--color-muted-foreground);
-}
-
-.settings-navigation-row__configured {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  color: var(--color-positive);
-}
-
-.settings-navigation-row__configured svg {
-  width: 0.875rem;
-  height: 0.875rem;
 }

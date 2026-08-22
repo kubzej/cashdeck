@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Card, CardContent } from '../../components/ui/card'
 import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group'
 import { formatCzk } from '../../lib/format-czk'
 import { CategoryIcon } from '../categories/category-icon'
@@ -89,25 +90,27 @@ export function RecurringCostSummary({ rules }: { rules: RecurringRule[] }) {
   if (summary.expenseCategories.length === 0 && summary.incomeCategories.length === 0) return null
 
   return (
-    <section className="recurring-cost-summary" aria-label="Náklady a příjmy z opakování">
-      <ToggleGroup type="single" value={period} onValueChange={(next) => { if (next === 'monthly' || next === 'yearly') setPeriod(next) }} width="full" className="recurring-cost-summary__period" aria-label="Období">
-        <ToggleGroupItem value="monthly">Měsíčně</ToggleGroupItem>
-        <ToggleGroupItem value="yearly">Ročně</ToggleGroupItem>
-      </ToggleGroup>
+    <Card aria-label="Náklady a příjmy z opakování" padding="sm" className="recurring-cost-summary">
+      <CardContent className="recurring-cost-summary__body">
+        <ToggleGroup type="single" value={period} onValueChange={(next) => { if (next === 'monthly' || next === 'yearly') setPeriod(next) }} width="full" className="recurring-cost-summary__period" aria-label="Období">
+          <ToggleGroupItem value="monthly">Měsíčně</ToggleGroupItem>
+          <ToggleGroupItem value="yearly">Ročně</ToggleGroupItem>
+        </ToggleGroup>
 
-      <div className="recurring-cost-summary__totals">
-        <CostTotal label="Výdaje" amountCzk={pick(summary.expenseMonthlyCzk, summary.expenseYearlyCzk)} tone="expense" signed={false} />
-        <CostTotal label="Příjmy" amountCzk={pick(summary.incomeMonthlyCzk, summary.incomeYearlyCzk)} tone="income" signed={false} />
-        <CostTotal label="Cashflow" amountCzk={pick(summary.cashflowMonthlyCzk, summary.cashflowYearlyCzk)} tone={summary.cashflowMonthlyCzk < 0 ? 'expense' : 'income'} signed />
-      </div>
+        <div className="recurring-cost-summary__totals">
+          <CostTotal label="Výdaje" amountCzk={pick(summary.expenseMonthlyCzk, summary.expenseYearlyCzk)} tone="expense" signed={false} />
+          <CostTotal label="Příjmy" amountCzk={pick(summary.incomeMonthlyCzk, summary.incomeYearlyCzk)} tone="income" signed={false} />
+          <CostTotal label="Cashflow" amountCzk={pick(summary.cashflowMonthlyCzk, summary.cashflowYearlyCzk)} tone={summary.cashflowMonthlyCzk < 0 ? 'expense' : 'income'} signed />
+        </div>
 
-      {summary.expenseCategories.length > 0 ? (
-        <CategoryList title="Výdaje podle kategorie" categories={summary.expenseCategories} pick={pick} />
-      ) : null}
-      {summary.incomeCategories.length > 0 ? (
-        <CategoryList title="Příjmy podle kategorie" categories={summary.incomeCategories} pick={pick} />
-      ) : null}
-    </section>
+        {summary.expenseCategories.length > 0 ? (
+          <CategoryList title="Výdaje podle kategorie" categories={summary.expenseCategories} pick={pick} />
+        ) : null}
+        {summary.incomeCategories.length > 0 ? (
+          <CategoryList title="Příjmy podle kategorie" categories={summary.incomeCategories} pick={pick} />
+        ) : null}
+      </CardContent>
+    </Card>
   )
 }
 

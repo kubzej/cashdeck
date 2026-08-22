@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowLeft, CircleAlert, Eye, EyeOff, Sparkles } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { ColorPicker } from '../../components/color-picker'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
+import { ScreenHeader } from '../../components/screen-header'
 import { DatePicker } from '../../components/ui/calendar'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldDescription, FieldError, FieldLabel } from '../../components/ui/field'
@@ -110,10 +112,12 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
 
   return (
     <section className="wallet-form-screen" aria-labelledby="wallet-form-title">
-      <header className="wallet-form-header">
-        <Button variant="ghost" size="icon" aria-label="Zpět na peněženky" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
-        <h1 id="wallet-form-title">{wallet ? 'Upravit peněženku' : 'Nová peněženka'}</h1>
-        {wallet ? (
+      <ScreenHeader
+        title={wallet ? 'Upravit peněženku' : 'Nová peněženka'}
+        titleId="wallet-form-title"
+        backLabel="Zpět na peněženky"
+        onBack={onCancel}
+        action={wallet ? (
           wallet.isHidden ? (
             <Button variant="ghost" size="icon" aria-label="Zobrazit peněženku" title="Zobrazit peněženku" loading={isTogglingVisibility} onClick={() => void handleToggleVisibility()}>
               <Eye aria-hidden="true" />
@@ -125,8 +129,8 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
           ) : (
             <DeleteConfirmationDialog title="Smazat peněženku?" description={`Peněženka „${wallet.name}“ bude trvale smazána.`} triggerLabel="Smazat peněženku" isDeleting={isDeleting} onConfirm={() => void handleDelete()} />
           )
-        ) : <span aria-hidden="true" />}
-      </header>
+        ) : undefined}
+      />
       <form className="wallet-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Peněženku se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
         <Field invalid={Boolean(errors.name)}>
@@ -143,24 +147,26 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
           <WalletTypePicker value={values.walletType} ariaLabel="Typ peněženky" onValueChange={(walletType) => setValues((current) => ({ ...current, walletType }))} />
         </fieldset>
         {showIndependenceFields ? (
-          <fieldset className="wallet-independence-field">
-            <legend><Sparkles aria-hidden="true" /> Nezávislost</legend>
-            <Field>
-              <FieldLabel>Počítá se do nezávislosti?</FieldLabel>
-              <ToggleGroup type="single" width="full" value={values.countsTowardIndependence ? 'yes' : 'no'} className="wallet-independence-toggle" aria-label="Počítá se do nezávislosti?" onValueChange={(next) => { if (!next) return; const countsTowardIndependence = next === 'yes'; setValues((current) => ({ ...current, countsTowardIndependence, availableNow: countsTowardIndependence ? current.availableNow : false })) }}>
-                <ToggleGroupItem value="no">Ne</ToggleGroupItem>
-                <ToggleGroupItem value="yes">Ano</ToggleGroupItem>
-              </ToggleGroup>
-            </Field>
-            {values.countsTowardIndependence ? <Field>
-              <FieldLabel>Dostupné hned?</FieldLabel>
-              <ToggleGroup type="single" width="full" value={values.availableNow ? 'yes' : 'no'} className="wallet-independence-toggle" aria-label="Dostupné hned?" onValueChange={(next) => { if (next) setValues((current) => ({ ...current, availableNow: next === 'yes' })) }}>
-                <ToggleGroupItem value="no">Ne</ToggleGroupItem>
-                <ToggleGroupItem value="yes">Ano</ToggleGroupItem>
-              </ToggleGroup>
-              <FieldDescription>Vypni, pokud jsou peníze zamčené (např. penzijní spoření před 60 lety).</FieldDescription>
-            </Field> : null}
-          </fieldset>
+          <div className="wallet-independence-group" role="group" aria-labelledby="wallet-independence-title">
+            <h2 id="wallet-independence-title" className="wallet-independence-title">Nezávislost</h2>
+            <Card padding="none" className="wallet-independence-field">
+              <Field>
+                <FieldLabel>Počítá se do nezávislosti?</FieldLabel>
+                <ToggleGroup type="single" width="full" value={values.countsTowardIndependence ? 'yes' : 'no'} className="wallet-independence-toggle" aria-label="Počítá se do nezávislosti?" onValueChange={(next) => { if (!next) return; const countsTowardIndependence = next === 'yes'; setValues((current) => ({ ...current, countsTowardIndependence, availableNow: countsTowardIndependence ? current.availableNow : false })) }}>
+                  <ToggleGroupItem value="no">Ne</ToggleGroupItem>
+                  <ToggleGroupItem value="yes">Ano</ToggleGroupItem>
+                </ToggleGroup>
+              </Field>
+              {values.countsTowardIndependence ? <Field>
+                <FieldLabel>Dostupné hned?</FieldLabel>
+                <ToggleGroup type="single" width="full" value={values.availableNow ? 'yes' : 'no'} className="wallet-independence-toggle" aria-label="Dostupné hned?" onValueChange={(next) => { if (next) setValues((current) => ({ ...current, availableNow: next === 'yes' })) }}>
+                  <ToggleGroupItem value="no">Ne</ToggleGroupItem>
+                  <ToggleGroupItem value="yes">Ano</ToggleGroupItem>
+                </ToggleGroup>
+                <FieldDescription>Vypni, pokud jsou peníze zamčené (např. penzijní spoření před 60 lety).</FieldDescription>
+              </Field> : null}
+            </Card>
+          </div>
         ) : null}
         <Field invalid={Boolean(errors.openingBalanceCzk)}>
           <FieldLabel>Počáteční zůstatek</FieldLabel>

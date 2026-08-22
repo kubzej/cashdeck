@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRightLeft, CalendarClock, CircleAlert, RefreshCw } from 'lucide-react'
+import { ArrowRightLeft, CalendarClock, CircleAlert, RefreshCw } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { ScreenHeader } from '../../components/screen-header'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List, ListItem, ListItemActions, ListItemContent, ListItemLeading, ListItemTitle } from '../../components/ui/list'
@@ -43,11 +44,7 @@ export function PlannedScreen({ filters, selection, onBack, onSelectTransaction,
   }, [range?.dateFrom, range?.dateTo, walletKey, selectionKey, retryKey])
 
   return <section className="planned-screen" aria-labelledby="planned-title">
-    <header className="planned-header">
-      <Button variant="ghost" size="icon" aria-label="Zpět k transakcím" onClick={onBack}><ArrowLeft aria-hidden="true" /></Button>
-      <h1 id="planned-title">Naplánované</h1>
-      <span aria-hidden="true" />
-    </header>
+    <ScreenHeader title="Naplánované" titleId="planned-title" backLabel="Zpět k transakcím" onBack={onBack} />
     {!range ? <EmptyState variant="quiet" size="lg" className="planned-empty"><EmptyStateIcon><CalendarClock aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>V tomto období nic budoucího není</EmptyStateTitle><EmptyStateDescription>Zvol období, které zasahuje do budoucnosti.</EmptyStateDescription></EmptyState> : <>
       <PlannedContent status={status} items={items} onRetry={() => setRetryKey((current) => current + 1)} onSelectTransaction={onSelectTransaction} onSelectTransfer={onSelectTransfer} />
     </>}

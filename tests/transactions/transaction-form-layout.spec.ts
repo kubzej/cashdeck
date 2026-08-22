@@ -58,7 +58,7 @@ test('new and edit transaction forms keep the same layout and load their data on
 })
 
 async function formLayout(page: Page) {
-  const header = await page.locator('.transaction-form-header').boundingBox()
+  const header = await page.locator('.screen-header').boundingBox()
   const amountPanel = await page.locator('.transaction-amount-panel').boundingBox()
   const primaryPickers = await page.locator('.transaction-primary-pickers').boundingBox()
   expect(header).not.toBeNull()

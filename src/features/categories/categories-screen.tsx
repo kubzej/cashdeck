@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { ArrowLeft, CircleAlert, Plus, RefreshCw, Tags } from 'lucide-react'
+import { CircleAlert, Plus, RefreshCw, Tags } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { ScreenHeader } from '../../components/screen-header'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List } from '../../components/ui/list'
@@ -88,11 +89,13 @@ export function CategoriesScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <section className="categories-screen" aria-labelledby="categories-title">
-      <header className="categories-header">
-        <Button variant="ghost" size="icon" aria-label="Zpět do nastavení" onClick={onBack}><ArrowLeft aria-hidden="true" /></Button>
-        <h1 id="categories-title">Kategorie</h1>
-        <Button variant="ghost" size="icon" aria-label={`Přidat ${activeDirection === 'expense' ? 'výdajovou' : 'příjmovou'} kategorii`} onClick={() => setView('new')}><Plus aria-hidden="true" /></Button>
-      </header>
+      <ScreenHeader
+        title="Kategorie"
+        titleId="categories-title"
+        backLabel="Zpět do nastavení"
+        onBack={onBack}
+        action={<Button variant="ghost" size="icon" aria-label={`Přidat ${activeDirection === 'expense' ? 'výdajovou' : 'příjmovou'} kategorii`} onClick={() => setView('new')}><Plus aria-hidden="true" /></Button>}
+      />
       <Tabs value={activeDirection} onValueChange={(value) => setActiveDirection(value as CategoryDirection)}>
         <TabsList variant="default" className="mx-auto">
           <TabsTrigger value="expense">Výdaje</TabsTrigger>
