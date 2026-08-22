@@ -97,8 +97,13 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
 
   const hasFiltersToClear = Boolean(fixedSelection) || !hasDefaultFilters(filters)
 
+  // Naplánované is about upcoming activity in general — once a category/label/search filter
+  // narrows the view to one slice, it's a distraction pointing at unrelated data, so it only
+  // shows in the true "Celkem" state (no selection, no search).
+  const showPlannedSummary = !fixedSelection && !debouncedSearch
+
   const content = <>
-    <PlannedSummaryCard filters={filters} selection={fixedSelection} onOpen={() => onOpenPlanned(filters)} />
+    {showPlannedSummary ? <PlannedSummaryCard filters={filters} selection={fixedSelection} onOpen={() => onOpenPlanned(filters)} /> : null}
     {status === 'loading' ? <List gap="sm" className="transactions-loading" aria-label="Načítání transakcí"><TransactionRowSkeleton /><TransactionRowSkeleton /><TransactionRowSkeleton /></List> : null}
     {status === 'error' ? <FeedbackState status="error" layout="panel" className="transactions-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Transakce se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState> : null}
     {status === 'ready' && activities.length === 0 ? <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><ReceiptText aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Zatím bez transakcí</EmptyStateTitle><EmptyStateDescription>Přidej první příjem nebo výdaj.</EmptyStateDescription></EmptyState> : null}
@@ -112,7 +117,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
 
   return <section className="transactions-screen" aria-label="Seznam transakcí">
     <FeedFilters wallets={wallets} value={filters} onChange={setFilters} showReset={hasFiltersToClear} onReset={resetAllFilters} />
-    {fixedSelection ? <SelectionSummaryCard filters={filters} selection={fixedSelection} /> : null}
+    <SelectionSummaryCard filters={filters} selection={fixedSelection} search={debouncedSearch} />
     {isNavigablePeriod(filters.period) ? <FeedPeriodPager period={filters.period} periodAnchor={filters.periodAnchor} earliestActivityDate={earliestActivityDate} onNavigate={(periodAnchor) => setFilters((current) => ({ ...current, periodAnchor }))}>{content}</FeedPeriodPager> : content}
   </section>
 }

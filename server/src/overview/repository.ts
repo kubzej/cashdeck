@@ -65,14 +65,18 @@ export function createOverviewRepository(pool: Pool): OverviewRepository {
       const dateFrom = clampToToday(input.dateFrom ?? earliestActivityDate ?? today, today)
       const dateTo = clampToToday(input.dateTo ?? today, today)
       const granularity = resolveOverviewGranularity(input.period, dateFrom, dateTo)
+      // wealthAndSeriesSql only references $1-$4 — it must get exactly that many parameters, or
+      // Postgres rejects the bind ("supplies N parameters, but prepared statement requires 4").
+      // The search-aware queries reference $5 too, so they need their own, longer array.
       const parameters: unknown[] = [userId, input.walletIds, dateFrom, dateTo]
+      const searchParameters: unknown[] = [...parameters, input.search]
 
       const [wealthAndSeriesResult, flowResult, flowSeriesResult, categoryResult, labelResult] = await Promise.all([
         withWealthCache(`overview:wealth:${userId}:${walletKey}:${dateFrom}:${dateTo}:${granularity}`, () => pool.query<WealthAndSeriesRow>(wealthAndSeriesSql(granularity), parameters)),
-        pool.query<FlowRow>(flowSql(), parameters),
-        pool.query<FlowSeriesRow>(flowSeriesSql(granularity), parameters),
-        pool.query<CategoryRow>(categoriesSql(), parameters),
-        pool.query<LabelRow>(labelsSql(), parameters),
+        pool.query<FlowRow>(flowSql(), searchParameters),
+        pool.query<FlowSeriesRow>(flowSeriesSql(granularity), searchParameters),
+        pool.query<CategoryRow>(categoriesSql(), searchParameters),
+        pool.query<LabelRow>(labelsSql(), searchParameters),
       ])
 
       const wealthAndSeries = wealthAndSeriesResult.rows[0] ?? { wealth_czk: '0', change_czk: '0', series: [] }
@@ -102,7 +106,7 @@ export function createOverviewRepository(pool: Pool): OverviewRepository {
     },
 
     async getSelectionTrend(userId, input) {
-      const parameters = [userId, input.walletIds, input.dateFrom, input.dateTo, input.id]
+      const parameters = [userId, input.walletIds, input.dateFrom, input.dateTo, input.id, input.search]
       const selectionFilter = selectionFilterSql(input.type)
 
       const [previousResult, seriesResult] = await Promise.all([
@@ -118,10 +122,41 @@ export function createOverviewRepository(pool: Pool): OverviewRepository {
   }
 }
 
-function selectionFilterSql(type: 'category' | 'label') {
+function selectionFilterSql(type: 'category' | 'label' | 'total') {
+  // Always true (id is always null for 'total') — but still references $5 with a cast, since
+  // Postgres can't infer an unreferenced placeholder's type ("could not determine data type of
+  // parameter $5") even though nothing here actually needs its value.
+  if (type === 'total') return '($5::uuid is null or true)'
   return type === 'category'
     ? 't.category_id = $5::uuid'
     : `exists (select 1 from transaction_labels tl where tl.user_id = $1 and tl.transaction_id = t.id and tl.label_id = $5::uuid)`
+}
+
+// Matches feed's search semantics (server/src/feed/repository.ts): category name, wallet name,
+// note, labels, and the name of the recurring rule that generated the transaction (if any).
+// $searchParam must be a positional placeholder, e.g. '$5' or '$6' — pick the next free one.
+function transactionSearchFilterSql(searchParam: string) {
+  return `(${searchParam}::text is null or (
+    search_category.name ilike '%' || ${searchParam} || '%'
+    or search_wallet.name ilike '%' || ${searchParam} || '%'
+    or coalesce(t.note, '') ilike '%' || ${searchParam} || '%'
+    or exists (
+      select 1
+      from transaction_labels search_transaction_label
+      join labels search_label on search_label.user_id = $1 and search_label.id = search_transaction_label.label_id
+      where search_transaction_label.user_id = $1
+        and search_transaction_label.transaction_id = t.id
+        and search_label.name ilike '%' || ${searchParam} || '%'
+    )
+    or exists (
+      select 1
+      from recurring_rule_occurrences search_occurrence
+      join recurring_rules search_recurring_rule on search_recurring_rule.user_id = $1 and search_recurring_rule.id = search_occurrence.recurring_rule_id
+      where search_occurrence.user_id = $1
+        and search_occurrence.transaction_id = t.id
+        and search_recurring_rule.name ilike '%' || ${searchParam} || '%'
+    )
+  ))`
 }
 
 function selectionPreviousSql(selectionFilter: string) {
@@ -133,11 +168,14 @@ function selectionPreviousSql(selectionFilter: string) {
       select t.id, t.amount_czk, t.category_id
       from transactions t
       join wallet_scope w on w.id = t.wallet_id
+      join categories search_category on search_category.user_id = $1 and search_category.id = t.category_id
+      join wallets search_wallet on search_wallet.user_id = $1 and search_wallet.id = t.wallet_id
       cross join previous_window
       where t.user_id = $1
         and t.transaction_date >= w.opening_balance_date
         and t.transaction_date between previous_window.previous_from and previous_window.previous_to
         and ${selectionFilter}
+        and ${transactionSearchFilterSql('$6')}
     )
     select coalesce(sum(case c.direction when 'income' then t.amount_czk else -t.amount_czk end), 0)::text as amount_czk
     from filtered_transactions t
@@ -152,10 +190,13 @@ function selectionSeriesSql(selectionFilter: string, granularity: OverviewGranul
       select t.id, t.amount_czk, t.category_id, t.transaction_date
       from transactions t
       join wallet_scope w on w.id = t.wallet_id
+      join categories search_category on search_category.user_id = $1 and search_category.id = t.category_id
+      join wallets search_wallet on search_wallet.user_id = $1 and search_wallet.id = t.wallet_id
       where t.user_id = $1
         and t.transaction_date >= w.opening_balance_date
         and t.transaction_date between $3::date and $4::date
         and ${selectionFilter}
+        and ${transactionSearchFilterSql('$6')}
     ),
     buckets as (
       select bucket_start::date
@@ -273,9 +314,12 @@ function transactionScope() {
     select t.id, t.amount_czk, t.transaction_date, t.category_id
     from transactions t
     join wallet_scope w on w.id = t.wallet_id
+    join categories search_category on search_category.user_id = $1 and search_category.id = t.category_id
+    join wallets search_wallet on search_wallet.user_id = $1 and search_wallet.id = t.wallet_id
     where t.user_id = $1
       and t.transaction_date >= w.opening_balance_date
       and t.transaction_date between $3::date and $4::date
+      and ${transactionSearchFilterSql('$5')}
   )`
 }
 
@@ -317,9 +361,12 @@ function labelsSql() {
       select t.id, t.amount_czk, t.category_id
       from transactions t
       join wallet_scope w on w.id = t.wallet_id
+      join categories search_category on search_category.user_id = $1 and search_category.id = t.category_id
+      join wallets search_wallet on search_wallet.user_id = $1 and search_wallet.id = t.wallet_id
       where t.user_id = $1
         and t.transaction_date >= w.opening_balance_date
         and t.transaction_date between $3::date and $4::date
+        and ${transactionSearchFilterSql('$5')}
     ),
     transaction_label_totals as (
       select l.id, l.name,

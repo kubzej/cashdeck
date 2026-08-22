@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ComponentType } from 'react'
+import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 import { BarChart3, Plus, ReceiptText, Settings2, Sparkles, WalletCards } from 'lucide-react'
 import { useAuth } from '../auth/auth-context'
 import { Button } from '../components/ui/button'
@@ -56,6 +56,11 @@ export function AppShell() {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false)
   const activeItem = navItems.find((item) => item.key === activeNav)
   const isDetailScreen = (activeNav === 'wallets' && walletView !== 'list') || (activeNav === 'transactions' && (transactionView !== 'list' || transferView !== 'list')) || (activeNav === 'settings' && settingsView !== 'index')
+
+  // Without this, a screen entered from a scrolled-down list (e.g. tapping a transaction deep in
+  // Transakce) would render already scrolled past its own top, since the SPA swaps content in
+  // place and the browser has no reason to reset scroll on its own.
+  useEffect(() => { window.scrollTo(0, 0) }, [activeNav, transactionView, transferView, walletView, settingsView])
 
   function selectNavigation(key: NavKey) {
     setActiveNav(key)

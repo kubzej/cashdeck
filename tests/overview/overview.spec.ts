@@ -53,9 +53,13 @@ test('excludes transfer impact from a label\'s total, even in Celkem mode', asyn
 test('shows the error state and recovers after retrying a failed overview load', async ({ page }) => {
   await mockAuthAndApi(page)
   const overviewApi = await mockOverviewApi(page)
-  overviewApi.failNext({ message: 'Dočasně nedostupné.' })
   await page.goto('/')
   await signIn(page)
+  // Transakce (the landing screen) already fired its own /api/overview request for the totals
+  // card — wait for it to settle before queuing the failure, so it lands on Přehled's own load
+  // instead of being consumed by that earlier request.
+  await expect.poll(() => overviewApi.requests().length).toBe(1)
+  overviewApi.failNext({ message: 'Dočasně nedostupné.' })
   await page.locator('.bottom-nav').getByRole('button', { name: 'Přehled', exact: true }).click()
 
   await expect(page.getByText('Přehled se nepodařilo načíst', { exact: true })).toBeVisible()
@@ -86,6 +90,11 @@ test('keeps an overview label filter exact in both actual and planned activity, 
   await page.goto('/')
   await signIn(page)
 
+  // Landing on Transakce fires its own (unfiltered) Naplánované request before the label filter
+  // is ever applied — count from here on, not from an absolute zero.
+  await expect.poll(() => plannedApi.requests().length).toBeGreaterThan(0)
+  const plannedCountBeforeFilter = plannedApi.requests().length
+
   await page.locator('.bottom-nav').getByRole('button', { name: 'Přehled', exact: true }).click()
   await page.getByRole('button', { name: /domácnost/ }).click()
 
@@ -95,11 +104,22 @@ test('keeps an overview label filter exact in both actual and planned activity, 
   await expect(page.locator('.selection-summary')).toContainText('-19 240 Kč')
   await expect.poll(() => feedApi.requests().some((request) => request.searchParams.get('labelId') === labelId)).toBe(true)
   await expect.poll(() => feedApi.boundsRequests().some((request) => request.searchParams.get('labelId') === labelId)).toBe(true)
-  await expect.poll(() => plannedApi.requests().some((request) => request.searchParams.get('labelId') === labelId)).toBe(true)
+  // Naplánované is about upcoming activity in general — while a label filter narrows the view,
+  // it would just point at unrelated data, so it's hidden entirely (no new request) rather than
+  // narrowed to the label like the transaction list is.
+  await page.waitForTimeout(300)
+  expect(plannedApi.requests()).toHaveLength(plannedCountBeforeFilter)
 
   await page.getByRole('button', { name: 'Zrušit všechny filtry' }).click()
+  // Clearing the filter brings Naplánované back.
+  await expect.poll(() => plannedApi.requests().length).toBeGreaterThan(plannedCountBeforeFilter)
 
-  await expect(page.locator('.selection-summary')).toHaveCount(0)
+  // The summary card itself stays — it now always shows a running total for the active filters —
+  // but it must drop the label-specific framing along with the label filter.
+  const clearedSummary = page.locator('.selection-summary')
+  await expect(clearedSummary).toContainText('Celkem')
+  await expect(clearedSummary).not.toContainText('Štítek')
+  await expect(clearedSummary).not.toContainText('domácnost')
   await expect(page.getByRole('button', { name: 'Zrušit všechny filtry' })).toHaveCount(0)
   await expect.poll(() => feedApi.requests().at(-1)?.searchParams.get('labelId')).toBeNull()
   await expect.poll(() => feedApi.boundsRequests().at(-1)?.searchParams.get('labelId')).toBeNull()

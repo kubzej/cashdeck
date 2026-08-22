@@ -82,6 +82,18 @@ test('a manually entered transaction with no originating recurring rule has a nu
   expect(page.items[0]).toMatchObject({ recurringRuleName: null })
 })
 
+test('search matches a transaction or transfer by the name of the recurring rule that generated it, not just category/wallet/note/labels', async () => {
+  const query = vi.fn().mockResolvedValueOnce({ rows: [] })
+  const repository = createFeedRepository({ query } as unknown as Pool)
+
+  await repository.listFeed('user-1', { ...baseInput, search: 'Oneplay' })
+
+  const normalized = String(query.mock.calls[0][0]).replace(/\s+/g, ' ')
+  expect(normalized).toContain('search_occurrence.transaction_id = t.id')
+  expect(normalized).toContain('search_occurrence.transfer_id = tr.id')
+  expect(normalized).toContain("search_recurring_rule.name ilike '%' || $3 || '%'")
+})
+
 function encodeTestCursor() {
   return Buffer.from(JSON.stringify({ activityDate: '2026-08-21', createdAt: sameTimestamp.toISOString(), kind: 'transaction', id: rowA.id })).toString('base64url')
 }

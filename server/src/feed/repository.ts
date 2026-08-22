@@ -126,6 +126,14 @@ export function createFeedRepository(pool: Pool): FeedRepository {
               and search_transaction_label.transaction_id = t.id
               and search_label.name ilike '%' || ${parameter} || '%'
           )
+          or exists (
+            select 1
+            from recurring_rule_occurrences search_occurrence
+            join recurring_rules search_recurring_rule on search_recurring_rule.user_id = $1 and search_recurring_rule.id = search_occurrence.recurring_rule_id
+            where search_occurrence.user_id = $1
+              and search_occurrence.transaction_id = t.id
+              and search_recurring_rule.name ilike '%' || ${parameter} || '%'
+          )
         )`)
         transferFilters.push(`(
           source_wallet_filter.name ilike '%' || ${parameter} || '%'
@@ -138,6 +146,14 @@ export function createFeedRepository(pool: Pool): FeedRepository {
             where search_transfer_label.user_id = $1
               and search_transfer_label.transfer_id = tr.id
               and search_label.name ilike '%' || ${parameter} || '%'
+          )
+          or exists (
+            select 1
+            from recurring_rule_occurrences search_occurrence
+            join recurring_rules search_recurring_rule on search_recurring_rule.user_id = $1 and search_recurring_rule.id = search_occurrence.recurring_rule_id
+            where search_occurrence.user_id = $1
+              and search_occurrence.transfer_id = tr.id
+              and search_recurring_rule.name ilike '%' || ${parameter} || '%'
           )
         )`)
         adjustmentFilters.push(`(

@@ -46,3 +46,23 @@ test('scopes the feed by the current month, selected visible wallets, period, an
   await expect.poll(() => feedApi.requests().length).toBe(4)
   expect(feedApi.requests()[3].searchParams.get('search')).toBe('slavia')
 })
+
+test('hides Naplánované while a search filter is active, and brings it back once the search is cleared', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockFeedApi(page)
+  const plannedApi = await mockPlannedApi(page, [])
+  await page.goto('/')
+  await signIn(page)
+
+  await expect.poll(() => plannedApi.requests().length).toBeGreaterThan(0)
+  const plannedCountBeforeSearch = plannedApi.requests().length
+
+  await page.getByLabel('Hledat v transakcích').fill('slavia')
+  // Naplánované is about upcoming activity in general — once search narrows the view to one
+  // slice, it's a distraction pointing at unrelated data.
+  await page.waitForTimeout(300)
+  expect(plannedApi.requests()).toHaveLength(plannedCountBeforeSearch)
+
+  await page.getByLabel('Hledat v transakcích').fill('')
+  await expect.poll(() => plannedApi.requests().length).toBeGreaterThan(plannedCountBeforeSearch)
+})
