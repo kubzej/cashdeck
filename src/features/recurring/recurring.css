@@ -24,7 +24,6 @@
 .recurring-custom-interval { margin-top: 0.5rem; }
 
 .recurring-cost-summary__body { display: grid; gap: 0.875rem; }
-.recurring-cost-summary__period { border: 1px solid var(--color-border); background: var(--color-muted); padding: 0.25rem; }
 .recurring-cost-summary__period [data-slot='toggle-group-item'] { min-width: 0; padding-inline: 0.375rem; font-size: 0.8125rem; }
 .recurring-cost-summary__totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; }
 .recurring-cost-summary__total { display: grid; gap: 0.25rem; }
