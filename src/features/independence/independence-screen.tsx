@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { CircleAlert, RefreshCw, Settings2, Sparkles } from 'lucide-react'
+import { CircleAlert, Mountain, RefreshCw, Settings2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent } from '../../components/ui/card'
 import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
@@ -47,7 +47,7 @@ export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => v
 
       {status === 'ready' && progress && !progress.hasSettings ? (
         <EmptyState variant="quiet" size="lg" className="screen-placeholder">
-          <EmptyStateIcon><Sparkles aria-hidden="true" /></EmptyStateIcon>
+          <EmptyStateIcon><Mountain aria-hidden="true" /></EmptyStateIcon>
           <EmptyStateTitle>Nezávislost ještě není nastavená</EmptyStateTitle>
           <EmptyStateDescription>Nastav si výběrovou sazbu a očekávané roční náklady, ať víš, kam směřuješ.</EmptyStateDescription>
           <EmptyStateActions><Button onClick={onOpenSettings}><Settings2 aria-hidden="true" />Nastavit nezávislost</Button></EmptyStateActions>

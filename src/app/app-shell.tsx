@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
-import { BarChart3, Plus, ReceiptText, Settings2, Sparkles, WalletCards } from 'lucide-react'
+import { BarChart3, Mountain, Plus, ReceiptText, Settings2, WalletCards } from 'lucide-react'
 import { useAuth } from '../auth/auth-context'
 import { Button } from '../components/ui/button'
 import { CategoriesScreen } from '../features/categories/categories-screen'
@@ -35,7 +35,7 @@ const navItems: NavItem[] = [
   { key: 'transactions', label: 'Transakce', icon: ReceiptText },
   { key: 'wallets', label: 'Peněženky', icon: WalletCards },
   { key: 'overview', label: 'Přehled', icon: BarChart3 },
-  { key: 'independence', label: 'Nezávislost', icon: Sparkles },
+  { key: 'independence', label: 'Nezávislost', icon: Mountain },
   { key: 'settings', label: 'Nastavení', icon: Settings2 },
 ]
 
@@ -110,7 +110,7 @@ export function AppShell() {
           </> : null}
         </main>
         {!isDetailScreen && activeNav === 'transactions' ? <Button size="icon" className="transaction-fab" aria-label="Přidat záznam" onClick={() => setIsAddActivityOpen(true)}><Plus aria-hidden="true" /></Button> : null}
-        {!isDetailScreen ? <nav className="bottom-nav" aria-label="Hlavní navigace">{navItems.map(({ key, label, icon: Icon }) => <Button key={key} variant="ghost" size="sm" className={`bottom-nav__item${key === activeNav ? ' bottom-nav__item--active' : ''}`} aria-current={key === activeNav ? 'page' : undefined} onClick={() => selectNavigation(key)}><Icon aria-hidden={true} /><span>{label}</span></Button>)}</nav> : null}
+        {!isDetailScreen ? <nav className="bottom-nav" aria-label="Hlavní navigace">{navItems.map(({ key, label, icon: Icon }) => <Button key={key} variant="ghost" size="sm" className={`bottom-nav__item${key === activeNav ? ' bottom-nav__item--active' : ''}`} aria-current={key === activeNav ? 'page' : undefined} onClick={() => selectNavigation(key)}><span className="bottom-nav__icon"><Icon aria-hidden={true} /></span><span>{label}</span></Button>)}</nav> : null}
         <AddActivityDialog open={isAddActivityOpen} onOpenChange={setIsAddActivityOpen} onCreateTransaction={() => setTransactionView('new')} onCreateTransfer={() => setTransferView('new')} />
       </div>
     </div>

@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { CalendarClock, CheckCircle2, ChevronRight, FolderCog, LogOut, Sparkles, Tags, UserRound } from 'lucide-react'
+import { CalendarClock, ChevronRight, FolderCog, LogOut, Mountain, Tags, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/auth-context'
 import { Button } from '../../components/ui/button'
 import {
@@ -10,16 +9,10 @@ import {
   ListItemDescription,
   ListItemTitle,
 } from '../../components/ui/list'
-import { getIndependenceSettings } from '../independence/api'
 import './settings.css'
 
 export function SettingsScreen({ onOpenCategories, onOpenLabels, onOpenRecurring, onOpenIndependence }: { onOpenCategories: () => void; onOpenLabels: () => void; onOpenRecurring: () => void; onOpenIndependence: () => void }) {
   const { signOut } = useAuth()
-  const [isIndependenceConfigured, setIsIndependenceConfigured] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    void getIndependenceSettings().then((result) => setIsIndependenceConfigured(result.settings !== null)).catch(() => setIsIndependenceConfigured(null))
-  }, [])
 
   return (
     <section className="settings-screen" aria-label="Nastavení aplikace">
@@ -63,12 +56,10 @@ export function SettingsScreen({ onOpenCategories, onOpenLabels, onOpenRecurring
             <ListItemActions><ChevronRight aria-hidden="true" /></ListItemActions>
           </ListItem>
           <ListItem render={<button type="button" aria-label="Nastavení nezávislosti" onClick={onOpenIndependence} />} interactive variant="quiet" size="spacious" className="surface-row settings-navigation-row">
-            <Sparkles className="settings-row-icon settings-row-icon--primary" aria-hidden="true" />
+            <Mountain className="settings-row-icon settings-row-icon--primary" aria-hidden="true" />
             <ListItemContent>
               <ListItemTitle>Nezávislost</ListItemTitle>
-              <ListItemDescription>
-                {isIndependenceConfigured ? <span className="settings-navigation-row__configured"><CheckCircle2 aria-hidden="true" />Nastaveno</span> : 'Zatím nenastaveno'}
-              </ListItemDescription>
+              <ListItemDescription>Cíl a pokrok</ListItemDescription>
             </ListItemContent>
             <ListItemActions><ChevronRight aria-hidden="true" /></ListItemActions>
           </ListItem>
