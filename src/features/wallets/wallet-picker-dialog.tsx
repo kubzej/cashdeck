@@ -17,12 +17,12 @@ export function WalletPickerDialog({ wallets, selectedWallet, placeholder, onSel
 
   return <Dialog open={open} onOpenChange={setOpen}>
     <DialogTrigger render={<Button type="button" variant="outline" className={`transaction-picker-button ${buttonClassName}`.trim()} data-selected={selectedWallet ? '' : undefined} />}>
-      {selectedWallet ? <><WalletCards className={`color-key--${selectedWallet.colorKey}`} aria-hidden="true" /><span>{selectedWallet.name}</span></> : <><WalletCards aria-hidden="true" /><span>{placeholder}</span></>}
+      {selectedWallet ? <><WalletCards className={`wallet-icon color-key--${selectedWallet.colorKey}`} aria-hidden="true" /><span>{selectedWallet.name}</span></> : <><WalletCards aria-hidden="true" /><span>{placeholder}</span></>}
     </DialogTrigger>
     <DialogContent size="sm" className="transaction-picker-dialog" showCloseButton={false}>
       <DialogHeader><DialogTitle>Vyber peněženku</DialogTitle></DialogHeader>
       <DialogBody><div className="transaction-wallet-options">
-        {wallets.map((wallet) => <button key={wallet.id} className="transaction-wallet-option" data-selected={selectedWallet?.id === wallet.id || undefined} type="button" onClick={() => { onSelect(wallet.id); setOpen(false) }}><WalletCards className={`color-key--${wallet.colorKey}`} aria-hidden="true" /><span>{wallet.name}</span>{selectedWallet?.id === wallet.id ? <Check aria-hidden="true" /> : null}</button>)}
+        {wallets.map((wallet) => <button key={wallet.id} className="transaction-wallet-option" data-selected={selectedWallet?.id === wallet.id || undefined} type="button" onClick={() => { onSelect(wallet.id); setOpen(false) }}><WalletCards className={`wallet-icon color-key--${wallet.colorKey}`} aria-hidden="true" /><span>{wallet.name}</span>{selectedWallet?.id === wallet.id ? <Check aria-hidden="true" /> : null}</button>)}
       </div></DialogBody>
     </DialogContent>
   </Dialog>
