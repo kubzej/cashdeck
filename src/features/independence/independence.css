@@ -1,6 +1,4 @@
 .independence-settings-screen { display: grid; flex: 1; grid-template-rows: auto 1fr; gap: 1.25rem; padding-top: 0.75rem; }
-.independence-settings-header { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; align-items: center; }
-.independence-settings-header h1 { margin: 0; color: var(--color-foreground); font-size: 1.25rem; font-weight: 650; text-align: center; }
 .independence-settings-loading { display: grid; gap: 0.75rem; }
 .independence-settings-feedback { margin-block: auto; }
 .independence-settings-form { display: grid; gap: 1.5rem; padding-bottom: 1.5rem; }

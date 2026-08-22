@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowLeft, CircleAlert, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { CircleAlert, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { ScreenHeader } from '../../components/screen-header'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldDescription, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
@@ -127,11 +128,7 @@ export function IndependenceSettingsScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <section className="independence-settings-screen" aria-labelledby="independence-settings-title">
-      <header className="independence-settings-header">
-        <Button variant="ghost" size="icon" aria-label="Zpět do nastavení" onClick={onBack}><ArrowLeft aria-hidden="true" /></Button>
-        <h1 id="independence-settings-title">Nezávislost</h1>
-        <span aria-hidden="true" />
-      </header>
+      <ScreenHeader title="Nezávislost" titleId="independence-settings-title" backLabel="Zpět do nastavení" onBack={onBack} />
 
       {status === 'loading' ? <div className="independence-settings-loading" aria-label="Načítání nastavení"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div> : null}
 

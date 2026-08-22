@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowLeft, CircleAlert } from 'lucide-react'
+import { CircleAlert } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { ColorPicker } from '../../components/color-picker'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
+import { ScreenHeader } from '../../components/screen-header'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
@@ -70,11 +71,13 @@ export function CategoryFormScreen({ category, direction, existingNames, onCance
 
   return (
     <section className="category-form-screen" aria-labelledby="category-form-title">
-      <header className="category-form-header">
-        <Button variant="ghost" size="icon" aria-label="Zpět na kategorie" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
-        <h1 id="category-form-title">{title}</h1>
-        {category ? <DeleteConfirmationDialog title="Smazat kategorii?" description={`Kategorie „${category.name}“ bude trvale smazána.`} triggerLabel="Smazat kategorii" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : <span aria-hidden="true" />}
-      </header>
+      <ScreenHeader
+        title={title}
+        titleId="category-form-title"
+        backLabel="Zpět na kategorie"
+        onBack={onCancel}
+        action={category ? <DeleteConfirmationDialog title="Smazat kategorii?" description={`Kategorie „${category.name}“ bude trvale smazána.`} triggerLabel="Smazat kategorii" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+      />
       <form className="category-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Kategorii se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
         <Field invalid={Boolean(errors.name)}>

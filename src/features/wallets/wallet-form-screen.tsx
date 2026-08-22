@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowLeft, CircleAlert, Eye, EyeOff, Sparkles } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff, Sparkles } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { ColorPicker } from '../../components/color-picker'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
+import { ScreenHeader } from '../../components/screen-header'
 import { DatePicker } from '../../components/ui/calendar'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldDescription, FieldError, FieldLabel } from '../../components/ui/field'
@@ -110,10 +111,12 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
 
   return (
     <section className="wallet-form-screen" aria-labelledby="wallet-form-title">
-      <header className="wallet-form-header">
-        <Button variant="ghost" size="icon" aria-label="Zpět na peněženky" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
-        <h1 id="wallet-form-title">{wallet ? 'Upravit peněženku' : 'Nová peněženka'}</h1>
-        {wallet ? (
+      <ScreenHeader
+        title={wallet ? 'Upravit peněženku' : 'Nová peněženka'}
+        titleId="wallet-form-title"
+        backLabel="Zpět na peněženky"
+        onBack={onCancel}
+        action={wallet ? (
           wallet.isHidden ? (
             <Button variant="ghost" size="icon" aria-label="Zobrazit peněženku" title="Zobrazit peněženku" loading={isTogglingVisibility} onClick={() => void handleToggleVisibility()}>
               <Eye aria-hidden="true" />
@@ -125,8 +128,8 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
           ) : (
             <DeleteConfirmationDialog title="Smazat peněženku?" description={`Peněženka „${wallet.name}“ bude trvale smazána.`} triggerLabel="Smazat peněženku" isDeleting={isDeleting} onConfirm={() => void handleDelete()} />
           )
-        ) : <span aria-hidden="true" />}
-      </header>
+        ) : undefined}
+      />
       <form className="wallet-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Peněženku se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
         <Field invalid={Boolean(errors.name)}>

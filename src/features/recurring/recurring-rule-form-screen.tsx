@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { ArrowLeft, ArrowRightLeft, Check, CircleAlert, ReceiptText, Tag } from 'lucide-react'
+import { ArrowRightLeft, Check, CircleAlert, ReceiptText, Tag } from 'lucide-react'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { FormLoadError } from '../../components/form-load-error'
+import { ScreenHeader } from '../../components/screen-header'
 import { Button } from '../../components/ui/button'
 import { DatePicker } from '../../components/ui/calendar'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
@@ -144,11 +145,13 @@ export function RecurringRuleFormScreen({ rule, onCancel, onSaved, onDeleted }: 
   }
 
   return <section className="transaction-form-screen" aria-labelledby="recurring-form-title">
-    <header className="transaction-form-header">
-      <Button variant="ghost" size="icon" aria-label="Zpět na opakování" onClick={onCancel}><ArrowLeft aria-hidden="true" /></Button>
-      <h1 id="recurring-form-title">{rule ? 'Upravit opakování' : 'Nové opakování'}</h1>
-      {rule ? <DeleteConfirmationDialog title="Smazat opakování?" description="Pravidlo bude smazáno, dříve vytvořené transakce a převody zůstanou." triggerLabel="Smazat opakování" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : <span aria-hidden="true" />}
-    </header>
+    <ScreenHeader
+      title={rule ? 'Upravit opakování' : 'Nové opakování'}
+      titleId="recurring-form-title"
+      backLabel="Zpět na opakování"
+      onBack={onCancel}
+      action={rule ? <DeleteConfirmationDialog title="Smazat opakování?" description="Pravidlo bude smazáno, dříve vytvořené transakce a převody zůstanou." triggerLabel="Smazat opakování" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+    />
     {status === 'error' ? <FormLoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
     {status !== 'error' ? <form className="transaction-form" noValidate onSubmit={(event) => void handleSubmit(event)}>
       {submissionError ? <SubmissionError message={submissionError} /> : null}
@@ -197,7 +200,7 @@ function RecurringCategoryPicker({ categories, selectedCategory, onSelect }: { c
   const [open, setOpen] = useState(false)
   return <Dialog open={open} onOpenChange={setOpen}>
     <DialogTrigger render={<Button type="button" variant="outline" className="transaction-picker-button" data-selected={selectedCategory ? '' : undefined} />}>{selectedCategory ? <><CategoryIcon iconKey={selectedCategory.iconKey} colorKey={selectedCategory.colorKey} /><span>{selectedCategory.name}</span></> : <><Tag aria-hidden="true" /><span>Vyber kategorii</span></>}</DialogTrigger>
-    <DialogContent size="default" className="transaction-picker-dialog" showCloseButton={false}><DialogHeader><DialogTitle>Vyber kategorii</DialogTitle></DialogHeader><DialogBody><div className="transaction-category-grid">{categories.map((category) => <button key={category.id} className="transaction-category-option" data-selected={selectedCategory?.id === category.id || undefined} type="button" onClick={() => { onSelect(category.id); setOpen(false) }}><CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /><span>{category.name}</span>{selectedCategory?.id === category.id ? <Check aria-hidden="true" /> : null}</button>)}</div></DialogBody></DialogContent>
+    <DialogContent size="default" className="transaction-picker-dialog" showCloseButton={false}><DialogHeader><DialogTitle>Vyber kategorii</DialogTitle></DialogHeader><DialogBody><div className="transaction-category-grid">{categories.map((category) => <button key={category.id} className={`transaction-category-option color-key--${category.colorKey}`} data-selected={selectedCategory?.id === category.id || undefined} type="button" onClick={() => { onSelect(category.id); setOpen(false) }}><CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /><span>{category.name}</span>{selectedCategory?.id === category.id ? <Check aria-hidden="true" /> : null}</button>)}</div></DialogBody></DialogContent>
   </Dialog>
 }
 

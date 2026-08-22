@@ -86,10 +86,7 @@
 .transaction-row__note { overflow: hidden; margin: 0; color: var(--color-muted-foreground); font-size: 0.6875rem; line-height: 1rem; text-overflow: ellipsis; white-space: nowrap; }
 .transactions-load-more { width: 100%; }
 
-.transaction-form-screen { display: grid; min-height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); gap: 1.25rem; padding-top: 0.5rem; }
-.transaction-form-header { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; align-items: center; }
-.transaction-form-header h1 { margin: 0; text-align: center; font-size: 1.25rem; font-weight: 650; }
-.transaction-form-header > span { width: 2.75rem; height: 2.75rem; }
+.transaction-form-screen { display: grid; grid-template-rows: auto 1fr; min-height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); gap: 1.25rem; padding-top: 0.5rem; }
 .transaction-form { display: grid; align-content: start; gap: 1.25rem; padding-bottom: 1.5rem; }
 .transaction-amount-panel { display: grid; gap: 1rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-card); box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 4%, transparent); }
 .transaction-direction { width: 100%; justify-content: center; border: 1px solid color-mix(in oklab, var(--color-border) 80%, var(--color-muted)); border-radius: calc(var(--radius-lg) - 0.1875rem); background: var(--color-muted); padding: 0.25rem; }

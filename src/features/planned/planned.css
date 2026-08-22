@@ -1,7 +1,4 @@
 .planned-screen { display: grid; align-content: start; gap: 1rem; min-height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-top: 0.5rem; }
-.planned-header { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; align-items: center; }
-.planned-header h1 { margin: 0; font-size: 1.25rem; font-weight: 650; text-align: center; }
-.planned-header > span { width: 2.75rem; height: 2.75rem; }
 .planned-loading { display: grid; gap: 0.75rem; }
 .planned-feedback { margin-block: auto; }
 .planned-empty { margin-block: auto; }

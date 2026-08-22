@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { ArrowLeft, CalendarClock, CircleAlert, Plus, RefreshCw } from 'lucide-react'
+import { CalendarClock, CircleAlert, Plus, RefreshCw } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { ScreenHeader } from '../../components/screen-header'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List } from '../../components/ui/list'
@@ -77,11 +78,13 @@ export function RecurringRulesScreen({ onBack }: { onBack: () => void }) {
   if (view === 'edit' && selectedRule) return <RecurringRuleFormScreen rule={selectedRule} onCancel={() => setView('list')} onSaved={finishForm} onDeleted={finishForm} />
 
   return <section className="recurring-screen" aria-labelledby="recurring-title">
-    <header className="recurring-header">
-      <Button variant="ghost" size="icon" aria-label="Zpět do nastavení" onClick={onBack}><ArrowLeft aria-hidden="true" /></Button>
-      <h1 id="recurring-title">Opakování</h1>
-      <Button variant="ghost" size="icon" aria-label="Přidat opakování" onClick={() => setView('new')}><Plus aria-hidden="true" /></Button>
-    </header>
+    <ScreenHeader
+      title="Opakování"
+      titleId="recurring-title"
+      backLabel="Zpět do nastavení"
+      onBack={onBack}
+      action={<Button variant="ghost" size="icon" aria-label="Přidat opakování" onClick={() => setView('new')}><Plus aria-hidden="true" /></Button>}
+    />
     {status === 'ready' ? <RecurringCostSummary rules={rules} /> : null}
     {reorderError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Pořadí se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{reorderError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
     <RecurringRulePanel
