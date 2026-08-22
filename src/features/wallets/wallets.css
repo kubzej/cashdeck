@@ -4,8 +4,8 @@
 .wallet-row { min-height: 5.5rem; }
 .wallet-row__content { align-self: center; gap: 0.25rem; }
 .wallet-icon { width: 2.25rem; height: 2.25rem; flex: 0 0 auto; align-self: center; color: var(--color-key-value); }
-.wallet-name { font-size: 1rem; }
-.wallet-balance { white-space: nowrap; color: var(--color-foreground); font-family: var(--font-mono); font-size: 1.125rem; font-variant-numeric: tabular-nums; font-weight: 650; line-height: 1.25; }
+.wallet-name { font-size: 0.9375rem; font-weight: 650; }
+.wallet-balance { white-space: nowrap; color: var(--color-foreground); font-family: var(--font-mono); font-size: 0.9375rem; font-variant-numeric: tabular-nums; font-weight: 650; line-height: 1.25; }
 .wallet-drag-handle { touch-action: none; }
 .wallets-hidden-section { display: grid; gap: 0.625rem; }
 .wallets-hidden-toggle { justify-content: flex-start; gap: 0.5rem; padding-inline: 0; color: var(--color-muted-foreground); }

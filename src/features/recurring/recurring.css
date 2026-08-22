@@ -9,7 +9,8 @@
 .recurring-row__icon--transfer { background: color-mix(in oklab, var(--color-primary) 10%, var(--color-card)); color: var(--color-primary); }
 .recurring-row__icon svg { width: 1.2rem; height: 1.2rem; }
 .recurring-row [data-slot='list-item-content'] { align-self: center; gap: 0.125rem; min-width: 0; }
-.recurring-row [data-slot='list-item-title'], .recurring-row [data-slot='list-item-description'] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recurring-row [data-slot='list-item-title'] { overflow: hidden; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.recurring-row [data-slot='list-item-description'] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recurring-row__amount { font-family: var(--font-mono); font-size: 0.875rem; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .recurring-row__amount--income { color: var(--color-positive); }
 .recurring-row__amount--expense { color: var(--color-negative); }
