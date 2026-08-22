@@ -297,7 +297,7 @@ function DatePicker({
           type="button"
           disabled={disabled}
           className={cn(
-            "focus-ring flex h-11 w-full items-center justify-between gap-3 rounded-md border border-input bg-transparent px-3 text-left text-sm transition-colors hover:bg-muted/45 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30",
+            "focus-ring flex h-11 w-full items-center justify-between gap-3 rounded-md border border-transparent bg-card shadow-sm px-3 text-left text-sm transition-colors hover:bg-muted/45 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30",
             !selectedDate && "text-muted-foreground",
             triggerClassName,
           )}

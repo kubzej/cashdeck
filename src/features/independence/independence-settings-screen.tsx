@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { CircleAlert, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { ScreenHeader } from '../../components/screen-header'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldDescription, FieldError, FieldLabel } from '../../components/ui/field'
@@ -145,7 +146,7 @@ export function IndependenceSettingsScreen({ onBack }: { onBack: () => void }) {
           {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Nastavení se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
           {savedNotice ? <FeedbackState status="success" layout="inline"><FeedbackStateContent><FeedbackStateTitle>Nastavení uloženo</FeedbackStateTitle></FeedbackStateContent></FeedbackState> : null}
 
-          <section className="independence-settings-section" aria-labelledby="independence-parameters-title">
+          <Card render={<section aria-labelledby="independence-parameters-title" />} padding="none" className="independence-settings-section">
             <h2 id="independence-parameters-title">Parametry</h2>
             <Field invalid={Boolean(errors.withdrawalRatePercent)}>
               <FieldLabel>Výběrová sazba (%)</FieldLabel>
@@ -171,9 +172,9 @@ export function IndependenceSettingsScreen({ onBack }: { onBack: () => void }) {
               <FieldDescription>Kolik plánuješ měsíčně přidávat do investic. Dlouhodobý odhad, appka to nesleduje z reálných dat.</FieldDescription>
               <FieldError match={Boolean(errors.monthlyContributionCzk)}>{errors.monthlyContributionCzk}</FieldError>
             </Field>
-          </section>
+          </Card>
 
-          <section className="independence-settings-section" aria-labelledby="independence-expenses-title">
+          <Card render={<section aria-labelledby="independence-expenses-title" />} padding="none" className="independence-settings-section">
             <div className="independence-settings-section__heading">
               <h2 id="independence-expenses-title">Roční náklady</h2>
               <strong>{formatCzk(annualExpensesCzk)}</strong>
@@ -185,7 +186,7 @@ export function IndependenceSettingsScreen({ onBack }: { onBack: () => void }) {
                 <FieldError match={Boolean(errors[key])}>{errors[key]}</FieldError>
               </Field>
             ))}
-          </section>
+          </Card>
 
           <Button type="submit" size="lg" className="independence-settings-submit" loading={isSubmitting}>Uložit nastavení</Button>
         </form>
@@ -200,7 +201,7 @@ function IrregularExpensesSection({ irregularExpenses, onChanged }: { irregularE
   const [editing, setEditing] = useState<IrregularExpense | 'new' | null>(null)
 
   return (
-    <section className="independence-settings-section" aria-labelledby="independence-irregular-title">
+    <Card render={<section aria-labelledby="independence-irregular-title" />} padding="none" className="independence-settings-section">
       <div className="independence-settings-section__heading">
         <h2 id="independence-irregular-title">Nepravidelné výdaje</h2>
         <Button type="button" variant="ghost" size="icon" aria-label="Přidat nepravidelný výdaj" onClick={() => setEditing('new')}><Plus aria-hidden="true" /></Button>
@@ -211,7 +212,8 @@ function IrregularExpensesSection({ irregularExpenses, onChanged }: { irregularE
             <ListItem key={item.id} variant="quiet" size="default" className="surface-row independence-irregular-row">
               <ListItemContent>
                 <ListItemTitle>{item.name}</ListItemTitle>
-                <span className="independence-irregular-row__meta">{formatCzk(item.amountCzk)} · jednou za {item.frequencyYears} {item.frequencyYears === 1 ? 'rok' : item.frequencyYears >= 2 && item.frequencyYears <= 4 ? 'roky' : 'let'} · ročně {formatCzk(Math.round(item.amountCzk / item.frequencyYears))}</span>
+                <span className="independence-irregular-row__meta">{formatCzk(item.amountCzk)}, jednou za {item.frequencyYears} {item.frequencyYears === 1 ? 'rok' : item.frequencyYears >= 2 && item.frequencyYears <= 4 ? 'roky' : 'let'}</span>
+                <span className="independence-irregular-row__annual">ročně {formatCzk(Math.round(item.amountCzk / item.frequencyYears))}</span>
               </ListItemContent>
               <ListItemActions>
                 <Button type="button" variant="ghost" size="icon" aria-label={`Upravit ${item.name}`} onClick={() => setEditing(item)}><Pencil aria-hidden="true" /></Button>
@@ -222,7 +224,7 @@ function IrregularExpensesSection({ irregularExpenses, onChanged }: { irregularE
         </List>
       )}
       {editing ? <IrregularExpenseForm item={editing === 'new' ? null : editing} onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); onChanged() }} /> : null}
-    </section>
+    </Card>
   )
 }
 

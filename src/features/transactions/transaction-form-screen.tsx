@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Check, CircleAlert, Tag } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { DatePicker } from '../../components/ui/calendar'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { FormLoadError } from '../../components/form-load-error'
@@ -133,7 +134,7 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
     {status === 'error' ? <FormLoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
     {status !== 'error' ? <form className="transaction-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
       {submissionError ? <SubmissionError isEdit={Boolean(transaction)} message={submissionError} /> : null}
-      <section className="transaction-amount-panel" aria-label="Částka a typ transakce">
+      <Card aria-label="Částka a typ transakce" padding="none" className="transaction-amount-panel">
         <ToggleGroup type="single" value={values.direction} onValueChange={(next) => { if (next) changeDirection(next as CategoryDirection) }} className="transaction-direction" aria-label="Typ transakce">
           <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
           <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
@@ -146,7 +147,7 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
           </div>
           <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
         </Field>
-      </section>
+      </Card>
       <div className="transaction-primary-pickers">
         <Field invalid={Boolean(errors.categoryId)} className="transaction-primary-picker">
           <FieldLabel>Kategorie</FieldLabel>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ArrowRightLeft, CircleAlert } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { DatePicker } from '../../components/ui/calendar'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { FormLoadError } from '../../components/form-load-error'
@@ -126,7 +127,7 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
     {status === 'error' ? <FormLoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
     {status !== 'error' ? <form className="transaction-form transfer-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
       {submissionError ? <SubmissionError isEdit={Boolean(transfer)} message={submissionError} /> : null}
-      <section className="transaction-amount-panel transfer-amount-panel" aria-label="Částka převodu">
+      <Card aria-label="Částka převodu" padding="none" className="transaction-amount-panel transfer-amount-panel">
         <div className="transfer-amount-panel__heading"><ArrowRightLeft aria-hidden="true" /><span>Převáděná částka</span></div>
         <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
           <FieldLabel>Částka</FieldLabel>
@@ -136,7 +137,7 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
           </div>
           <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
         </Field>
-      </section>
+      </Card>
       <div className="transaction-primary-pickers transfer-wallet-pickers">
         <Field invalid={Boolean(errors.sourceWalletId)} className="transaction-primary-picker">
           <FieldLabel>Z peněženky</FieldLabel>

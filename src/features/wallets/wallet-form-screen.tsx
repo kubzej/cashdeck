@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { CircleAlert, Eye, EyeOff, Sparkles } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { ColorPicker } from '../../components/color-picker'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { ScreenHeader } from '../../components/screen-header'
@@ -146,7 +147,7 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
           <WalletTypePicker value={values.walletType} ariaLabel="Typ peněženky" onValueChange={(walletType) => setValues((current) => ({ ...current, walletType }))} />
         </fieldset>
         {showIndependenceFields ? (
-          <fieldset className="wallet-independence-field">
+          <Card render={<fieldset />} padding="none" className="wallet-independence-field">
             <legend><Sparkles aria-hidden="true" /> Nezávislost</legend>
             <Field>
               <FieldLabel>Počítá se do nezávislosti?</FieldLabel>
@@ -163,7 +164,7 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
               </ToggleGroup>
               <FieldDescription>Vypni, pokud jsou peníze zamčené (např. penzijní spoření před 60 lety).</FieldDescription>
             </Field> : null}
-          </fieldset>
+          </Card>
         ) : null}
         <Field invalid={Boolean(errors.openingBalanceCzk)}>
           <FieldLabel>Počáteční zůstatek</FieldLabel>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { BarChart3, CircleAlert, RefreshCw, Tags } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { EmptyState, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group'
@@ -83,10 +84,10 @@ function OverviewContent({ metrics, mode, onModeChange, onOpenTransactions }: { 
       <ToggleGroupItem value="cashflow">Cashflow</ToggleGroupItem>
     </ToggleGroup>
 
-    <section className="overview-hero" aria-label={primary.label}>
+    <Card aria-label={primary.label} padding="none" className="overview-hero">
       <strong className={`overview-hero__amount overview-hero__amount--${primary.tone}`}>{formatSignedMoney(primary.amountCzk, primary.signed)}</strong>
       <span>{primary.label}</span>
-    </section>
+    </Card>
 
     <section className="overview-chart-section" aria-labelledby="overview-chart-title">
       <div className="overview-section-heading"><div><h2 id="overview-chart-title">{mode === 'total' ? 'Vývoj bohatství' : 'Tok peněz'}</h2><p>{formatRange(metrics.range.dateFrom, metrics.range.dateTo)}</p></div></div>
@@ -110,11 +111,11 @@ function BreakdownSection({ title, emptyText, children }: { title: string; empty
 
 function CategoryBreakdown({ categories, mode, onOpenTransactions }: { categories: OverviewCategory[]; mode: OverviewMode; onOpenTransactions: (selection: OverviewSelection) => void }) {
   const maxAmount = Math.max(...categories.map((category) => category.amountCzk), 1)
-  return <><CategoryDonut categories={categories} /><div className="overview-breakdown-list">{categories.map((category) => <button type="button" className="overview-breakdown-row" key={category.id} onClick={() => onOpenTransactions({ type: 'category', id: category.id, name: category.name })}>
+  return <><CategoryDonut categories={categories} /><div className="overview-breakdown-list">{categories.map((category) => <Card render={<button type="button" onClick={() => onOpenTransactions({ type: 'category', id: category.id, name: category.name })} />} interactive padding="none" className="overview-breakdown-row" key={category.id}>
     <span className={`overview-breakdown-row__icon color-key--${category.colorKey}`}><CategoryIcon iconKey={category.iconKey as CategoryIconKey} colorKey={category.colorKey as CategoryColorKey} /></span>
     <span className="overview-breakdown-row__content"><span className="overview-breakdown-row__name">{category.name}</span><span className="overview-breakdown-row__meta">{formatTransactionCount(category.transactionCount)}</span><span className="overview-breakdown-row__bar"><i style={{ '--overview-bar-size': `${Math.max(5, category.amountCzk / maxAmount * 100)}%` } as CSSProperties} /></span></span>
     <strong className={category.direction === 'income' ? 'is-positive' : mode === 'total' ? 'is-negative' : 'is-negative'}>{category.direction === 'income' ? '+' : '-'}{formatCzk(category.amountCzk)}</strong>
-  </button>)}</div></>
+  </Card>)}</div></>
 }
 
 function CategoryDonut({ categories }: { categories: OverviewCategory[] }) {
@@ -127,7 +128,7 @@ function CategoryDonut({ categories }: { categories: OverviewCategory[] }) {
     return segment
   })
   const annotations = selectDonutAnnotations(segments)
-  return <div className="overview-category-donut" aria-label="Podíl kategorií">
+  return <Card aria-label="Podíl kategorií" padding="none" className="overview-category-donut">
     <div className="overview-category-donut__canvas">
       <svg viewBox="0 0 220 220" role="img" aria-label="Podíl všech kategorií v období">
         <circle className="overview-category-donut__track" cx="110" cy="110" r="45" />
@@ -148,7 +149,7 @@ function CategoryDonut({ categories }: { categories: OverviewCategory[] }) {
         <span className="overview-category-donut__percentage">{formatPercent(share)}</span>
       </div>)}
     </div>
-  </div>
+  </Card>
 }
 
 type DonutSegment = { category: OverviewCategory; share: number; offset: number }
@@ -174,11 +175,11 @@ function selectDonutAnnotations(segments: DonutSegment[]) {
 
 function LabelBreakdown({ labels, onOpenTransactions }: { labels: LabelDisplay[]; onOpenTransactions: (selection: OverviewSelection) => void }) {
   const maxAmount = Math.max(...labels.map((label) => label.magnitudeCzk), 1)
-  return <div className="overview-breakdown-list">{labels.map((label) => <button type="button" className="overview-breakdown-row" key={label.id} onClick={() => onOpenTransactions({ type: 'label', id: label.id, name: label.name })}>
+  return <div className="overview-breakdown-list">{labels.map((label) => <Card render={<button type="button" onClick={() => onOpenTransactions({ type: 'label', id: label.id, name: label.name })} />} interactive padding="none" className="overview-breakdown-row" key={label.id}>
     <span className="overview-breakdown-row__icon overview-breakdown-row__icon--label"><Tags aria-hidden="true" /></span>
     <span className="overview-breakdown-row__content"><span className="overview-breakdown-row__name">{label.name}</span><span className="overview-breakdown-row__meta">{formatLabelCount(label.transactionCount, label.transferCount)}</span><span className="overview-breakdown-row__bar"><i style={{ '--overview-bar-size': `${Math.max(5, label.magnitudeCzk / maxAmount * 100)}%` } as CSSProperties} /></span></span>
     <strong className={label.amountCzk > 0 ? 'is-positive' : 'is-negative'}>{formatSignedMoney(label.amountCzk, true)}</strong>
-  </button>)}</div>
+  </Card>)}</div>
 }
 
 function WealthChart({ points }: { points: OverviewMetrics['wealthSeries'] }) {
@@ -192,7 +193,7 @@ function WealthChart({ points }: { points: OverviewMetrics['wealthSeries'] }) {
   const activePoint = activeIndex === null ? null : points[activeIndex]
   const activeCoordinates = activeIndex === null ? null : parseChartCoordinates(coordinates[activeIndex])
 
-  return <div className="overview-chart"><div className="overview-chart__legend"><span>{formatCompactMoney(min)}</span><span>{formatCompactMoney(max)}</span></div><svg viewBox="0 0 300 148" role="img" aria-label="Vývoj celkového bohatství" onPointerDown={(event) => {
+  return <Card padding="none" className="overview-chart"><div className="overview-chart__legend"><span>{formatCompactMoney(min)}</span><span>{formatCompactMoney(max)}</span></div><svg viewBox="0 0 300 148" role="img" aria-label="Vývoj celkového bohatství" onPointerDown={(event) => {
     const bounds = event.currentTarget.getBoundingClientRect()
     const x = (event.clientX - bounds.left) / bounds.width * 300
     const closestIndex = coordinates.reduce((closest, coordinate, index) => Math.abs(parseChartCoordinates(coordinate).x - x) < Math.abs(parseChartCoordinates(coordinates[closest]).x - x) ? index : closest, 0)
@@ -204,7 +205,7 @@ function WealthChart({ points }: { points: OverviewMetrics['wealthSeries'] }) {
       return <circle key={points[index].date} className="overview-chart__point-hit" cx={x} cy={y} r="9" tabIndex={0} role="button" aria-label={`${formatTooltipDate(points[index].date)}: ${formatCzk(points[index].valueCzk)}`} onFocus={() => setActiveIndex(index)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActiveIndex(index) } }} />
     })}
     {activePoint && activeCoordinates ? <ChartSvgTooltip x={activeCoordinates.x} y={activeCoordinates.y} date={activePoint.date} value={formatCzk(activePoint.valueCzk)} /> : null}
-  </svg><div className="overview-chart__dates"><span>{formatChartDate(points[0].date)}</span><span>{formatChartDate(points.at(-1)?.date ?? points[0].date)}</span></div></div>
+  </svg><div className="overview-chart__dates"><span>{formatChartDate(points[0].date)}</span><span>{formatChartDate(points.at(-1)?.date ?? points[0].date)}</span></div></Card>
 }
 
 function FlowChart({ points, mode }: { points: OverviewMetrics['flowSeries']; mode: Exclude<OverviewMode, 'total'> }) {
@@ -213,11 +214,11 @@ function FlowChart({ points, mode }: { points: OverviewMetrics['flowSeries']; mo
   const values = points.map((point) => mode === 'income' ? point.incomeCzk : mode === 'expense' ? point.expenseCzk : point.incomeCzk - point.expenseCzk)
   const max = mode === 'cashflow' ? Math.max(...points.map((point) => point.incomeCzk), ...points.map((point) => point.expenseCzk), 1) : Math.max(...values.map((value) => Math.abs(value)), 1)
   const activePoint = activeIndex === null ? null : points[activeIndex]
-  return <div className="overview-flow-chart" aria-label="Graf peněžního toku">{activePoint && activeIndex !== null ? <ChartHtmlTooltip point={activePoint} mode={mode} index={activeIndex} count={points.length} /> : null}<div className={`overview-flow-chart__columns ${mode === 'cashflow' ? 'overview-flow-chart__columns--cashflow' : ''}`}>{points.map((point, index) => {
+  return <Card aria-label="Graf peněžního toku" padding="none" className="overview-flow-chart">{activePoint && activeIndex !== null ? <ChartHtmlTooltip point={activePoint} mode={mode} index={activeIndex} count={points.length} /> : null}<div className={`overview-flow-chart__columns ${mode === 'cashflow' ? 'overview-flow-chart__columns--cashflow' : ''}`}>{points.map((point, index) => {
     const value = values[index]
     if (mode === 'cashflow') return <button type="button" key={point.date} className="is-cashflow" aria-label={`${formatTooltipDate(point.date)}: příjmy ${formatCzk(point.incomeCzk)}, výdaje ${formatCzk(point.expenseCzk)}`} onClick={() => setActiveIndex(index)}><i className="overview-flow-chart__income" style={{ '--overview-flow-size': `${getBarSize(point.incomeCzk, max)}%` } as CSSProperties} /><i className="overview-flow-chart__expense" style={{ '--overview-flow-size': `${getBarSize(point.expenseCzk, max)}%` } as CSSProperties} /></button>
     return <button type="button" key={point.date} className={value < 0 ? 'is-negative' : mode === 'expense' ? 'is-negative' : 'is-positive'} aria-label={`${formatTooltipDate(point.date)}: ${formatFlowValue(value, mode)}`} onClick={() => setActiveIndex(index)}><i style={{ '--overview-flow-size': `${Math.max(5, Math.abs(value) / max * 100)}%` } as CSSProperties} /></button>
-  })}</div><div className="overview-chart__dates"><span>{formatChartDate(points[0].date)}</span><span>{formatChartDate(points.at(-1)?.date ?? points[0].date)}</span></div></div>
+  })}</div><div className="overview-chart__dates"><span>{formatChartDate(points[0].date)}</span><span>{formatChartDate(points.at(-1)?.date ?? points[0].date)}</span></div></Card>
 }
 
 function ChartSvgTooltip({ x, y, date, value }: { x: number; y: number; date: string; value: string }) {

@@ -72,3 +72,9 @@ constraints, not suggestions.
   repeated rows. Do not pack one area tightly while leaving the next one airy without a reason.
 - Repeated UI should align to a stable internal padding model. Avoid ad hoc one-off spacing fixes in
   the catalog when the primitive itself should own that rhythm.
+
+## 10. Metadata text
+
+- Never join unrelated facts on one line with a middle dot (`·`). It reads as noise, not structure.
+- Give each fact its own line (stacked spans), or rephrase with words, when a row needs more than
+  one piece of metadata (amount, frequency, a derived total, etc.).

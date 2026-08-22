@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { CircleAlert, Landmark, Search, Tags, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Skeleton } from '../../components/ui/skeleton'
 import { formatCzk } from '../../lib/format-czk'
@@ -51,7 +52,7 @@ export function SelectionSummaryCard({ filters, selection, search }: { filters: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metrics, selection?.type, selection?.id])
 
-  if (status === 'loading') return <div className="selection-summary selection-summary--loading" aria-label="Načítání přehledu výběru"><Skeleton className="h-10 w-10" /><div><Skeleton className="h-4 w-28" /><Skeleton className="mt-1 h-3 w-20" /></div></div>
+  if (status === 'loading') return <Card aria-label="Načítání přehledu výběru" padding="none" className="selection-summary selection-summary--loading"><Skeleton className="h-10 w-10" /><div><Skeleton className="h-4 w-28" /><Skeleton className="mt-1 h-3 w-20" /></div></Card>
   if (status === 'error') return <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Přehled se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setRetryKey((current) => current + 1)}>Zkusit znovu</Button></FeedbackStateActions></FeedbackState>
 
   const series = trend?.series ?? []
@@ -103,7 +104,7 @@ export function SelectionSummaryCard({ filters, selection, search }: { filters: 
 }
 
 function SummaryCard({ icon, colorKey, title, name, meta, amountCzk, delta, series, granularity }: { icon: ReactNode; colorKey?: string; title: string; name?: string; meta: string; amountCzk: number; delta: TrendDelta | null; series: OverviewSelectionTrend['series']; granularity: OverviewGranularity }) {
-  return <div className="selection-summary">
+  return <Card padding="none" className="selection-summary">
     <div className="selection-summary__header">
       <span className={`selection-summary__icon ${colorKey ? `color-key--${colorKey}` : ''}`.trim()}>{icon}</span>
       <span className="selection-summary__kicker">{title}</span>
@@ -115,7 +116,7 @@ function SummaryCard({ icon, colorKey, title, name, meta, amountCzk, delta, seri
     </div>
     <small className="selection-summary__meta">{meta}</small>
     {series.length > 1 ? <Sparkline points={series} granularity={granularity} /> : null}
-  </div>
+  </Card>
 }
 
 function TrendPill({ delta }: { delta: TrendDelta }) {

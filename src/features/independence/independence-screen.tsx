@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { CircleAlert, RefreshCw, Settings2, Sparkles } from 'lucide-react'
 import { Button } from '../../components/ui/button'
-
+import { Card, CardContent } from '../../components/ui/card'
 import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -61,14 +61,16 @@ export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => v
             <ProgressCard label="Dostupné" amountCzk={progress.availableWealthCzk} percent={progress.availableProgressPercent} years={progress.yearsToAvailable} />
           </div>
 
-          <section className="independence-target-card">
-            <span className="independence-target-card__label">Cílová částka</span>
-            <strong className="independence-target-card__amount">{formatCzk(progress.independenceNumberCzk)}</strong>
-            <span className="independence-target-card__meta">
-              roční náklady dnes: {formatCzk(progress.annualExpensesCzk)}
-              {progress.futureAnnualExpensesCzk !== null && progress.yearsToAvailable ? <> · za {formatYears(progress.yearsToAvailable)}: {formatCzk(progress.futureAnnualExpensesCzk)}</> : null}
-            </span>
-          </section>
+          <Card padding="sm" className="independence-target-card">
+            <CardContent className="independence-target-card__body">
+              <span className="independence-target-card__label">Cílová částka</span>
+              <strong className="independence-target-card__amount">{formatCzk(progress.independenceNumberCzk)}</strong>
+              <div className="independence-target-card__meta">
+                <span>roční náklady dnes: {formatCzk(progress.annualExpensesCzk)}</span>
+                {progress.futureAnnualExpensesCzk !== null && progress.yearsToAvailable ? <span>roční náklady za {formatYears(progress.yearsToAvailable)}: {formatCzk(progress.futureAnnualExpensesCzk)}</span> : null}
+              </div>
+            </CardContent>
+          </Card>
 
           {progress.wealthByType.length > 0 ? (
             <section className="independence-wealth-by-type" aria-label="Rozložení podle typu peněženky">
@@ -98,19 +100,23 @@ export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => v
 
 function WealthByTypeList({ entries, totalCzk }: { entries: IndependenceProgress['wealthByType']; totalCzk: number }) {
   return (
-    <ul className="independence-wealth-by-type__list">
-      {entries.map((entry) => {
-        const percent = totalCzk > 0 ? (entry.amountCzk / totalCzk) * 100 : 0
-        return (
-          <li key={entry.walletType} className="independence-wealth-by-type__item">
-            <WalletTypeIcon walletType={entry.walletType} className="independence-wealth-by-type__icon" />
-            <span className="independence-wealth-by-type__label">{walletTypeLabel(entry.walletType)}</span>
-            <span className="independence-wealth-by-type__amount">{formatCzk(entry.amountCzk)}</span>
-            <span className="independence-wealth-by-type__percent">{formatPercent(percent)}</span>
-          </li>
-        )
-      })}
-    </ul>
+    <Card padding="sm" className="independence-wealth-by-type__card">
+      <CardContent>
+        <ul className="independence-wealth-by-type__list">
+          {entries.map((entry) => {
+            const percent = totalCzk > 0 ? (entry.amountCzk / totalCzk) * 100 : 0
+            return (
+              <li key={entry.walletType} className="independence-wealth-by-type__item">
+                <WalletTypeIcon walletType={entry.walletType} className="independence-wealth-by-type__icon" />
+                <span className="independence-wealth-by-type__label">{walletTypeLabel(entry.walletType)}</span>
+                <span className="independence-wealth-by-type__amount">{formatCzk(entry.amountCzk)}</span>
+                <span className="independence-wealth-by-type__percent">{formatPercent(percent)}</span>
+              </li>
+            )
+          })}
+        </ul>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -120,10 +126,10 @@ function ReturnSensitivityList({ entries, ownReturnPercent }: { entries: Indepen
       {entries.map((entry) => {
         const isOwn = ownReturnPercent !== null && entry.realReturnPercent === ownReturnPercent
         return (
-          <li key={entry.realReturnPercent} className={`independence-sensitivity__item${isOwn ? ' independence-sensitivity__item--own' : ''}`}>
-            <span className="independence-sensitivity__rate">{entry.realReturnPercent} %{isOwn ? <span className="independence-sensitivity__own-tag">tvoje nastavení</span> : null}</span>
+          <Card key={entry.realReturnPercent} render={<li />} padding="none" className={`independence-sensitivity__item${isOwn ? ' independence-sensitivity__item--own' : ''}`}>
+            <span className="independence-sensitivity__rate">{entry.realReturnPercent} %</span>
             <span className="independence-sensitivity__years">{entry.yearsToTotal === null ? 'bez projekce' : entry.yearsToTotal === 0 ? 'už teď' : formatYears(entry.yearsToTotal)}</span>
-          </li>
+          </Card>
         )
       })}
     </ul>
@@ -133,13 +139,15 @@ function ReturnSensitivityList({ entries, ownReturnPercent }: { entries: Indepen
 function ProgressCard({ label, amountCzk, percent, years }: { label: string; amountCzk: number; percent: number; years: number | null }) {
   const clampedPercent = Math.max(0, Math.min(100, percent))
   return (
-    <section className="independence-progress-card">
-      <span className="independence-progress-card__label">{label}</span>
-      <strong className="independence-progress-card__amount">{formatCzk(amountCzk)}</strong>
-      <div className="independence-progress-card__bar"><i style={{ '--independence-progress-size': `${clampedPercent}%` } as CSSProperties} /></div>
-      <span className="independence-progress-card__percent">{formatPercent(percent)}</span>
-      <span className="independence-progress-card__years">{years === null ? 'bez projekce' : years === 0 ? 'už teď' : `za ${formatYears(years)} (cca ${targetYear(years)})`}</span>
-    </section>
+    <Card padding="sm" className="independence-progress-card">
+      <CardContent className="independence-progress-card__body">
+        <span className="independence-progress-card__label">{label}</span>
+        <strong className="independence-progress-card__amount">{formatCzk(amountCzk)}</strong>
+        <div className="independence-progress-card__bar"><i style={{ '--independence-progress-size': `${clampedPercent}%` } as CSSProperties} /></div>
+        <span className="independence-progress-card__percent">{formatPercent(percent)}</span>
+        <span className="independence-progress-card__years">{years === null ? 'bez projekce' : years === 0 ? 'už teď' : `za ${formatYears(years)} (cca ${targetYear(years)})`}</span>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -154,7 +162,7 @@ function WealthTrendChart({ points }: { points: Array<{ date: string; amountCzk:
   const activeCoordinates = activeIndex === null ? null : parseChartCoordinates(coordinates[activeIndex])
 
   return (
-    <div className="independence-wealth-trend__chart">
+    <Card padding="none" className="independence-wealth-trend__chart">
       <div className="independence-wealth-trend__legend"><span>{formatCzk(max)}</span><span>{formatCzk(min)}</span></div>
       <svg
         viewBox="0 0 300 148"
@@ -176,7 +184,7 @@ function WealthTrendChart({ points }: { points: Array<{ date: string; amountCzk:
         {activePoint && activeCoordinates ? <ChartSvgTooltip x={activeCoordinates.x} y={activeCoordinates.y} label={formatMonth(activePoint.date)} value={formatCzk(activePoint.amountCzk)} /> : null}
       </svg>
       <div className="independence-wealth-trend__dates"><span>{formatMonth(points[0].date)}</span><span>{formatMonth(points.at(-1)?.date ?? points[0].date)}</span></div>
-    </div>
+    </Card>
   )
 }
 

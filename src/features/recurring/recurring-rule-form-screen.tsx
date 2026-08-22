@@ -4,6 +4,7 @@ import { DeleteConfirmationDialog } from '../../components/delete-confirmation-d
 import { FormLoadError } from '../../components/form-load-error'
 import { ScreenHeader } from '../../components/screen-header'
 import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
 import { DatePicker } from '../../components/ui/calendar'
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
@@ -160,7 +161,7 @@ export function RecurringRuleFormScreen({ rule, onCancel, onSaved, onDeleted }: 
         <Input autoFocus value={values.name} maxLength={120} placeholder="Např. Nájem" onChange={(event) => { const name = event.currentTarget.value; setValues((current) => ({ ...current, name })) }} />
         <FieldError match={Boolean(errors.name)}>{errors.name}</FieldError>
       </Field>
-      <section className="transaction-amount-panel" aria-label="Částka a typ opakování">
+      <Card aria-label="Částka a typ opakování" padding="none" className="transaction-amount-panel">
         <ToggleGroup type="single" width="full" value={values.kind} disabled={Boolean(rule)} onValueChange={(value) => { if (value) setKind(value as RecurringRuleKind) }} className="transaction-direction" aria-label="Typ opakování">
           <ToggleGroupItem value="transaction"><ReceiptText aria-hidden="true" />Transakce</ToggleGroupItem>
           <ToggleGroupItem value="transfer"><ArrowRightLeft aria-hidden="true" />Převod</ToggleGroupItem>
@@ -175,7 +176,7 @@ export function RecurringRuleFormScreen({ rule, onCancel, onSaved, onDeleted }: 
           <div className="transaction-amount"><Input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={values.amountCzk} placeholder="0" aria-label="Částka v korunách" onKeyDown={createDecimalKeyBlocker(() => setErrors((current) => ({ ...current, amountCzk: DECIMAL_INPUT_ERROR })))} onChange={(event) => { const { value: amountCzk, error } = sanitizeAmountInput(event.currentTarget.value); setErrors((current) => ({ ...current, amountCzk: error })); setValues((current) => ({ ...current, amountCzk })) }} /><span>Kč</span></div>
           <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
         </Field>
-      </section>
+      </Card>
       {values.kind === 'transaction' ? <div className="transaction-primary-pickers">
         <Field invalid={Boolean(errors.categoryId)} className="transaction-primary-picker"><FieldLabel>Kategorie</FieldLabel>{status === 'loading' ? <Skeleton className="h-36 w-full" /> : <RecurringCategoryPicker categories={selectableCategories} selectedCategory={selectedCategory} onSelect={(categoryId) => setValues((current) => ({ ...current, categoryId }))} />}<FieldError match={Boolean(errors.categoryId)}>{errors.categoryId}</FieldError></Field>
         <Field invalid={Boolean(errors.walletId)} className="transaction-primary-picker"><FieldLabel>Peněženka</FieldLabel>{status === 'loading' ? <Skeleton className="h-36 w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={selectedWallet} placeholder="Vyber peněženku" onSelect={(walletId) => setValues((current) => ({ ...current, walletId }))} buttonClassName="transaction-primary-picker-button" />}<FieldError match={Boolean(errors.walletId)}>{errors.walletId}</FieldError></Field>
