@@ -134,11 +134,11 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
     {status === 'error' ? <FormLoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
     {status !== 'error' ? <form className="transaction-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
       {submissionError ? <SubmissionError isEdit={Boolean(transaction)} message={submissionError} /> : null}
-      <Card aria-label="Částka a typ transakce" padding="none" className="transaction-amount-panel">
-        <ToggleGroup type="single" value={values.direction} onValueChange={(next) => { if (next) changeDirection(next as CategoryDirection) }} className="transaction-direction" aria-label="Typ transakce">
-          <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
-          <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
-        </ToggleGroup>
+      <ToggleGroup type="single" value={values.direction} onValueChange={(next) => { if (next) changeDirection(next as CategoryDirection) }} width="full" className="transaction-direction" aria-label="Typ transakce">
+        <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
+        <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
+      </ToggleGroup>
+      <Card aria-label="Částka transakce" padding="none" className="transaction-amount-panel">
         <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
           <FieldLabel>Částka</FieldLabel>
           <div className="transaction-amount">

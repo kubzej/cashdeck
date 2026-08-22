@@ -161,16 +161,16 @@ export function RecurringRuleFormScreen({ rule, onCancel, onSaved, onDeleted }: 
         <Input autoFocus value={values.name} maxLength={120} placeholder="Např. Nájem" onChange={(event) => { const name = event.currentTarget.value; setValues((current) => ({ ...current, name })) }} />
         <FieldError match={Boolean(errors.name)}>{errors.name}</FieldError>
       </Field>
-      <Card aria-label="Částka a typ opakování" padding="none" className="transaction-amount-panel">
-        <ToggleGroup type="single" width="full" value={values.kind} disabled={Boolean(rule)} onValueChange={(value) => { if (value) setKind(value as RecurringRuleKind) }} className="transaction-direction" aria-label="Typ opakování">
-          <ToggleGroupItem value="transaction"><ReceiptText aria-hidden="true" />Transakce</ToggleGroupItem>
-          <ToggleGroupItem value="transfer"><ArrowRightLeft aria-hidden="true" />Převod</ToggleGroupItem>
-        </ToggleGroup>
-        {rule ? <p className="transaction-form-hint">Typ opakování nelze po vytvoření změnit — smaž pravidlo a založ nové.</p> : null}
-        {values.kind === 'transaction' ? <ToggleGroup type="single" width="full" value={values.direction} onValueChange={(value) => { if (value) setDirection(value as CategoryDirection) }} className="transaction-direction" aria-label="Směr transakce">
-          <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
-          <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
-        </ToggleGroup> : null}
+      <ToggleGroup type="single" width="full" value={values.kind} disabled={Boolean(rule)} onValueChange={(value) => { if (value) setKind(value as RecurringRuleKind) }} className="transaction-direction" aria-label="Typ opakování">
+        <ToggleGroupItem value="transaction"><ReceiptText aria-hidden="true" />Transakce</ToggleGroupItem>
+        <ToggleGroupItem value="transfer"><ArrowRightLeft aria-hidden="true" />Převod</ToggleGroupItem>
+      </ToggleGroup>
+      {rule ? <p className="transaction-form-hint">Typ opakování nelze po vytvoření změnit — smaž pravidlo a založ nové.</p> : null}
+      {values.kind === 'transaction' ? <ToggleGroup type="single" width="full" value={values.direction} onValueChange={(value) => { if (value) setDirection(value as CategoryDirection) }} className="transaction-direction" aria-label="Směr transakce">
+        <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
+        <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
+      </ToggleGroup> : null}
+      <Card aria-label="Částka opakování" padding="none" className="transaction-amount-panel">
         <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
           <FieldLabel>Částka</FieldLabel>
           <div className="transaction-amount"><Input type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={values.amountCzk} placeholder="0" aria-label="Částka v korunách" onKeyDown={createDecimalKeyBlocker(() => setErrors((current) => ({ ...current, amountCzk: DECIMAL_INPUT_ERROR })))} onChange={(event) => { const { value: amountCzk, error } = sanitizeAmountInput(event.currentTarget.value); setErrors((current) => ({ ...current, amountCzk: error })); setValues((current) => ({ ...current, amountCzk })) }} /><span>Kč</span></div>
