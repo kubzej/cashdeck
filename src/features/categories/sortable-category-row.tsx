@@ -15,7 +15,7 @@ export function SortableCategoryRow({ category, disabled, onSelect }: { category
   }
 
   return (
-    <ListItem render={<div ref={setNodeRef} style={style} />} role="listitem" variant="quiet" size="spacious" className="category-row surface-row" interactive onClick={() => onSelect(category)}>
+    <ListItem render={<div ref={setNodeRef} style={style} />} role="listitem" variant="quiet" size="compact" className="category-row surface-row" interactive onClick={() => onSelect(category)}>
       <CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} />
       <ListItemContent className="category-row__content">
         <ListItemTitle className="category-name">{category.name}</ListItemTitle>

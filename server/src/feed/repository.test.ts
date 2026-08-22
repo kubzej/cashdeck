@@ -10,7 +10,7 @@ const rowA = {
   wallet_id: 'wallet-1', wallet_name: 'Účet', category_id: 'category-1', category_name: 'Jídlo',
   category_icon_key: 'utensils', category_color_key: 'orange', direction: 'expense' as const,
   source_wallet_id: null, source_wallet_name: null, destination_wallet_id: null, destination_wallet_name: null,
-  adjustment_operation: null, labels: [],
+  adjustment_operation: null, recurring_rule_name: null, labels: [],
 }
 const rowB = {
   ...rowA,
@@ -54,6 +54,32 @@ test('two records sharing the same activity date and timestamp are still paginat
   // last 4 cursor params before the limit: activityDate, createdAt, kind, id
   const cursorValues = values.slice(-5, -1)
   expect(cursorValues).toEqual(['2026-08-21', sameTimestamp.toISOString(), 'transaction', rowA.id])
+})
+
+test('listFeed joins the recurring rule that generated a transaction or transfer, and maps its name through', async () => {
+  const query = vi.fn().mockResolvedValueOnce({
+    rows: [
+      { ...rowA, recurring_rule_name: 'HBO' },
+      { ...rowB, recurring_rule_name: 'Hypotéka' },
+    ],
+  })
+  const repository = createFeedRepository({ query } as unknown as Pool)
+
+  const page = await repository.listFeed('user-1', baseInput)
+
+  const normalized = String(query.mock.calls[0][0]).replace(/\s+/g, ' ')
+  expect(normalized).toContain('left join recurring_rule_occurrences occurrence')
+  expect(normalized).toContain('left join recurring_rules recurring_rule')
+  expect(page.items[0]).toMatchObject({ kind: 'transaction', recurringRuleName: 'HBO' })
+})
+
+test('a manually entered transaction with no originating recurring rule has a null recurringRuleName', async () => {
+  const query = vi.fn().mockResolvedValueOnce({ rows: [rowA] })
+  const repository = createFeedRepository({ query } as unknown as Pool)
+
+  const page = await repository.listFeed('user-1', baseInput)
+
+  expect(page.items[0]).toMatchObject({ recurringRuleName: null })
 })
 
 function encodeTestCursor() {

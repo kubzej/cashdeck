@@ -14,7 +14,7 @@ const config: ServerConfig = { databaseUrl: 'postgres://unused', frontendOrigin:
 function createRepository(): FeedRepository {
   return {
     listFeed: vi.fn().mockResolvedValue({
-      items: [{ kind: 'transaction', id: 'c00f7a6a-d0c1-4f08-9bd4-643415bef124', walletId, walletName: 'AirBank', categoryId: 'c00f7a6a-d0c1-4f08-9bd4-643415bef125', categoryName: 'Jídlo', categoryIconKey: 'utensils', categoryColorKey: 'orange', direction: 'expense', amountCzk: 250, transactionDate: '2026-08-20', note: null, labels: [] }],
+      items: [{ kind: 'transaction', id: 'c00f7a6a-d0c1-4f08-9bd4-643415bef124', walletId, walletName: 'AirBank', categoryId: 'c00f7a6a-d0c1-4f08-9bd4-643415bef125', categoryName: 'Jídlo', categoryIconKey: 'utensils', categoryColorKey: 'orange', direction: 'expense', amountCzk: 250, transactionDate: '2026-08-20', note: null, labels: [], recurringRuleName: null }],
       nextCursor: null,
     }),
     getBounds: vi.fn().mockResolvedValue({ earliestActivityDate: '2020-01-01' }),

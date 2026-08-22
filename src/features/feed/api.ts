@@ -2,8 +2,8 @@ import { apiRequest } from '../../lib/api-client'
 import type { Transaction } from '../transactions/api'
 import type { Transfer } from '../transfers/api'
 
-export type FeedTransaction = Transaction & { kind: 'transaction' }
-export type FeedTransfer = Transfer & { kind: 'transfer'; impactCzk: number }
+export type FeedTransaction = Transaction & { kind: 'transaction'; recurringRuleName: string | null }
+export type FeedTransfer = Transfer & { kind: 'transfer'; impactCzk: number; recurringRuleName: string | null }
 export type FeedBalanceAdjustment = {
   kind: 'balance_adjustment'
   id: string

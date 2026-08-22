@@ -50,8 +50,8 @@ export async function mockFeedApi(page: Page, source: FeedSource = [], { earlies
 
 export function feedItems(transactions: Transaction[] = [], transfers: Transfer[] = []): FeedItem[] {
   return [
-    ...transactions.map((transaction) => ({ kind: 'transaction' as const, ...transaction })),
-    ...transfers.map((transfer) => ({ kind: 'transfer' as const, ...transfer, impactCzk: 0 })),
+    ...transactions.map((transaction) => ({ kind: 'transaction' as const, recurringRuleName: null, ...transaction })),
+    ...transfers.map((transfer) => ({ kind: 'transfer' as const, recurringRuleName: null, ...transfer, impactCzk: 0 })),
   ].sort((left, right) => activityDate(right).localeCompare(activityDate(left)))
 }
 

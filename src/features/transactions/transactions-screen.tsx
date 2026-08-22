@@ -3,12 +3,12 @@ import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw, Scale } from 'luci
 import { Button } from '../../components/ui/button'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
-import { List, ListItem, ListItemActions, ListItemContent, ListItemLeading, ListItemTitle } from '../../components/ui/list'
+import { List, ListItem, ListItemActions, ListItemContent, ListItemDescription, ListItemLeading, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
 import { formatCzk } from '../../lib/format-czk'
 import { SEARCH_DEBOUNCE_MS } from '../../lib/search-debounce'
 import { CategoryIcon } from '../categories/category-icon'
-import { getFeedBounds, listFeed, type FeedBalanceAdjustment, type FeedItem, type FeedTransfer } from '../feed/api'
+import { getFeedBounds, listFeed, type FeedBalanceAdjustment, type FeedItem, type FeedTransaction, type FeedTransfer } from '../feed/api'
 import { createDefaultFeedFilters, FeedFilters, isNavigablePeriod, resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
 import { FeedPeriodPager } from '../feed/feed-period-pager'
 import { PlannedSummaryCard } from '../planned/planned-summary-card'
@@ -131,9 +131,9 @@ function TransactionRowSkeleton() {
   return <ListItem variant="quiet" size="default" className="transaction-row surface-row"><ListItemLeading><Skeleton shape="circle" /></ListItemLeading><ListItemContent><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-20" /></ListItemContent><ListItemActions><Skeleton className="h-4 w-14" /></ListItemActions></ListItem>
 }
 
-function TransactionRow({ transaction, onSelect }: { transaction: Transaction; onSelect: (transaction: Transaction) => void }) {
+function TransactionRow({ transaction, onSelect }: { transaction: FeedTransaction; onSelect: (transaction: Transaction) => void }) {
   const amount = formatCzk(transaction.amountCzk)
-  return <ListItem variant="quiet" size="default" interactive className="transaction-row surface-row" onClick={() => onSelect(transaction)}><ListItemLeading className={`transaction-row__category color-key--${transaction.categoryColorKey}`}><CategoryIcon iconKey={transaction.categoryIconKey} colorKey={transaction.categoryColorKey} /></ListItemLeading><ListItemContent><ListItemTitle><span>{transaction.categoryName}</span><span className="transaction-row__wallet">v {transaction.walletName}</span></ListItemTitle>{transaction.labels.length > 0 ? <div className="transaction-row__labels">{transaction.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transaction.note ? <p className="transaction-row__note">{transaction.note}</p> : null}</ListItemContent><ListItemActions><strong className={transaction.direction === 'income' ? 'transaction-row__amount transaction-row__amount--income' : 'transaction-row__amount transaction-row__amount--expense'}>{transaction.direction === 'income' ? '+' : '-'}{amount}</strong></ListItemActions></ListItem>
+  return <ListItem variant="quiet" size="default" interactive className="transaction-row surface-row" onClick={() => onSelect(transaction)}><ListItemLeading className={`transaction-row__category color-key--${transaction.categoryColorKey}`}><CategoryIcon iconKey={transaction.categoryIconKey} colorKey={transaction.categoryColorKey} /></ListItemLeading><ListItemContent><ListItemTitle><span>{transaction.categoryName}</span><span className="transaction-row__wallet">v {transaction.walletName}</span></ListItemTitle>{transaction.recurringRuleName ? <ListItemDescription className="transaction-row__recurring-name">{transaction.recurringRuleName}</ListItemDescription> : null}{transaction.labels.length > 0 ? <div className="transaction-row__labels">{transaction.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transaction.note ? <p className="transaction-row__note">{transaction.note}</p> : null}</ListItemContent><ListItemActions><strong className={transaction.direction === 'income' ? 'transaction-row__amount transaction-row__amount--income' : 'transaction-row__amount transaction-row__amount--expense'}>{transaction.direction === 'income' ? '+' : '-'}{amount}</strong></ListItemActions></ListItem>
 }
 
 function TransferRow({ transfer, onSelect }: { transfer: FeedTransfer; onSelect: (transfer: Transfer) => void }) {
@@ -141,7 +141,7 @@ function TransferRow({ transfer, onSelect }: { transfer: FeedTransfer; onSelect:
   const impact = transfer.impactCzk
   const amountClass = impact > 0 ? 'transfer-row__amount transaction-row__amount--income' : impact < 0 ? 'transfer-row__amount transaction-row__amount--expense' : 'transfer-row__amount'
   const amountPrefix = impact > 0 ? '+' : impact < 0 ? '-' : ''
-  return <ListItem variant="quiet" size="default" interactive className="transaction-row transfer-row surface-row" onClick={() => onSelect(transfer)}><ListItemLeading className="transfer-row__icon"><ArrowRightLeft aria-hidden="true" /></ListItemLeading><ListItemContent><ListItemTitle><span>Převod</span><span className="transaction-row__wallet">z {transfer.sourceWalletName} do {transfer.destinationWalletName}</span></ListItemTitle>{transfer.labels.length > 0 ? <div className="transaction-row__labels">{transfer.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transfer.note ? <p className="transaction-row__note">{transfer.note}</p> : null}</ListItemContent><ListItemActions><strong className={amountClass}>{amountPrefix}{amount}</strong></ListItemActions></ListItem>
+  return <ListItem variant="quiet" size="default" interactive className="transaction-row transfer-row surface-row" onClick={() => onSelect(transfer)}><ListItemLeading className="transfer-row__icon"><ArrowRightLeft aria-hidden="true" /></ListItemLeading><ListItemContent><ListItemTitle><span>Převod</span><span className="transaction-row__wallet">z {transfer.sourceWalletName} do {transfer.destinationWalletName}</span></ListItemTitle>{transfer.recurringRuleName ? <ListItemDescription className="transaction-row__recurring-name">{transfer.recurringRuleName}</ListItemDescription> : null}{transfer.labels.length > 0 ? <div className="transaction-row__labels">{transfer.labels.map((label) => <span key={label.id} className="transaction-row__label">{label.name}</span>)}</div> : null}{transfer.note ? <p className="transaction-row__note">{transfer.note}</p> : null}</ListItemContent><ListItemActions><strong className={amountClass}>{amountPrefix}{amount}</strong></ListItemActions></ListItem>
 }
 
 function BalanceAdjustmentRow({ adjustment }: { adjustment: FeedBalanceAdjustment }) {

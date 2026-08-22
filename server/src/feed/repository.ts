@@ -20,6 +20,7 @@ export type FeedTransaction = {
   transactionDate: string
   note: string | null
   labels: FeedLabel[]
+  recurringRuleName: string | null
 }
 
 export type FeedTransfer = {
@@ -34,6 +35,7 @@ export type FeedTransfer = {
   transferDate: string
   note: string | null
   labels: FeedLabel[]
+  recurringRuleName: string | null
 }
 
 export type FeedBalanceAdjustment = {
@@ -71,6 +73,7 @@ type FeedRow = {
   destination_wallet_id: string | null
   destination_wallet_name: string | null
   adjustment_operation: 'add' | 'subtract' | null
+  recurring_rule_name: string | null
   labels: unknown
 }
 
@@ -259,6 +262,7 @@ function feedSelect(transactionFilters: string, transferFilters: string, adjustm
     page.source_wallet_id, source_wallet.name as source_wallet_name,
     page.destination_wallet_id, destination_wallet.name as destination_wallet_name,
     page.adjustment_operation,
+    recurring_rule.name as recurring_rule_name,
     coalesce(
       json_agg(json_build_object('id', label.id, 'name', label.name) order by label.normalized_name asc, label.id asc)
         filter (where label.id is not null),
@@ -272,9 +276,13 @@ function feedSelect(transactionFilters: string, transferFilters: string, adjustm
   left join transaction_labels transaction_label on page.kind = 'transaction' and transaction_label.user_id = $1 and transaction_label.transaction_id = page.id
   left join transfer_labels transfer_label on page.kind = 'transfer' and transfer_label.user_id = $1 and transfer_label.transfer_id = page.id
   left join labels label on label.user_id = $1 and label.id = coalesce(transaction_label.label_id, transfer_label.label_id)
+  left join recurring_rule_occurrences occurrence on occurrence.user_id = $1
+    and ((page.kind = 'transaction' and occurrence.transaction_id = page.id) or (page.kind = 'transfer' and occurrence.transfer_id = page.id))
+  left join recurring_rules recurring_rule on recurring_rule.user_id = $1 and recurring_rule.id = occurrence.recurring_rule_id
   group by page.kind, page.id, page.activity_date, page.created_at, page.amount_czk, page.note,
     page.wallet_id, wallet.name, page.category_id, category.name, category.icon_key, category.color_key, category.direction,
-    page.source_wallet_id, source_wallet.name, page.destination_wallet_id, destination_wallet.name, page.adjustment_operation
+    page.source_wallet_id, source_wallet.name, page.destination_wallet_id, destination_wallet.name, page.adjustment_operation,
+    recurring_rule.name
   order by page.activity_date desc, page.created_at desc, page.kind desc, page.id desc`
 }
 
@@ -325,11 +333,11 @@ function toFeedItem(row: FeedRow, selectedWalletIds: string[] | null): FeedItem 
   }
   if (row.kind === 'transaction') {
     if (!row.wallet_id || !row.wallet_name || !row.category_id || !row.category_name || !row.category_icon_key || !row.category_color_key || !row.direction) throw new Error('Neúplný řádek transakce ve feedu.')
-    return { kind: 'transaction', id: row.id, walletId: row.wallet_id, walletName: row.wallet_name, categoryId: row.category_id, categoryName: row.category_name, categoryIconKey: row.category_icon_key, categoryColorKey: row.category_color_key, direction: row.direction, amountCzk: Number(row.amount_czk), transactionDate: row.activity_date, note: row.note, labels }
+    return { kind: 'transaction', id: row.id, walletId: row.wallet_id, walletName: row.wallet_name, categoryId: row.category_id, categoryName: row.category_name, categoryIconKey: row.category_icon_key, categoryColorKey: row.category_color_key, direction: row.direction, amountCzk: Number(row.amount_czk), transactionDate: row.activity_date, note: row.note, labels, recurringRuleName: row.recurring_rule_name }
   }
   if (!row.source_wallet_id || !row.source_wallet_name || !row.destination_wallet_id || !row.destination_wallet_name) throw new Error('Neúplný řádek převodu ve feedu.')
   const amountCzk = Number(row.amount_czk)
-  return { kind: 'transfer', id: row.id, sourceWalletId: row.source_wallet_id, sourceWalletName: row.source_wallet_name, destinationWalletId: row.destination_wallet_id, destinationWalletName: row.destination_wallet_name, amountCzk, impactCzk: calculateTransferImpactCzk({ amountCzk, sourceWalletId: row.source_wallet_id, destinationWalletId: row.destination_wallet_id, selectedWalletIds }), transferDate: row.activity_date, note: row.note, labels }
+  return { kind: 'transfer', id: row.id, sourceWalletId: row.source_wallet_id, sourceWalletName: row.source_wallet_name, destinationWalletId: row.destination_wallet_id, destinationWalletName: row.destination_wallet_name, amountCzk, impactCzk: calculateTransferImpactCzk({ amountCzk, sourceWalletId: row.source_wallet_id, destinationWalletId: row.destination_wallet_id, selectedWalletIds }), transferDate: row.activity_date, note: row.note, labels, recurringRuleName: row.recurring_rule_name }
 }
 
 function parseLabels(value: unknown): FeedLabel[] {
