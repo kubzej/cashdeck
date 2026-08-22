@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm typecheck && vite build",
-    "lint": "oxlint",
+    "lint": "oxlint && pnpm lint:css",
+    "lint:css": "stylelint \"src/**/*.css\"",
     "preview": "vite preview",
     "server:dev": "tsx watch server/src/main.ts",
     "server:build": "tsc -p server/tsconfig.json",
@@ -50,6 +51,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
+    "stylelint": "^17.14.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.20.5",
     "typescript": "~6.0.2",

@@ -159,7 +159,7 @@ function Calendar({
         <BaseButton
           data-slot="calendar-prev"
           type="button"
-          aria-label="Previous month"
+          aria-label="Předchozí měsíc"
           className="focus-ring inline-flex size-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
           onClick={() => updateMonth(addMonths(visibleMonth, -1))}
         >
@@ -175,7 +175,7 @@ function Calendar({
         <BaseButton
           data-slot="calendar-next"
           type="button"
-          aria-label="Next month"
+          aria-label="Následující měsíc"
           className="focus-ring inline-flex size-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
           onClick={() => updateMonth(addMonths(visibleMonth, 1))}
         >
