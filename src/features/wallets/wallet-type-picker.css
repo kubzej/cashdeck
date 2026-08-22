@@ -1,5 +1,7 @@
 .wallet-type-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; width: 100%; padding: 0; border-radius: 0; background: transparent; }
-.wallet-type-picker__choice { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; padding-inline: 0.75rem; }
+.wallet-type-picker__choice { display: flex; min-height: 3.25rem; align-items: center; justify-content: flex-start; gap: 0.5rem; border-radius: var(--radius-lg); background: var(--color-muted); padding-inline: 0.75rem; }
 .wallet-type-picker__choice svg { width: 1.125rem; height: 1.125rem; flex: 0 0 auto; color: var(--color-muted-foreground); }
+.wallet-type-picker__choice[data-pressed] { background: var(--color-card); box-shadow: 0 0.25rem 0.75rem color-mix(in oklab, var(--color-foreground) 8%, transparent); }
 .wallet-type-picker__choice[data-pressed] svg { color: var(--color-primary); }
-.wallet-type-picker__choice span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8125rem; }
+.wallet-type-picker__choice span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8125rem; color: var(--color-foreground); }
+.wallet-type-picker__choice[data-pressed] span { font-weight: 650; }
