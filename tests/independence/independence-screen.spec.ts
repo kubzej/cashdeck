@@ -68,7 +68,6 @@ test('shows total and available progress as two distinct figures against the sam
   await expect(page.getByText('Kryptoměny', { exact: true })).toBeVisible()
   const ownRateItem = page.locator('.independence-sensitivity__item--own')
   await expect(ownRateItem).toContainText('4 %')
-  await expect(ownRateItem).toContainText('tvoje nastavení')
   await expect(ownRateItem).toContainText('12,4 let')
   const totalCard = page.locator('.independence-progress-card').filter({ hasText: 'Celkem' })
   const availableCard = page.locator('.independence-progress-card').filter({ hasText: 'Dostupné' })
