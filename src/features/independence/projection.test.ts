@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { computeScenario, resolveScenarioTargetCzk } from './projection'
+import { computeCoastFire, computeScenario, resolveScenarioTargetCzk } from './projection'
 
 // Independent reimplementation of the compound-growth formula (not a copy of projection.ts's
 // internal valueAfterYears), used to cross-check the piecewise segmentation logic against a
@@ -170,4 +170,56 @@ test('resolveScenarioTargetCzk combines withdrawal rate, expense delta, and irre
   const fullAnnualExpensesCzk = independenceNumberCzk * (baseWithdrawalRatePercent / 100)
   const expected = Math.round((fullAnnualExpensesCzk - annualIrregularCzk) * 0.85 * (100 / 3.25))
   expect(target).toBe(expected)
+})
+
+const coastInput = {
+  startWealthCzk: 1_000_000,
+  targetCzk: 10_000_000,
+  realReturnPercent: 5,
+  monthlyContributionCzk: 20_000,
+  horizonYears: 25,
+}
+
+test('coastNumberTodayCzk matches the plain discounted-target formula', () => {
+  const { coastNumberTodayCzk } = computeCoastFire(coastInput)
+  const expected = coastInput.targetCzk / 1.05 ** coastInput.horizonYears
+  expect(coastNumberTodayCzk).toBeCloseTo(expected, 0)
+})
+
+test('reports already coasting when current wealth already clears the coast number', () => {
+  const result = computeCoastFire({ ...coastInput, startWealthCzk: coastInput.targetCzk / 1.05 ** coastInput.horizonYears + 1 })
+  expect(result.isCoastingAlready).toBe(true)
+  expect(result.yearsToCoast).toBe(0)
+})
+
+test('finds a future coast date when not coasting yet but contributions get there in time', () => {
+  const result = computeCoastFire(coastInput)
+  expect(result.isCoastingAlready).toBe(false)
+  expect(result.yearsToCoast).not.toBeNull()
+  expect(result.yearsToCoast!).toBeGreaterThan(0)
+  expect(result.yearsToCoast!).toBeLessThan(coastInput.horizonYears)
+  // At the coast date, accumulated wealth should just clear what's needed to coast the rest of the way.
+  const requiredAtCoastDate = coastInput.targetCzk / 1.05 ** (coastInput.horizonYears - result.yearsToCoast!)
+  expect(result.coastDateWealthCzk!).toBeGreaterThanOrEqual(requiredAtCoastDate - 1)
+})
+
+test('reports no coast date when contributions are too low to ever get there within the horizon', () => {
+  const result = computeCoastFire({ ...coastInput, monthlyContributionCzk: 0, startWealthCzk: 100_000 })
+  expect(result.isCoastingAlready).toBe(false)
+  expect(result.yearsToCoast).toBeNull()
+  expect(result.coastDateWealthCzk).toBeNull()
+})
+
+test('a higher monthly contribution reaches the coast date sooner', () => {
+  const lower = computeCoastFire({ ...coastInput, monthlyContributionCzk: 15_000 }).yearsToCoast
+  const higher = computeCoastFire({ ...coastInput, monthlyContributionCzk: 30_000 }).yearsToCoast
+  expect(lower).not.toBeNull()
+  expect(higher).not.toBeNull()
+  expect(higher!).toBeLessThan(lower!)
+})
+
+test('a longer horizon lowers the coast number needed today', () => {
+  const shortHorizon = computeCoastFire({ ...coastInput, horizonYears: 15 }).coastNumberTodayCzk
+  const longHorizon = computeCoastFire({ ...coastInput, horizonYears: 35 }).coastNumberTodayCzk
+  expect(longHorizon).toBeLessThan(shortHorizon)
 })

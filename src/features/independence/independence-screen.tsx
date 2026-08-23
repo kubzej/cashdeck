@@ -10,6 +10,7 @@ import { formatCzk } from '../../lib/format-czk'
 import { parseIsoDate } from '../../lib/prague-date'
 import { WalletTypeIcon, walletTypeLabel } from '../wallets/wallet-type-icon'
 import { getIndependenceProgress, getIndependenceSettings, getIndependenceWealthSeries, listIrregularExpenses, type IndependenceProgress, type IndependenceSettings } from './api'
+import { CoastFirePanel } from './coast-fire-panel'
 import { WhatIfPanel } from './whatif-panel'
 import './independence.css'
 
@@ -63,6 +64,7 @@ export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => v
           <TabsList>
             <TabsTrigger value="overview">Přehled</TabsTrigger>
             <TabsTrigger value="whatif">Kalkulačka</TabsTrigger>
+            <TabsTrigger value="coastFire">Coast FIRE</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -109,6 +111,17 @@ export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => v
           <TabsContent value="whatif">
             {settings ? (
               <WhatIfPanel totalWealthCzk={progress.totalWealthCzk} independenceNumberCzk={progress.independenceNumberCzk} annualIrregularCzk={annualIrregularCzk} settings={settings} />
+            ) : null}
+          </TabsContent>
+
+          <TabsContent value="coastFire">
+            {settings ? (
+              <CoastFirePanel
+                totalWealthCzk={progress.totalWealthCzk}
+                independenceNumberCzk={progress.independenceNumberCzk}
+                settings={settings}
+                defaultHorizonYears={Math.max(5, Math.ceil(progress.yearsToTotal ?? 30))}
+              />
             ) : null}
           </TabsContent>
         </Tabs>

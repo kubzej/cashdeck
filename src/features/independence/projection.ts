@@ -83,6 +83,62 @@ function sampleCheckpoints(checkpoints: ScenarioPoint[], pauseYears: number, ann
   return points
 }
 
+export type CoastFireInput = {
+  startWealthCzk: number
+  targetCzk: number
+  realReturnPercent: number
+  monthlyContributionCzk: number
+  horizonYears: number
+}
+
+export type CoastFireResult = {
+  isCoastingAlready: boolean
+  coastNumberTodayCzk: number
+  yearsToCoast: number | null
+  coastDateWealthCzk: number | null
+}
+
+// The "coast number" for a given point in time is how much wealth would need to already be sitting
+// there, growing untouched at realReturnRate for the years remaining until horizonYears, to reach
+// targetCzk with zero further contributions from that point on.
+function coastNumberAt(yearsFromNow: number, horizonYears: number, targetCzk: number, rate: number): number {
+  const remainingYears = horizonYears - yearsFromNow
+  if (remainingYears <= 0) return targetCzk
+  if (rate === 0) return targetCzk
+  return targetCzk / Math.pow(1 + rate, remainingYears)
+}
+
+// Finds the "coast date": the first point in time (given continued contributions until then) where
+// accumulated wealth first covers the shrinking coast-number requirement for the chosen horizon —
+// i.e. the point after which contributions could stop entirely and the target would still be reached
+// by horizonYears through growth alone.
+export function computeCoastFire(input: CoastFireInput): CoastFireResult {
+  const rate = input.realReturnPercent / 100
+  const annualContributionCzk = Math.max(0, input.monthlyContributionCzk) * 12
+  const coastNumberTodayCzk = coastNumberAt(0, input.horizonYears, input.targetCzk, rate)
+
+  if (input.startWealthCzk >= coastNumberTodayCzk) {
+    return { isCoastingAlready: true, coastNumberTodayCzk, yearsToCoast: 0, coastDateWealthCzk: input.startWealthCzk }
+  }
+
+  const wealthAt = (yearsFromNow: number) => valueAfterYears(input.startWealthCzk, yearsFromNow, annualContributionCzk, rate)
+  const differenceAt = (yearsFromNow: number) => wealthAt(yearsFromNow) - coastNumberAt(yearsFromNow, input.horizonYears, input.targetCzk, rate)
+
+  if (differenceAt(input.horizonYears) < 0) {
+    return { isCoastingAlready: false, coastNumberTodayCzk, yearsToCoast: null, coastDateWealthCzk: null }
+  }
+
+  let low = 0
+  let high = input.horizonYears
+  for (let iteration = 0; iteration < 60; iteration++) {
+    const mid = (low + high) / 2
+    if (differenceAt(mid) >= 0) high = mid
+    else low = mid
+  }
+  const yearsToCoast = Math.ceil(high * 10) / 10
+  return { isCoastingAlready: false, coastNumberTodayCzk, yearsToCoast, coastDateWealthCzk: wealthAt(yearsToCoast) }
+}
+
 function solveYearsToTarget(checkpoints: ScenarioPoint[], pauseYears: number, annualContributionCzk: number, rate: number, targetCzk: number): number | null {
   if (targetCzk <= 0 || checkpoints[0].amountCzk >= targetCzk) return 0
 
