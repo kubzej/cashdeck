@@ -19,6 +19,8 @@
 .independence-screen-loading { display: grid; gap: 0.75rem; }
 .independence-screen-feedback { margin-block: auto; }
 .independence-screen-content { display: grid; gap: 1rem; }
+.independence-screen-tabs [data-slot='tabs-list'] { width: 100%; }
+.independence-screen-tabs [data-slot='tabs-trigger'] { flex: 1; }
 .independence-progress-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
 .independence-progress-card__body { display: grid; gap: 0.375rem; }
 .independence-progress-card__label { color: var(--color-muted-foreground); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -56,3 +58,32 @@
 .independence-wealth-trend__tooltip rect { fill: var(--color-foreground); stroke: none; }
 .independence-wealth-trend__tooltip text { fill: var(--color-card); font-family: var(--font-mono); font-size: 8px; }
 .independence-wealth-trend__tooltip text + text { font-size: 9px; font-weight: 650; }
+
+.independence-whatif__body { display: grid; gap: 1rem; }
+.independence-whatif__summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; }
+.independence-whatif__summary-item { display: grid; gap: 0.25rem; }
+.independence-whatif__summary-item span { color: var(--color-muted-foreground); font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.independence-whatif__summary-item strong { color: var(--color-foreground); font-size: 0.875rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.independence-whatif__summary-item strong.is-positive { color: var(--color-positive); }
+.independence-whatif__summary-item strong.is-negative { color: var(--color-negative); }
+.independence-whatif__summary-item em { overflow: hidden; color: var(--color-muted-foreground); font-size: 0.6875rem; font-style: normal; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.independence-whatif__chart { display: grid; gap: 0.375rem; }
+.independence-whatif__chart-legend { display: flex; gap: 1rem; font-size: 0.6875rem; color: var(--color-muted-foreground); }
+.independence-whatif__chart-legend-item { display: flex; align-items: center; gap: 0.375rem; }
+.independence-whatif__chart-legend-item::before { content: ''; display: inline-block; width: 0.75rem; height: 0.1875rem; border-radius: var(--radius-full); }
+.independence-whatif__chart-legend-item--baseline::before { background: var(--color-muted-foreground); }
+.independence-whatif__chart-legend-item--scenario::before { background: var(--color-primary); }
+.independence-whatif__chart-scale { display: flex; justify-content: space-between; color: var(--color-muted-foreground); font-size: 0.6875rem; font-variant-numeric: tabular-nums; }
+.independence-whatif__chart svg { display: block; width: 100%; height: 8.75rem; overflow: visible; }
+.independence-whatif__chart-target { stroke-width: 1; stroke-dasharray: 3 4; }
+.independence-whatif__chart-target--baseline { stroke: var(--color-border); }
+.independence-whatif__chart-target--scenario { stroke: color-mix(in oklab, var(--color-primary) 55%, transparent); }
+.independence-whatif__chart-baseline { fill: none; stroke: var(--color-muted-foreground); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 5 5; }
+.independence-whatif__chart-scenario { fill: none; stroke: var(--color-primary); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.independence-whatif__chart-dates { display: flex; justify-content: space-between; color: var(--color-muted-foreground); font-size: 0.6875rem; }
+.independence-whatif__form { display: grid; gap: 0.875rem; border-top: 1px dashed var(--color-border); padding-top: 0.875rem; }
+.independence-whatif__group { display: grid; gap: 0.625rem; }
+.independence-whatif__group-label { color: var(--color-foreground); font-size: 0.8125rem; font-weight: 650; }
+.independence-whatif__switch-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-height: 2.75rem; }
+.independence-whatif__group-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; }
+.independence-whatif__group-hint { margin: 0; color: var(--color-muted-foreground); font-size: 0.75rem; line-height: 1.4; }

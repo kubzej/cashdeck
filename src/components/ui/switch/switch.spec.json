@@ -1,0 +1,39 @@
+{
+  "name": "Switch",
+  "import": "import { Switch } from \"@/components/ui/switch\"",
+  "description": "Instant on/off toggle, built on Base UI. Token-only.",
+  "props": {
+    "checked": {
+      "type": "boolean",
+      "description": "Controlled checked state. Use with onCheckedChange for a controlled switch."
+    },
+    "defaultChecked": {
+      "type": "boolean",
+      "default": "false",
+      "description": "Initial checked state for an uncontrolled switch."
+    },
+    "onCheckedChange": {
+      "type": "(checked: boolean, eventDetails) => void",
+      "description": "Called when the switch is toggled."
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": "false",
+      "description": "Ignores user interaction and dims the control."
+    },
+    "className": {
+      "type": "string",
+      "description": "Layout escape hatch only. Do not restyle color or thickness."
+    }
+  },
+  "forbidden": [
+    "Do not use Switch for a choice needing a submit action — pair with an explicit save action if the effect is not instant.",
+    "Do not use Switch for more than two mutually exclusive options — use ToggleGroup or Select instead.",
+    "Do not restyle color or track/thumb size via className.",
+    "Do not omit an adjacent visible label — Switch has no built-in label."
+  ],
+  "responsive": {
+    "note": "Pair Switch with a tappable label row (e.g. inside a list item) so the effective touch target reaches 44px, since the track itself is smaller."
+  },
+  "example": "<div className=\"flex items-center justify-between\">\n  <span>Zahrnout nepravidelné výdaje</span>\n  <Switch checked={value} onCheckedChange={setValue} />\n</div>"
+}

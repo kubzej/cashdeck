@@ -5,28 +5,32 @@ import { Card, CardContent } from '../../components/ui/card'
 import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Skeleton } from '../../components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { formatCzk } from '../../lib/format-czk'
 import { parseIsoDate } from '../../lib/prague-date'
 import { WalletTypeIcon, walletTypeLabel } from '../wallets/wallet-type-icon'
-import { getIndependenceProgress, getIndependenceSettings, getIndependenceWealthSeries, type IndependenceProgress } from './api'
+import { getIndependenceProgress, getIndependenceSettings, getIndependenceWealthSeries, listIrregularExpenses, type IndependenceProgress, type IndependenceSettings } from './api'
+import { WhatIfPanel } from './whatif-panel'
 import './independence.css'
 
 export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [progress, setProgress] = useState<IndependenceProgress | null>(null)
   const [series, setSeries] = useState<Array<{ date: string; amountCzk: number }>>([])
-  const [ownReturnPercent, setOwnReturnPercent] = useState<number | null>(null)
+  const [settings, setSettings] = useState<IndependenceSettings | null>(null)
+  const [annualIrregularCzk, setAnnualIrregularCzk] = useState(0)
   const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
     setStatus('loading')
-    Promise.all([getIndependenceProgress(), getIndependenceWealthSeries(), getIndependenceSettings()])
-      .then(([progressResult, seriesResult, settingsResult]) => {
+    Promise.all([getIndependenceProgress(), getIndependenceWealthSeries(), getIndependenceSettings(), listIrregularExpenses()])
+      .then(([progressResult, seriesResult, settingsResult, irregularResult]) => {
         if (controller.signal.aborted) return
         setProgress(progressResult)
         setSeries(seriesResult.points)
-        setOwnReturnPercent(settingsResult.settings?.expectedRealReturnPercent ?? null)
+        setSettings(settingsResult.settings)
+        setAnnualIrregularCzk(irregularResult.items.reduce((sum, item) => sum + item.amountCzk / item.frequencyYears, 0))
         setStatus('ready')
       })
       .catch(() => { if (!controller.signal.aborted) setStatus('error') })
@@ -55,44 +59,59 @@ export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => v
       ) : null}
 
       {status === 'ready' && progress && progress.hasSettings ? (
-        <div className="independence-screen-content">
-          <div className="independence-progress-grid">
-            <ProgressCard label="Celkem" amountCzk={progress.totalWealthCzk} percent={progress.totalProgressPercent} years={progress.yearsToTotal} />
-            <ProgressCard label="Dostupné" amountCzk={progress.availableWealthCzk} percent={progress.availableProgressPercent} years={progress.yearsToAvailable} />
-          </div>
+        <Tabs defaultValue="overview" className="independence-screen-tabs">
+          <TabsList>
+            <TabsTrigger value="overview">Přehled</TabsTrigger>
+            <TabsTrigger value="whatif">Kalkulačka</TabsTrigger>
+          </TabsList>
 
-          <Card padding="sm" className="independence-target-card">
-            <CardContent className="independence-target-card__body">
-              <span className="independence-target-card__label">Cílová částka</span>
-              <strong className="independence-target-card__amount">{formatCzk(progress.independenceNumberCzk)}</strong>
-              <div className="independence-target-card__meta">
-                <span>roční náklady dnes: {formatCzk(progress.annualExpensesCzk)}</span>
-                {progress.futureAnnualExpensesCzk !== null && progress.yearsToAvailable ? <span>roční náklady za {formatYears(progress.yearsToAvailable)}: {formatCzk(progress.futureAnnualExpensesCzk)}</span> : null}
+          <TabsContent value="overview">
+            <div className="independence-screen-content">
+              <div className="independence-progress-grid">
+                <ProgressCard label="Celkem" amountCzk={progress.totalWealthCzk} percent={progress.totalProgressPercent} years={progress.yearsToTotal} />
+                <ProgressCard label="Dostupné" amountCzk={progress.availableWealthCzk} percent={progress.availableProgressPercent} years={progress.yearsToAvailable} />
               </div>
-            </CardContent>
-          </Card>
 
-          {progress.wealthByType.length > 0 ? (
-            <section className="independence-wealth-by-type" aria-label="Rozložení podle typu peněženky">
-              <h2>Rozložení podle typu</h2>
-              <WealthByTypeList entries={progress.wealthByType} totalCzk={progress.totalWealthCzk} />
-            </section>
-          ) : null}
+              <Card padding="sm" className="independence-target-card">
+                <CardContent className="independence-target-card__body">
+                  <span className="independence-target-card__label">Cílová částka</span>
+                  <strong className="independence-target-card__amount">{formatCzk(progress.independenceNumberCzk)}</strong>
+                  <div className="independence-target-card__meta">
+                    <span>roční náklady dnes: {formatCzk(progress.annualExpensesCzk)}</span>
+                    {progress.futureAnnualExpensesCzk !== null && progress.yearsToAvailable ? <span>roční náklady za {formatYears(progress.yearsToAvailable)}: {formatCzk(progress.futureAnnualExpensesCzk)}</span> : null}
+                  </div>
+                </CardContent>
+              </Card>
 
-          {progress.returnSensitivity.length > 0 ? (
-            <section className="independence-sensitivity" aria-label="Citlivost cíle na očekávaný výnos">
-              <h2>Citlivost na výnos</h2>
-              <ReturnSensitivityList entries={progress.returnSensitivity} ownReturnPercent={ownReturnPercent} />
-            </section>
-          ) : null}
+              {progress.wealthByType.length > 0 ? (
+                <section className="independence-wealth-by-type" aria-label="Rozložení podle typu peněženky">
+                  <h2>Rozložení podle typu</h2>
+                  <WealthByTypeList entries={progress.wealthByType} totalCzk={progress.totalWealthCzk} />
+                </section>
+              ) : null}
 
-          {series.length > 1 ? (
-            <section className="independence-wealth-trend" aria-label="Vývoj investičního jmění za posledních 12 měsíců">
-              <h2>Vývoj investičního jmění</h2>
-              <WealthTrendChart points={series} />
-            </section>
-          ) : null}
-        </div>
+              {progress.returnSensitivity.length > 0 ? (
+                <section className="independence-sensitivity" aria-label="Citlivost cíle na očekávaný výnos">
+                  <h2>Citlivost na výnos</h2>
+                  <ReturnSensitivityList entries={progress.returnSensitivity} ownReturnPercent={settings?.expectedRealReturnPercent ?? null} />
+                </section>
+              ) : null}
+
+              {series.length > 1 ? (
+                <section className="independence-wealth-trend" aria-label="Vývoj investičního jmění za posledních 12 měsíců">
+                  <h2>Vývoj investičního jmění</h2>
+                  <WealthTrendChart points={series} />
+                </section>
+              ) : null}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="whatif">
+            {settings ? (
+              <WhatIfPanel totalWealthCzk={progress.totalWealthCzk} independenceNumberCzk={progress.independenceNumberCzk} annualIrregularCzk={annualIrregularCzk} settings={settings} />
+            ) : null}
+          </TabsContent>
+        </Tabs>
       ) : null}
     </section>
   )

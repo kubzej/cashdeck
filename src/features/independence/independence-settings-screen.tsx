@@ -183,6 +183,7 @@ export function IndependenceSettingsScreen({ onBack }: { onBack: () => void }) {
               <Field key={key} invalid={Boolean(errors[key])}>
                 <FieldLabel>{label} (měsíčně)</FieldLabel>
                 <Input type="text" inputMode="numeric" value={values[key]} onChange={(event) => { const value = event.currentTarget.value; setValues((current) => ({ ...current, [key]: value })) }} />
+                {key === 'reserveMonthlyCzk' ? <FieldDescription>Bezpečnostní polštář pro věci mimo ostatní kategorie nebo běžnou měsíční nejistotu v útratě. Počítá se stejně jako ostatní kategorie (× 12 ročně) — na jednorázové velké výdaje jednou za pár let použij Nepravidelné výdaje níže.</FieldDescription> : null}
                 <FieldError match={Boolean(errors[key])}>{errors[key]}</FieldError>
               </Field>
             ))}
