@@ -1,9 +1,10 @@
 import { Check } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group'
-import { colorKeys, colorLabels, type ColorKey } from '../lib/color-keys'
+import { colorKeys, type ColorKey } from '../../server/src/catalog'
+import { colorLabels } from '../lib/color-labels'
 import './color-picker.css'
 
-export { colorKeys, type ColorKey } from '../lib/color-keys'
+export { colorKeys, type ColorKey }
 
 export function ColorPicker({ value, onValueChange, ariaLabel }: { value: ColorKey; onValueChange: (colorKey: ColorKey) => void; ariaLabel: string }) {
   return (

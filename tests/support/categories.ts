@@ -1,11 +1,14 @@
-import { expect, type Page, type Route } from '@playwright/test'
+import { type Page, type Route } from '@playwright/test'
+
+import type { CategoryIconKey, ColorKey } from '../../server/src/catalog'
+import { rejectUnauthorized } from './authorization'
 
 export type CategoryFixture = {
   id: string
   name: string
   direction: 'expense' | 'income'
-  iconKey: string
-  colorKey: string
+  iconKey: CategoryIconKey
+  colorKey: ColorKey
   sortOrder: number
 }
 
@@ -27,7 +30,7 @@ export async function mockCategoriesApi(page: Page, initialCategories: CategoryF
   const failures = new Map<CategoryRequestMethod, QueuedCategoryApiFailure>()
 
   await page.route('http://api.test/api/categories**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
 
     const request = route.request()
     const pathname = new URL(request.url()).pathname
@@ -56,7 +59,7 @@ export async function mockCategoriesApi(page: Page, initialCategories: CategoryF
       const input = request.postDataJSON() as CategoryUpdateInput
       categories = categories.map((category) => category.id === categoryId ? { ...category, ...input } : category)
       const category = categories.find((item) => item.id === categoryId)
-      await route.fulfill(category ? json(category) : json({ message: 'Kategorie neexistuje.' }, 404))
+      await route.fulfill(category ? json(category) : json({ error: 'Kategorie neexistuje.' }, 404))
       return
     }
 
@@ -70,7 +73,7 @@ export async function mockCategoriesApi(page: Page, initialCategories: CategoryF
     if (request.method() === 'PUT') {
       const [, , , direction, order] = pathname.split('/')
       if (order !== 'order' || (direction !== 'expense' && direction !== 'income')) {
-        await route.fulfill(json({ message: `Nepodporované řazení kategorií: ${pathname}` }, 500))
+        await route.fulfill(json({ error: `Nepodporované řazení kategorií: ${pathname}` }, 500))
         return
       }
 
@@ -85,11 +88,11 @@ export async function mockCategoriesApi(page: Page, initialCategories: CategoryF
       return
     }
 
-    await route.fulfill(json({ message: `Nepodporovaný category požadavek: ${request.method()} ${pathname}` }, 500))
+    await route.fulfill(json({ error: `Nepodporovaný category požadavek: ${request.method()} ${pathname}` }, 500))
   })
 
   return {
-    categories(direction) {
+    categories(direction?: CategoryFixture['direction']) {
       return categories
         .filter((category) => direction === undefined || category.direction === direction)
         .map((category) => ({ ...category }))
@@ -122,6 +125,6 @@ async function fulfillFailure(route: Route, failures: Map<CategoryRequestMethod,
 
   if (failure.remaining <= 1) failures.delete(method)
   else failures.set(method, { ...failure, remaining: failure.remaining - 1 })
-  await route.fulfill(json({ message: failure.message }, failure.status))
+  await route.fulfill(json({ error: failure.message }, failure.status))
   return true
 }

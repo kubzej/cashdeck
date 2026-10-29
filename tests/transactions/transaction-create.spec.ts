@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { mockAuthAndApi, signIn } from '../support/auth'
-import { mockCategoriesApi } from '../support/categories'
+import { mockCategoriesApi, type CategoryFixture } from '../support/categories'
 import { mockLabelsApi } from '../support/labels'
 import { mockTransactionsApi } from '../support/transactions'
 import { mockTransfersApi } from '../support/transfers'
@@ -25,6 +25,9 @@ test('validates, creates a label inline, and retries a failed transaction creati
   await page.getByRole('textbox', { name: 'Částka', exact: true }).fill('1290')
   await page.getByRole('button', { name: 'Vyber kategorii' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Jídlo', exact: true }).click()
+  // Each error goes away as soon as its own field is fixed, not only on the next save.
+  await expect(page.getByText('Vyber kategorii.', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Zadej celý počet korun větší než nula.', { exact: true })).toHaveCount(0)
   await page.getByRole('textbox', { name: 'Hledat nebo vytvořit štítek' }).fill('slavia')
   await page.getByRole('button', { name: 'Vytvořit „slavia“' }).click()
   await expect(page.getByRole('button', { name: 'slavia' })).toHaveClass(/transaction-label-chip--selected/)
@@ -60,8 +63,39 @@ test('rejects a decimal point in the amount instead of silently merging the digi
   await expect(page.getByText('Zadej celé koruny bez desetinných míst.', { exact: true })).toBeVisible()
 
   await amount.fill('99.90')
+  await expect(amount).toHaveValue('99')
   await expect(page.getByText('Zadej celé koruny bez desetinných míst.', { exact: true })).toBeVisible()
   expect(transactionsApi.transactions()).toEqual([])
+})
+
+test('a pasted amount with a decimal comma never reaches the saved transaction as a different number', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page, [wallet])
+  await mockCategoriesApi(page, [expenseCategory])
+  await mockLabelsApi(page, [])
+  const transactionsApi = await mockTransactionsApi(page)
+  await mockTransfersApi(page)
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Přidat záznam' }).click()
+  await page.getByRole('button', { name: 'Transakce', exact: true }).click()
+  const amount = page.getByRole('textbox', { name: 'Částka', exact: true })
+  await amount.fill('250')
+  await amount.fill('99,90')
+  await expect(amount).toHaveValue('250')
+  await expect(page.getByText('Zadej celé koruny bez desetinných míst.', { exact: true })).toBeVisible()
+
+  await amount.fill('-40')
+  await expect(amount).toHaveValue('250')
+  await expect(page.getByText('Zadej částku bez znaménka.', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Vyber kategorii' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Jídlo', exact: true }).click()
+  await page.getByRole('button', { name: 'Uložit transakci' }).click()
+
+  await expect.poll(() => transactionsApi.transactions().length).toBe(1)
+  expect(transactionsApi.transactions()[0].amountCzk).toBe(250)
 })
 
 test('rejects a transaction date before the selected wallet was opened', async ({ page }) => {
@@ -87,4 +121,4 @@ test('rejects a transaction date before the selected wallet was opened', async (
 })
 
 const wallet = { id: 'wallet-1', name: 'Běžný účet', colorKey: 'teal', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 0, isHidden: false, openingBalanceLocked: false }
-const expenseCategory = { id: 'category-1', name: 'Jídlo', direction: 'expense' as const, iconKey: 'utensils', colorKey: 'orange', sortOrder: 0 }
+const expenseCategory: CategoryFixture = { id: 'category-1', name: 'Jídlo', direction: 'expense', iconKey: 'utensils', colorKey: 'orange', sortOrder: 0 }

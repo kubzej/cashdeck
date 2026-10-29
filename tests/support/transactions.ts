@@ -1,5 +1,6 @@
-import { expect, type Page, type Route } from '@playwright/test'
+import { type Page, type Route } from '@playwright/test'
 import type { CreateTransactionInput, Transaction } from '../../src/features/transactions/api'
+import { rejectUnauthorized } from './authorization'
 
 export type TransactionApiMock = {
   failNext: (method: TransactionRequestMethod, failure?: Partial<TransactionApiFailure>) => void
@@ -17,7 +18,7 @@ export async function mockTransactionsApi(page: Page, initialTransactions: Trans
   const failures = new Map<TransactionRequestMethod, QueuedTransactionApiFailure>()
 
   await page.route('http://api.test/api/transactions**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
 
     const request = route.request()
     const url = new URL(request.url())
@@ -51,7 +52,7 @@ export async function mockTransactionsApi(page: Page, initialTransactions: Trans
       const input = request.postDataJSON() as CreateTransactionInput
       const previous = transactions.find((transaction) => transaction.id === transactionId)
       if (!previous) {
-        await route.fulfill(json({ message: 'Transakce neexistuje.' }, 404))
+        await route.fulfill(json({ error: 'Transakce neexistuje.' }, 404))
         return
       }
       const transaction: Transaction = {
@@ -74,7 +75,7 @@ export async function mockTransactionsApi(page: Page, initialTransactions: Trans
       return
     }
 
-    await route.fulfill(json({ message: `Nepodporovaný transaction požadavek: ${request.method()} ${pathname}` }, 500))
+    await route.fulfill(json({ error: `Nepodporovaný transaction požadavek: ${request.method()} ${pathname}` }, 500))
   })
 
   return {
@@ -107,6 +108,6 @@ async function fulfillFailure(route: Route, failures: Map<TransactionRequestMeth
 
   if (failure.remaining <= 1) failures.delete(method)
   else failures.set(method, { ...failure, remaining: failure.remaining - 1 })
-  await route.fulfill(json({ message: failure.message }, failure.status))
+  await route.fulfill(json({ error: failure.message }, failure.status))
   return true
 }

@@ -4,8 +4,8 @@ import {
   DomainError,
   parseCalendarDate,
   parseUuid,
-  parseWholeCzk,
 } from '../management/domain.js'
+import { parseLabelIds, parseOptionalNote, parsePositiveAmount } from '../parsing.js'
 
 export type TransactionInput = {
   walletId: string
@@ -45,26 +45,4 @@ export function parseUpdateTransaction(body: unknown): TransactionUpdateInput {
 
   if (Object.keys(update).length === 0) throw new DomainError(400, 'Chybí změna transakce.')
   return update
-}
-
-function parsePositiveAmount(value: unknown) {
-  const amount = parseWholeCzk(value, 'Částka', { allowNegative: false })
-  if (amount <= 0) throw new DomainError(400, 'Částka musí být alespoň 1 Kč.')
-  return amount
-}
-
-function parseOptionalNote(value: unknown) {
-  if (value === null || value === undefined) return null
-  if (typeof value !== 'string') throw new DomainError(400, 'Poznámka musí být text.')
-  const note = value.trim()
-  if (!note) return null
-  if (note.length > 2000) throw new DomainError(400, 'Poznámka může mít nejvýše 2 000 znaků.')
-  return note
-}
-
-function parseLabelIds(value: unknown) {
-  if (!Array.isArray(value)) throw new DomainError(400, 'Štítky musí být seznam ID.')
-  const labelIds = value.map((labelId) => parseUuid(labelId, 'Štítek'))
-  if (labelIds.length !== new Set(labelIds).size) throw new DomainError(400, 'Štítky se nesmí opakovat.')
-  return labelIds
 }

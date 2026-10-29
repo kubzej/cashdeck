@@ -1,7 +1,5 @@
 import { expect, test } from 'vitest'
 import {
-  defaultCategories,
-  defaultCategorySeeds,
   DomainError,
   normalizeCategoryName,
   normalizeLabelName,
@@ -50,24 +48,10 @@ test('accepts every wallet type and rejects an unsupported one', () => {
   expect(() => parseWalletType(undefined)).toThrow(DomainError)
 })
 
-test('defines the agreed one-time default category set', () => {
-  expect(defaultCategories).toHaveLength(29)
-  expect(defaultCategories.filter((category) => category.direction === 'expense')).toHaveLength(22)
-  expect(defaultCategories.filter((category) => category.direction === 'income')).toHaveLength(7)
-  expect(defaultCategories.some((category) => category.name === 'Měsíční změny')).toBe(false)
-})
-
-test('allows the same visible name to exist once per direction, e.g. Dar as both an expense and an income category', () => {
-  const darCategories = defaultCategories.filter((category) => category.name === 'Dar')
-  expect(darCategories).toHaveLength(2)
-  expect(darCategories.map((category) => category.direction).sort()).toEqual(['expense', 'income'])
-  const seeds = defaultCategorySeeds()
-  const seededDarKeys = seeds.filter((seed) => seed.name === 'Dar').map((seed) => `${seed.direction}:${seed.name.toLowerCase()}`)
-  expect(new Set(seededDarKeys).size).toBe(seededDarKeys.length)
-})
-
-test('gives income and expense defaults independent manual order', () => {
-  const seeds = defaultCategorySeeds()
-  expect(seeds.filter((seed) => seed.direction === 'expense').map((seed) => seed.sortOrder)).toEqual([...Array(22).keys()])
-  expect(seeds.filter((seed) => seed.direction === 'income').map((seed) => seed.sortOrder)).toEqual([...Array(7).keys()])
+test('whole-CZK amounts are capped at 10 billion in either direction, so a typo cannot be saved', () => {
+  expect(parseWholeCzk(10_000_000_000, 'Částka', { allowNegative: false })).toBe(10_000_000_000)
+  expect(parseWholeCzk(-10_000_000_000, 'Počáteční zůstatek', { allowNegative: true })).toBe(-10_000_000_000)
+  expect(() => parseWholeCzk(10_000_000_001, 'Částka', { allowNegative: false })).toThrow('Částka je příliš velké číslo.')
+  expect(() => parseWholeCzk(-10_000_000_001, 'Počáteční zůstatek', { allowNegative: true })).toThrow(DomainError)
+  expect(() => parseWholeCzk(1_500_000_000_000_000, 'Částka', { allowNegative: false })).toThrow(DomainError)
 })

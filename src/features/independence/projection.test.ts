@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest'
-import { computeCoastFire, computeScenario, resolveScenarioTargetCzk } from './projection'
+import { expect, test, vi } from 'vitest'
+import { computeCoastFire, computeScenario, resolveScenarioTargetCzk, targetYear } from './projection'
 
 // Independent reimplementation of the compound-growth formula (not a copy of projection.ts's
 // internal valueAfterYears), used to cross-check the piecewise segmentation logic against a
@@ -222,4 +222,16 @@ test('a longer horizon lowers the coast number needed today', () => {
   const shortHorizon = computeCoastFire({ ...coastInput, horizonYears: 15 }).coastNumberTodayCzk
   const longHorizon = computeCoastFire({ ...coastInput, horizonYears: 35 }).coastNumberTodayCzk
   expect(longHorizon).toBeLessThan(shortHorizon)
+})
+
+test('targetYear adds the rounded number of years to the current calendar year', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-10-27T12:00:00+02:00'))
+  try {
+    expect(targetYear(0)).toBe(2026)
+    expect(targetYear(12.4)).toBe(2038)
+    expect(targetYear(12.6)).toBe(2039)
+  } finally {
+    vi.useRealTimers()
+  }
 })

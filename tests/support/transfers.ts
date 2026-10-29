@@ -1,12 +1,13 @@
-import { expect, type Page, type Route } from '@playwright/test'
+import { type Page, type Route } from '@playwright/test'
 import type { Transfer, TransferInput } from '../../src/features/transfers/api'
+import { rejectUnauthorized } from './authorization'
 
 export type TransferApiMock = {
   failNext: (method: TransferRequestMethod, failure?: Partial<TransferApiFailure>) => void
   transfers: () => Transfer[]
 }
 
-type TransferRequestMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+type TransferRequestMethod = 'POST' | 'PATCH' | 'DELETE'
 type TransferApiFailure = { status: number; message: string }
 type QueuedTransferApiFailure = TransferApiFailure & { remaining: number }
 
@@ -16,21 +17,11 @@ export async function mockTransfersApi(page: Page, initialTransfers: Transfer[] 
   const failures = new Map<TransferRequestMethod, QueuedTransferApiFailure>()
 
   await page.route('http://api.test/api/transfers**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
 
     const request = route.request()
-    const url = new URL(request.url())
-    const pathname = url.pathname
+    const pathname = new URL(request.url()).pathname
     if (await fulfillFailure(route, failures)) return
-
-    if (request.method() === 'GET' && pathname === '/api/transfers') {
-      const limit = Number(url.searchParams.get('limit') ?? '50')
-      const start = Number(url.searchParams.get('cursor')?.replace('cursor-', '') ?? '0')
-      const items = transfers.slice(start, start + limit)
-      const nextCursor = start + limit < transfers.length ? `cursor-${start + limit}` : null
-      await route.fulfill(json({ items, nextCursor }))
-      return
-    }
 
     if (request.method() === 'POST' && pathname === '/api/transfers') {
       const input = request.postDataJSON() as TransferInput
@@ -55,7 +46,7 @@ export async function mockTransfersApi(page: Page, initialTransfers: Transfer[] 
       const input = request.postDataJSON() as TransferInput
       const previous = transfers.find((transfer) => transfer.id === transferId)
       if (!previous) {
-        await route.fulfill(json({ message: 'Převod neexistuje.' }, 404))
+        await route.fulfill(json({ error: 'Převod neexistuje.' }, 404))
         return
       }
       const transfer: Transfer = { ...previous, ...input, labels: input.labelIds.map((id) => ({ id, name: id })) }
@@ -71,7 +62,7 @@ export async function mockTransfersApi(page: Page, initialTransfers: Transfer[] 
       return
     }
 
-    await route.fulfill(json({ message: `Nepodporovaný transfer požadavek: ${request.method()} ${pathname}` }, 500))
+    await route.fulfill(json({ error: `Nepodporovaný transfer požadavek: ${request.method()} ${pathname}` }, 500))
   })
 
   return {
@@ -92,6 +83,6 @@ async function fulfillFailure(route: Route, failures: Map<TransferRequestMethod,
   if (!failure) return false
 
   failures.delete(method)
-  await route.fulfill(json({ message: failure.message }, failure.status))
+  await route.fulfill(json({ error: failure.message }, failure.status))
   return true
 }

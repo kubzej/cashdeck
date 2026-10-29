@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { getPlannedRange, projectRecurringRules, summarizePlanned, type RecurringProjectionRule } from './domain.js'
+import { getPlannedRange, parsePlannedListQuery, projectRecurringRules, summarizePlanned, type RecurringProjectionRule } from './domain.js'
 
 const rule: RecurringProjectionRule = {
   id: 'rule-1', name: 'Nájem', kind: 'transaction', amountCzk: 23_000,
@@ -11,8 +11,8 @@ const rule: RecurringProjectionRule = {
 }
 
 test('keeps planned data strictly in the future', () => {
-  expect(getPlannedRange({ walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-31' }, '2026-08-20')).toEqual({ dateFrom: '2026-08-21', dateTo: '2026-08-31' })
-  expect(getPlannedRange({ walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-20' }, '2026-08-20')).toEqual({ dateFrom: '2026-08-21', dateTo: '2026-08-20' })
+  expect(getPlannedRange({ dateFrom: '2026-08-01', dateTo: '2026-08-31' }, '2026-08-20')).toEqual({ dateFrom: '2026-08-21', dateTo: '2026-08-31' })
+  expect(getPlannedRange({ dateFrom: '2026-08-01', dateTo: '2026-08-20' }, '2026-08-20')).toEqual({ dateFrom: '2026-08-21', dateTo: '2026-08-20' })
 })
 
 test('projects anchored monthly occurrences only within the selected future range', () => {
@@ -54,4 +54,12 @@ test('keeps exact category and label drill-down filters consistent for recurring
   expect(projectRecurringRules([rule, secondRule], { walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-31', categoryId: 'category-1' }, '2026-08-20')).toHaveLength(1)
   expect(projectRecurringRules([rule, secondRule], { walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-31', labelId: 'label-2' }, '2026-08-20')).toMatchObject([{ recurringRuleId: 'rule-3' }])
   expect(projectRecurringRules([rule, secondRule], { walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-31', categoryId: 'category-1', labelId: 'label-2' }, '2026-08-20')).toEqual([])
+})
+
+test('limits the projected range to two years ahead, ignoring any past part of the range', () => {
+  const today = '2026-10-27'
+  expect(parsePlannedListQuery({ dateFrom: '2026-10-28', dateTo: '2028-10-28' }, today).dateTo).toBe('2028-10-28')
+  expect(parsePlannedListQuery({ dateFrom: '2020-01-01', dateTo: '2028-10-28' }, today).dateTo).toBe('2028-10-28')
+  expect(() => parsePlannedListQuery({ dateFrom: '2026-10-28', dateTo: '2028-10-30' }, today)).toThrow('Naplánované lze zobrazit nejvýš na dva roky dopředu.')
+  expect(() => parsePlannedListQuery({ dateFrom: '2026-10-28', dateTo: '9999-12-31' }, today)).toThrow('Naplánované lze zobrazit nejvýš na dva roky dopředu.')
 })

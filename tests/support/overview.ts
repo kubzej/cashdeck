@@ -1,5 +1,6 @@
-import { expect, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
 import type { OverviewMetrics, OverviewSelectionTrend } from '../../src/features/overview/api'
+import { rejectUnauthorized } from './authorization'
 
 export const overviewFixture: OverviewMetrics = {
   range: { dateFrom: '2026-08-01', dateTo: '2026-08-21', earliestActivityDate: '2025-01-01', granularity: 'day' },
@@ -49,13 +50,13 @@ export async function mockOverviewApi(page: Page, fixture: OverviewMetrics = ove
   let queuedFailure: { status: number; message: string; target: 'overview' | 'selection' } | null = null
 
   await page.route('http://api.test/api/overview**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
     const url = new URL(route.request().url())
     const isSelection = url.pathname === '/api/overview/selection'
     if (queuedFailure && queuedFailure.target === (isSelection ? 'selection' : 'overview')) {
       const failure = queuedFailure
       queuedFailure = null
-      await route.fulfill({ contentType: 'application/json', status: failure.status, body: JSON.stringify({ message: failure.message }) })
+      await route.fulfill({ contentType: 'application/json', status: failure.status, body: JSON.stringify({ error: failure.message }) })
       return
     }
     if (isSelection) {

@@ -59,5 +59,5 @@ async function openTransferEdit(page: Parameters<typeof mockAuthAndApi>[0]): Pro
 const wallets = [
   { id: 'wallet-1', name: 'Běžný účet', colorKey: 'teal', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 0, isHidden: false, openingBalanceLocked: false },
   { id: 'wallet-2', name: 'Spoření', colorKey: 'blue', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 1, isHidden: false, openingBalanceLocked: false },
-  { id: 'wallet-3', name: 'Investice', colorKey: 'purple', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 2, isHidden: false, openingBalanceLocked: false },
+  { id: 'wallet-3', name: 'Investice', colorKey: 'violet', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 2, isHidden: false, openingBalanceLocked: false },
 ]

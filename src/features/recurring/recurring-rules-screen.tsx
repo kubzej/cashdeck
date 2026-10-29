@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
-import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, closestCenter, type DragEndEvent, type useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { CalendarClock, CircleAlert, Plus, RefreshCw } from 'lucide-react'
+import { CalendarClock, CircleAlert, Plus } from 'lucide-react'
+import { LoadError } from '../../components/load-error'
 import { Button } from '../../components/ui/button'
 import { ScreenHeader } from '../../components/screen-header'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
+import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
+import { useSortableList } from '../../lib/sortable-list'
 import { RecurringCostSummary } from './recurring-cost-summary'
 import { RecurringRuleFormScreen } from './recurring-rule-form-screen'
 import { SortableRecurringRuleRow } from './sortable-recurring-rule-row'
@@ -23,8 +25,10 @@ export function RecurringRulesScreen({ onBack }: { onBack: () => void }) {
   const [selectedRule, setSelectedRule] = useState<RecurringRule | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [reorderError, setReorderError] = useState<string | null>(null)
-  const [isReordering, setIsReordering] = useState(false)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const { sensors, isReordering, handleDragEnd: reorderByDrag } = useSortableList({
+    onStart: () => setReorderError(null),
+    onError: (error) => setReorderError(error instanceof Error ? error.message : 'Pořadí opakování se nepodařilo uložit.'),
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -51,27 +55,10 @@ export function RecurringRulesScreen({ onBack }: { onBack: () => void }) {
   }
 
   async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = rules.findIndex((rule) => rule.id === active.id)
-    const newIndex = rules.findIndex((rule) => rule.id === over.id)
-    if (oldIndex < 0 || newIndex < 0) return
-
-    const nextRules = [...rules]
-    const [movedRule] = nextRules.splice(oldIndex, 1)
-    nextRules.splice(newIndex, 0, movedRule)
-    setIsReordering(true)
-    setReorderError(null)
-
-    try {
+    await reorderByDrag(event, rules, async (nextRules) => {
       await reorderRecurringRules(nextRules.map((rule) => rule.id))
       setRules(nextRules)
-    } catch (error) {
-      setReorderError(error instanceof Error ? error.message : 'Pořadí opakování se nepodařilo uložit.')
-    } finally {
-      setIsReordering(false)
-    }
+    })
   }
 
   if (view === 'new') return <RecurringRuleFormScreen onCancel={() => setView('list')} onSaved={finishForm} />
@@ -109,7 +96,7 @@ function RecurringRulePanel({ rules, status, isReordering, sensors, onDragEnd, o
   onSelect: (rule: RecurringRule) => void
 }) {
   if (status === 'loading') return <div className="recurring-loading" aria-label="Načítání opakování"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
-  if (status === 'error') return <FeedbackState status="error" layout="panel" className="recurring-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Opakování se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={onRetry}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState>
+  if (status === 'error') return <LoadError title="Opakování se nepodařilo načíst" className="recurring-feedback" onRetry={onRetry} />
   if (rules.length === 0) return <EmptyState variant="quiet" size="lg" className="recurring-empty"><EmptyStateIcon><CalendarClock aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Bez opakování</EmptyStateTitle><EmptyStateDescription>Přidej pravidlo pro pravidelnou transakci nebo převod.</EmptyStateDescription></EmptyState>
 
   return <div className="recurring-list-section">

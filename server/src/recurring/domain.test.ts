@@ -12,7 +12,7 @@ test('parses a future recurring transaction rule and normalizes its text', () =>
     name: '  Nájem  ', kind: 'transaction', amountCzk: 18000, walletId, categoryId,
     note: '  Září  ', labelIds: [labelId], frequency: 'monthly', customIntervalDays: null,
     nextOccurrenceDate: '2026-09-18', endsOn: null,
-  }, '2026-08-20')).toEqual({
+  })).toEqual({
     name: 'Nájem', kind: 'transaction', amountCzk: 18000, walletId, categoryId,
     sourceWalletId: null, destinationWalletId: null, note: 'Září', labelIds: [labelId],
     frequency: 'monthly', customIntervalDays: null, nextOccurrenceDate: '2026-09-18', endsOn: null,
@@ -24,7 +24,7 @@ test('parses a recurring transfer with a custom day interval', () => {
     name: 'Přesun do rezervy', kind: 'transfer', amountCzk: 5000,
     sourceWalletId: walletId, destinationWalletId, note: null, labelIds: [],
     frequency: 'custom_days', customIntervalDays: 30, nextOccurrenceDate: '2026-08-20', endsOn: '2027-01-01',
-  }, '2026-08-20')).toMatchObject({
+  })).toMatchObject({
     kind: 'transfer', walletId: null, categoryId: null, sourceWalletId: walletId,
     destinationWalletId, frequency: 'custom_days', customIntervalDays: 30,
   })
@@ -35,7 +35,7 @@ test('allows the final occurrence on the end date', () => {
     name: 'Poslední splátka', kind: 'transaction', amountCzk: 1000, walletId, categoryId,
     note: null, labelIds: [], frequency: 'monthly', customIntervalDays: null,
     nextOccurrenceDate: '2026-08-20', endsOn: '2026-08-20',
-  }, '2026-08-20')
+  })
 
   expect(parsed.endsOn).toBe(parsed.nextOccurrenceDate)
 })
@@ -45,7 +45,7 @@ test('rejects a past next occurrence and malformed rule payloads', () => {
     name: 'Nájem', kind: 'transaction', amountCzk: 1, walletId, categoryId,
     frequency: 'monthly', customIntervalDays: null, nextOccurrenceDate: '2026-08-20', endsOn: null,
     ...overrides,
-  }, '2026-08-20')
+  })
 
   expect(() => create({ frequency: 'custom_days', customIntervalDays: 0 })).toThrow(DomainError)
   expect(() => create({ frequency: 'custom_days', customIntervalDays: null })).toThrow(DomainError)
@@ -66,5 +66,5 @@ test('a rule creation route must call assertForwardSchedule itself — parseRecu
     name: 'Nájem', kind: 'transaction', amountCzk: 1000, walletId, categoryId,
     note: null, labelIds: [], frequency: 'monthly', customIntervalDays: null,
     nextOccurrenceDate: '2026-09-20', endsOn: '2026-08-20',
-  }, '2026-08-21')).toMatchObject({ nextOccurrenceDate: '2026-09-20', endsOn: '2026-08-20' })
+  })).toMatchObject({ nextOccurrenceDate: '2026-09-20', endsOn: '2026-08-20' })
 })

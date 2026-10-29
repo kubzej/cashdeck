@@ -1,6 +1,11 @@
+// Repository tests run against a mocked `pg` pool: they check which queries and parameters the
+// repository sends and how it handles the rows it is handed (transactions, cache invalidation,
+// validation), never what Postgres would return. SQL correctness is not covered here.
+
 import type { Pool } from 'pg'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { resetWealthCacheForTests } from '../wealth-cache.js'
+import type { WalletType } from '../catalog.js'
 import { createIndependenceRepository } from './repository.js'
 
 beforeEach(() => resetWealthCacheForTests())
@@ -8,9 +13,9 @@ beforeEach(() => resetWealthCacheForTests())
 // Splits a total/available pair into two mock wallet_balances rows (one available_now, one
 // not), matching walletBalancesSql's new per-wallet-row shape.
 function walletBalanceRows(totalCzk: number, availableCzk: number) {
-  const rows = [{ wallet_type: 'investment' as const, available_now: true, current_balance_czk: String(availableCzk) }]
+  const rows: { wallet_type: WalletType; available_now: boolean; current_balance_czk: string }[] = [{ wallet_type: 'investment', available_now: true, current_balance_czk: String(availableCzk) }]
   const lockedCzk = totalCzk - availableCzk
-  if (lockedCzk > 0) rows.push({ wallet_type: 'pension' as const, available_now: false, current_balance_czk: String(lockedCzk) })
+  if (lockedCzk > 0) rows.push({ wallet_type: 'pension', available_now: false, current_balance_czk: String(lockedCzk) })
   return rows
 }
 
@@ -214,4 +219,28 @@ test('maps the wealth series rows and scopes the query to the user', async () =>
   expect(points).toEqual([{ date: '2025-09-01', amountCzk: 80_000 }, { date: '2025-10-01', amountCzk: 95_000 }])
   expect(query.mock.calls[0][1]).toEqual(['user-1'])
   expect(String(query.mock.calls[0][0])).toContain('counts_toward_independence')
+})
+
+test('getWealthSeries leaves future-dated activity out of the current month, matching the headline total', async () => {
+  const query = vi.fn().mockResolvedValue({ rows: [] })
+  const repository = createIndependenceRepository({ query } as unknown as Pool)
+
+  await repository.getWealthSeries('user-1')
+
+  const normalized = String(query.mock.calls[0][0]).replace(/\s+/g, ' ')
+  expect(normalized).toContain("(now() at time zone 'Europe/Prague')::date as today")
+  expect(normalized).toContain('and event_date <= (select today from bounds)')
+})
+
+test('hidden wallets are left out of independence wealth, like they are out of Overview wealth', async () => {
+  const query = vi.fn().mockResolvedValue({ rows: [] })
+  const repository = createIndependenceRepository({ query } as unknown as Pool)
+
+  await repository.getWealthSeries('user-1')
+  await repository.getProgress('user-1')
+
+  const statements = query.mock.calls.map(([sql]) => String(sql).replace(/\s+/g, ' '))
+  expect(statements.filter((sql) => sql.includes('counts_toward_independence and not'))).toHaveLength(2)
+  expect(statements.some((sql) => sql.includes('where user_id = $1 and counts_toward_independence and not is_hidden'))).toBe(true)
+  expect(statements.some((sql) => sql.includes('where w.user_id = $1 and w.counts_toward_independence and not w.is_hidden'))).toBe(true)
 })

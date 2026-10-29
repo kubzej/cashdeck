@@ -1,9 +1,11 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { CircleAlert, Mountain, RefreshCw, Settings2 } from 'lucide-react'
+import { Mountain, Settings2 } from 'lucide-react'
+import { LoadError } from '../../components/load-error'
+import { targetYear } from './projection'
+import { formatPercent, formatYears } from '../../lib/format'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent } from '../../components/ui/card'
 import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { formatCzk } from '../../lib/format-czk'
@@ -43,11 +45,7 @@ export function IndependenceScreen({ onOpenSettings }: { onOpenSettings: () => v
       {status === 'loading' ? <div className="independence-screen-loading" aria-label="Načítání nezávislosti"><Skeleton className="h-28 w-full" /><Skeleton className="h-16 w-full" /></div> : null}
 
       {status === 'error' ? (
-        <FeedbackState status="error" layout="panel" className="independence-screen-feedback">
-          <FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon>
-          <FeedbackStateContent><FeedbackStateTitle>Nezávislost se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent>
-          <FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions>
-        </FeedbackState>
+        <LoadError title="Nezávislost se nepodařilo načíst" className="independence-screen-feedback" onRetry={() => setReloadToken((current) => current + 1)} />
       ) : null}
 
       {status === 'ready' && progress && !progress.hasSettings ? (
@@ -142,7 +140,7 @@ function WealthByTypeList({ entries, totalCzk }: { entries: IndependenceProgress
                 <WalletTypeIcon walletType={entry.walletType} className="independence-wealth-by-type__icon" />
                 <span className="independence-wealth-by-type__label">{walletTypeLabel(entry.walletType)}</span>
                 <span className="independence-wealth-by-type__amount">{formatCzk(entry.amountCzk)}</span>
-                <span className="independence-wealth-by-type__percent">{formatPercent(percent)}</span>
+                <span className="independence-wealth-by-type__percent">{formatPercent(Math.max(0, percent))}</span>
               </li>
             )
           })}
@@ -176,7 +174,7 @@ function ProgressCard({ label, amountCzk, percent, years }: { label: string; amo
         <span className="independence-progress-card__label">{label}</span>
         <strong className="independence-progress-card__amount">{formatCzk(amountCzk)}</strong>
         <div className="independence-progress-card__bar"><i style={{ '--independence-progress-size': `${clampedPercent}%` } as CSSProperties} /></div>
-        <span className="independence-progress-card__percent">{formatPercent(percent)}</span>
+        <span className="independence-progress-card__percent">{formatPercent(Math.max(0, percent))}</span>
         <span className="independence-progress-card__years">{years === null ? 'bez projekce' : years === 0 ? 'už teď' : `za ${formatYears(years)} (cca ${targetYear(years)})`}</span>
       </CardContent>
     </Card>
@@ -241,20 +239,7 @@ function parseChartCoordinates(value: string) {
   return { x, y }
 }
 
-function formatPercent(value: number) {
-  return `${new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 1 }).format(Math.max(0, value))} %`
-}
-
-function formatYears(years: number) {
-  if (years < 1) return `${Math.round(years * 12)} měsíců`
-  const whole = Math.round(years * 10) / 10
-  return `${new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 1 }).format(whole)} let`
-}
-
 function formatMonth(value: string) {
   return new Intl.DateTimeFormat('cs-CZ', { month: 'short', year: 'numeric' }).format(parseIsoDate(value))
 }
 
-function targetYear(years: number) {
-  return new Date().getFullYear() + Math.round(years)
-}

@@ -1,8 +1,11 @@
 import type { Pool, PoolClient } from 'pg'
+import type { CategoryDirection } from '../catalog.js'
+import { withTransaction } from '../database.js'
 import { DomainError } from '../management/domain.js'
 import { assertForwardSchedule, type RecurringRuleInput, type RecurringRuleKind } from './domain.js'
 import { getNextOccurrenceDate, getPragueToday, isRecurringOccurrenceDue, isRecurringRuleEnded, type RecurringFrequency } from './schedule.js'
 import { invalidateWealthCache } from '../wealth-cache.js'
+import { parseLabels } from '../parsing.js'
 
 export type RecurringRuleLabel = { id: string; name: string }
 
@@ -17,7 +20,7 @@ export type RecurringRule = {
   categoryName: string | null
   categoryIconKey: string | null
   categoryColorKey: string | null
-  categoryDirection: 'income' | 'expense' | null
+  categoryDirection: CategoryDirection | null
   sourceWalletId: string | null
   sourceWalletName: string | null
   destinationWalletId: string | null
@@ -36,7 +39,7 @@ export type RecurringGenerationResult = {
   processedRules: number
   generatedTransactions: number
   generatedTransfers: number
-  failedRuleIds: string[]
+  failures: Array<{ ruleId: string; message: string }>
 }
 
 export type RecurringRuleRepository = {
@@ -59,7 +62,7 @@ type RuleRow = {
   category_name: string | null
   category_icon_key: string | null
   category_color_key: string | null
-  category_direction: 'income' | 'expense' | null
+  category_direction: CategoryDirection | null
   source_wallet_id: string | null
   source_wallet_name: string | null
   destination_wallet_id: string | null
@@ -102,7 +105,7 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
     },
 
     async createRule(userId, input, today = getPragueToday()) {
-      return withTransaction(pool, async (client) => {
+      const { rule, generated } = await withTransaction(pool, async (client) => {
         await assertLabelsExist(client, userId, input.labelIds)
         const created = await client.query<{ id: string }>(
           `with next_order as (
@@ -123,13 +126,15 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
         const ruleId = created.rows[0]?.id
         if (!ruleId) throw new Error('Vytvoření opakování nevrátilo ID.')
         await replaceRuleLabels(client, userId, ruleId, input.labelIds)
-        await materializeDueOccurrences(client, today, ruleId)
-        return requireRule(client, userId, ruleId)
+        const generation = await materializeDueOccurrences(client, today, ruleId)
+        return { rule: await requireRule(client, userId, ruleId), generated: generatedCount(generation) }
       })
+      if (generated > 0) invalidateWealthCache()
+      return rule
     },
 
     async updateRule(userId, ruleId, input, today = getPragueToday()) {
-      return withTransaction(pool, async (client) => {
+      const result = await withTransaction(pool, async (client) => {
         await assertLabelsExist(client, userId, input.labelIds)
         const current = await client.query<{ kind: RecurringRuleKind; next_occurrence_date: string; schedule_anchor_date: string; ends_on: string | null }>(
           `select kind,
@@ -142,7 +147,7 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
           [userId, ruleId],
         )
         const existing = current.rows[0]
-        if (!existing) return null
+        if (!existing) return { rule: null, generated: 0 }
         if (input.kind !== existing.kind) throw new DomainError(400, 'Typ opakování nelze po vytvoření změnit.')
 
         // Only re-validate the schedule as forward-looking when it's actually being changed.
@@ -181,11 +186,13 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
            returning id`,
           [userId, ruleId, ...ruleValues(userId, input).slice(1, -3), scheduleAnchorDate, input.nextOccurrenceDate, input.endsOn, status],
         )
-        if (!updated.rows[0]) return null
+        if (!updated.rows[0]) return { rule: null, generated: 0 }
         await replaceRuleLabels(client, userId, ruleId, input.labelIds)
-        if (status === 'active') await materializeDueOccurrences(client, today, ruleId)
-        return requireRule(client, userId, ruleId)
+        const generation = status === 'active' ? await materializeDueOccurrences(client, today, ruleId) : null
+        return { rule: await requireRule(client, userId, ruleId), generated: generation ? generatedCount(generation) : 0 }
       })
+      if (result.generated > 0) invalidateWealthCache()
+      return result.rule
     },
 
     async deleteRule(userId, ruleId) {
@@ -225,21 +232,25 @@ export function createRecurringRuleRepository(pool: Pool): RecurringRuleReposito
       // Each rule commits in its own transaction: one rule hitting an error (or the
       // per-run occurrence limit) must not roll back the occurrences already generated
       // and committed for every other rule in this run.
-      const result: RecurringGenerationResult = { processedRules: 0, generatedTransactions: 0, generatedTransfers: 0, failedRuleIds: [] }
+      const result: RecurringGenerationResult = { processedRules: 0, generatedTransactions: 0, generatedTransfers: 0, failures: [] }
       for (const { id: ruleId } of due.rows) {
         try {
           const ruleResult = await withTransaction(pool, (client) => materializeDueOccurrences(client, today, ruleId))
           result.processedRules += ruleResult.processedRules
           result.generatedTransactions += ruleResult.generatedTransactions
           result.generatedTransfers += ruleResult.generatedTransfers
-        } catch {
-          result.failedRuleIds.push(ruleId)
+        } catch (error) {
+          result.failures.push({ ruleId, message: error instanceof Error ? error.message : String(error) })
         }
       }
-      if (result.generatedTransactions > 0 || result.generatedTransfers > 0) invalidateWealthCache()
+      if (generatedCount(result) > 0) invalidateWealthCache()
       return result
     },
   }
+}
+
+function generatedCount(result: RecurringGenerationResult) {
+  return result.generatedTransactions + result.generatedTransfers
 }
 
 async function materializeDueOccurrences(client: PoolClient, today: string, ruleId: string | null = null) {
@@ -259,7 +270,7 @@ async function materializeDueOccurrences(client: PoolClient, today: string, rule
     [today, ruleId],
   )
 
-  const result: RecurringGenerationResult = { processedRules: 0, generatedTransactions: 0, generatedTransfers: 0, failedRuleIds: [] }
+  const result: RecurringGenerationResult = { processedRules: 0, generatedTransactions: 0, generatedTransfers: 0, failures: [] }
   for (const rule of dueRules.rows) {
     let nextOccurrenceDate = rule.next_occurrence_date
     let generatedForRule = 0
@@ -479,25 +490,4 @@ async function occurrenceAlreadyRecorded(client: PoolClient, userId: string, rul
     [userId, ruleId, occurrenceDate],
   )
   return result.rows[0]?.exists ?? false
-}
-
-function parseLabels(value: unknown): RecurringRuleLabel[] {
-  const labels = typeof value === 'string' ? JSON.parse(value) : value
-  if (!Array.isArray(labels)) return []
-  return labels.filter((label): label is RecurringRuleLabel => typeof label === 'object' && label !== null && 'id' in label && 'name' in label && typeof label.id === 'string' && typeof label.name === 'string')
-}
-
-async function withTransaction<T>(pool: Pool, callback: (client: PoolClient) => Promise<T>) {
-  const client = await pool.connect()
-  try {
-    await client.query('begin')
-    const result = await callback(client)
-    await client.query('commit')
-    return result
-  } catch (error) {
-    await client.query('rollback')
-    throw error
-  } finally {
-    client.release()
-  }
 }

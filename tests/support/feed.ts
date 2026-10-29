@@ -1,9 +1,14 @@
-import { expect, type Page, type Route } from '@playwright/test'
+import { type Page, type Route } from '@playwright/test'
 import type { FeedItem } from '../../src/features/feed/api'
 import type { Transaction } from '../../src/features/transactions/api'
 import type { Transfer } from '../../src/features/transfers/api'
+import { rejectUnauthorized } from './authorization'
 
-type FeedSource = FeedItem[] | (() => FeedItem[])
+// Fixtures may leave `recurringRuleName` out; the mock fills in `null` like the server does for a
+// one-off entry.
+type WithOptionalRule<Item> = Item extends unknown ? Omit<Item, 'recurringRuleName'> & { recurringRuleName?: string | null } : never
+type FeedFixture = WithOptionalRule<FeedItem>
+type FeedSource = FeedFixture[] | (() => FeedFixture[])
 type FeedApiFailure = { status: number; message: string }
 type QueuedFeedApiFailure = FeedApiFailure & { remaining: number }
 
@@ -14,13 +19,14 @@ export type FeedApiMock = {
 }
 
 export async function mockFeedApi(page: Page, source: FeedSource = [], { earliestActivityDate }: { earliestActivityDate?: string | null } = {}) {
-  const getItems = typeof source === 'function' ? source : () => source
+  const getFixtures = typeof source === 'function' ? source : () => source
+  const getItems = () => getFixtures().map((item) => ({ ...item, recurringRuleName: item.recurringRuleName ?? null }) as FeedItem)
   const requests: string[] = []
   const boundsRequests: string[] = []
   let queuedFailure: QueuedFeedApiFailure | null = null
 
   await page.route('http://api.test/api/feed**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
     const url = new URL(route.request().url())
     if (url.pathname === '/api/feed/bounds') {
       boundsRequests.push(url.toString())
@@ -63,6 +69,6 @@ async function fulfillFailure(route: Route, get: () => QueuedFeedApiFailure | nu
   const failure = get()
   if (!failure) return false
   clear()
-  await route.fulfill({ contentType: 'application/json', status: failure.status, body: JSON.stringify({ message: failure.message }) })
+  await route.fulfill({ contentType: 'application/json', status: failure.status, body: JSON.stringify({ error: failure.message }) })
   return true
 }

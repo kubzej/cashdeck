@@ -1,12 +1,9 @@
 import { apiRequest } from '../../lib/api-client'
-import { colorKeys, type ColorKey } from '../../lib/color-keys'
-import { categoryIconKeys, type CategoryIconKey } from '../../../server/src/management/category-catalog'
+import { categoryDirections, categoryIconKeys, colorKeys, type CategoryDirection, type CategoryIconKey, type ColorKey } from '../../../server/src/catalog'
 
-export const categoryDirections = ['expense', 'income'] as const
 export const categoryColorKeys = colorKeys
-export { categoryIconKeys }
+export { categoryDirections, categoryIconKeys, type CategoryDirection }
 
-export type CategoryDirection = (typeof categoryDirections)[number]
 export type CategoryColorKey = ColorKey
 export type { CategoryIconKey }
 

@@ -1,14 +1,17 @@
 import type { Pool } from 'pg'
+import type { CategoryDirection, OverviewSelectionType } from '../catalog.js'
 import { getPragueToday } from '../recurring/schedule.js'
+import { financialEventsCte } from '../sql/financial-events.js'
 import { withWealthCache } from '../wealth-cache.js'
-import { resolveOverviewGranularity, type OverviewGranularity, type OverviewInput, type OverviewSelectionInput } from './domain.js'
+import { assertOverviewBucketLimit, resolveOverviewGranularity, type OverviewGranularity, type OverviewInput, type OverviewSelectionInput } from './domain.js'
+import { escapeLikePattern } from '../parsing.js'
 
 export type OverviewCategory = {
   id: string
   name: string
   iconKey: string
   colorKey: string
-  direction: 'income' | 'expense'
+  direction: CategoryDirection
   amountCzk: number
   transactionCount: number
 }
@@ -48,7 +51,7 @@ type BoundsRow = { earliest_activity_date: string | null }
 type WealthAndSeriesRow = { wealth_czk: string; change_czk: string; series: Array<{ date: string; value_czk: number }> | string }
 type FlowRow = { income_czk: string; expense_czk: string }
 type FlowSeriesRow = { bucket_date: string; income_czk: string; expense_czk: string }
-type CategoryRow = { id: string; name: string; icon_key: string; color_key: string; direction: 'income' | 'expense'; amount_czk: string; transaction_count: string }
+type CategoryRow = { id: string; name: string; icon_key: string; color_key: string; direction: CategoryDirection; amount_czk: string; transaction_count: string }
 type LabelRow = { id: string; name: string; income_czk: string; expense_czk: string; transaction_count: string; transfer_impact_czk: string; transfer_count: string }
 
 function walletCacheKey(walletIds: string[] | null) {
@@ -60,26 +63,27 @@ export function createOverviewRepository(pool: Pool): OverviewRepository {
     async getOverview(userId, input) {
       const today = getPragueToday()
       const walletKey = walletCacheKey(input.walletIds)
-      const bounds = await withWealthCache(`overview:bounds:${userId}:${walletKey}`, () => pool.query<BoundsRow>(boundsSql(), [userId, input.walletIds, today]))
-      const earliestActivityDate = bounds.rows[0]?.earliest_activity_date ?? null
+      const bounds = await withWealthCache(`overview:bounds:${userId}:${walletKey}`, async () => (await pool.query<BoundsRow>(boundsSql(), [userId, input.walletIds, today])).rows)
+      const earliestActivityDate = bounds[0]?.earliest_activity_date ?? null
       const dateFrom = clampToToday(input.dateFrom ?? earliestActivityDate ?? today, today)
       const dateTo = clampToToday(input.dateTo ?? today, today)
       const granularity = resolveOverviewGranularity(input.period, dateFrom, dateTo)
+      assertOverviewBucketLimit(dateFrom, dateTo, granularity)
       // wealthAndSeriesSql only references $1-$4 — it must get exactly that many parameters, or
       // Postgres rejects the bind ("supplies N parameters, but prepared statement requires 4").
       // The search-aware queries reference $5 too, so they need their own, longer array.
       const parameters: unknown[] = [userId, input.walletIds, dateFrom, dateTo]
-      const searchParameters: unknown[] = [...parameters, input.search]
+      const searchParameters: unknown[] = [...parameters, input.search === null ? null : escapeLikePattern(input.search)]
 
-      const [wealthAndSeriesResult, flowResult, flowSeriesResult, categoryResult, labelResult] = await Promise.all([
-        withWealthCache(`overview:wealth:${userId}:${walletKey}:${dateFrom}:${dateTo}:${granularity}`, () => pool.query<WealthAndSeriesRow>(wealthAndSeriesSql(granularity), parameters)),
+      const [wealthAndSeriesRows, flowResult, flowSeriesResult, categoryResult, labelResult] = await Promise.all([
+        withWealthCache(`overview:wealth:${userId}:${walletKey}:${dateFrom}:${dateTo}:${granularity}`, async () => (await pool.query<WealthAndSeriesRow>(wealthAndSeriesSql(granularity), parameters)).rows),
         pool.query<FlowRow>(flowSql(), searchParameters),
         pool.query<FlowSeriesRow>(flowSeriesSql(granularity), searchParameters),
         pool.query<CategoryRow>(categoriesSql(), searchParameters),
         pool.query<LabelRow>(labelsSql(), searchParameters),
       ])
 
-      const wealthAndSeries = wealthAndSeriesResult.rows[0] ?? { wealth_czk: '0', change_czk: '0', series: [] }
+      const wealthAndSeries = wealthAndSeriesRows[0] ?? { wealth_czk: '0', change_czk: '0', series: [] }
       const wealthSeriesRows = typeof wealthAndSeries.series === 'string' ? JSON.parse(wealthAndSeries.series) : wealthAndSeries.series
       const flow = flowResult.rows[0] ?? { income_czk: '0', expense_czk: '0' }
       const incomeCzk = Number(flow.income_czk)
@@ -106,7 +110,12 @@ export function createOverviewRepository(pool: Pool): OverviewRepository {
     },
 
     async getSelectionTrend(userId, input) {
-      const parameters = [userId, input.walletIds, input.dateFrom, input.dateTo, input.id, input.search]
+      // Same cap as getOverview: the client usually sends the already-capped range from there,
+      // but the server must not count future-dated activity if it doesn't.
+      const today = getPragueToday()
+      const dateFrom = clampToToday(input.dateFrom, today)
+      const dateTo = clampToToday(input.dateTo, today)
+      const parameters = [userId, input.walletIds, dateFrom, dateTo, input.id, input.search === null ? null : escapeLikePattern(input.search)]
       const selectionFilter = selectionFilterSql(input.type)
 
       const [previousResult, seriesResult] = await Promise.all([
@@ -122,7 +131,7 @@ export function createOverviewRepository(pool: Pool): OverviewRepository {
   }
 }
 
-function selectionFilterSql(type: 'category' | 'label' | 'total') {
+function selectionFilterSql(type: OverviewSelectionType) {
   // Always true (id is always null for 'total') — but still references $5 with a cast, since
   // Postgres can't infer an unreferenced placeholder's type ("could not determine data type of
   // parameter $5") even though nothing here actually needs its value.
@@ -154,6 +163,33 @@ function transactionSearchFilterSql(searchParam: string) {
       join recurring_rules search_recurring_rule on search_recurring_rule.user_id = $1 and search_recurring_rule.id = search_occurrence.recurring_rule_id
       where search_occurrence.user_id = $1
         and search_occurrence.transaction_id = t.id
+        and search_recurring_rule.name ilike '%' || ${searchParam} || '%'
+    )
+  ))`
+}
+
+// Transfer counterpart of transactionSearchFilterSql: same semantics as the feed's transfer
+// search (wallet names, note, labels, generating recurring rule). Expects the `tr`,
+// `source_wallet` and `destination_wallet` aliases.
+function transferSearchFilterSql(searchParam: string) {
+  return `(${searchParam}::text is null or (
+    source_wallet.name ilike '%' || ${searchParam} || '%'
+    or destination_wallet.name ilike '%' || ${searchParam} || '%'
+    or coalesce(tr.note, '') ilike '%' || ${searchParam} || '%'
+    or exists (
+      select 1
+      from transfer_labels search_transfer_label
+      join labels search_label on search_label.user_id = $1 and search_label.id = search_transfer_label.label_id
+      where search_transfer_label.user_id = $1
+        and search_transfer_label.transfer_id = tr.id
+        and search_label.name ilike '%' || ${searchParam} || '%'
+    )
+    or exists (
+      select 1
+      from recurring_rule_occurrences search_occurrence
+      join recurring_rules search_recurring_rule on search_recurring_rule.user_id = $1 and search_recurring_rule.id = search_occurrence.recurring_rule_id
+      where search_occurrence.user_id = $1
+        and search_occurrence.transfer_id = tr.id
         and search_recurring_rule.name ilike '%' || ${searchParam} || '%'
     )
   ))`
@@ -230,31 +266,7 @@ function walletScope() {
 }
 
 function financialEvents() {
-  return `${walletScope()}, financial_events as materialized (
-    select opening_balance_date as event_date, opening_balance_czk::bigint as delta_czk
-    from wallet_scope
-    union all
-    select t.transaction_date, case c.direction when 'income' then t.amount_czk else -t.amount_czk end
-    from transactions t
-    join wallet_scope w on w.id = t.wallet_id
-    join categories c on c.user_id = t.user_id and c.id = t.category_id
-    where t.user_id = $1 and t.transaction_date >= w.opening_balance_date
-    union all
-    select tr.transfer_date, -tr.amount_czk
-    from transfers tr
-    join wallet_scope w on w.id = tr.source_wallet_id
-    where tr.user_id = $1 and tr.transfer_date >= w.opening_balance_date
-    union all
-    select tr.transfer_date, tr.amount_czk
-    from transfers tr
-    join wallet_scope w on w.id = tr.destination_wallet_id
-    where tr.user_id = $1 and tr.transfer_date >= w.opening_balance_date
-    union all
-    select adjustment_date, case operation when 'add' then amount_czk else -amount_czk end
-    from balance_adjustments adjustment
-    join wallet_scope w on w.id = adjustment.wallet_id
-    where adjustment.user_id = $1 and adjustment.adjustment_date >= w.opening_balance_date
-  )`
+  return `${walletScope()}, ${financialEventsCte}`
 }
 
 function boundsSql() {
@@ -388,8 +400,8 @@ function labelsSql() {
         0::bigint as transaction_count,
         coalesce(sum(
           case when $2::uuid[] is null then 0 else
-            case when source_scope.id is not null then -tr.amount_czk else 0 end
-            + case when destination_scope.id is not null then tr.amount_czk else 0 end
+            case when source_scope.id is not null and tr.transfer_date >= source_scope.opening_balance_date then -tr.amount_czk else 0 end
+            + case when destination_scope.id is not null and tr.transfer_date >= destination_scope.opening_balance_date then tr.amount_czk else 0 end
           end
         ), 0)::bigint as transfer_impact_czk,
         count(distinct tr.id)::bigint as transfer_count
@@ -402,7 +414,11 @@ function labelsSql() {
       join labels l on l.user_id = $1 and l.id = tl.label_id
       where tr.user_id = $1
         and tr.transfer_date between $3::date and $4::date
-        and ($2::uuid[] is null or source_scope.id is not null or destination_scope.id is not null)
+        and (
+          (source_scope.id is not null and tr.transfer_date >= source_scope.opening_balance_date)
+          or (destination_scope.id is not null and tr.transfer_date >= destination_scope.opening_balance_date)
+        )
+        and ${transferSearchFilterSql('$5')}
       group by l.id, l.name
     ),
     label_totals as (

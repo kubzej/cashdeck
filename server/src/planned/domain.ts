@@ -1,6 +1,8 @@
+import type { CategoryDirection, RecurringRuleKind } from '../catalog.js'
 import { calculateTransferImpactCzk } from '../feed/domain.js'
 import { asRecord, assertOnlyKeys, DomainError, parseCalendarDate, parseUuid } from '../management/domain.js'
 import { getNextOccurrenceDate, getPragueToday, type RecurringFrequency } from '../recurring/schedule.js'
+import { parseWalletIds } from '../parsing.js'
 
 export type PlannedLabel = { id: string; name: string }
 
@@ -16,7 +18,7 @@ export type PlannedTransaction = {
   categoryName: string
   categoryIconKey: string
   categoryColorKey: string
-  direction: 'income' | 'expense'
+  direction: CategoryDirection
   amountCzk: number
   transactionDate: string
   note: string | null
@@ -48,7 +50,7 @@ export type PlannedListResult = { items: PlannedItem[]; summary: PlannedSummary 
 export type RecurringProjectionRule = {
   id: string
   name: string
-  kind: 'transaction' | 'transfer'
+  kind: RecurringRuleKind
   amountCzk: number
   walletId: string | null
   walletName: string | null
@@ -56,7 +58,7 @@ export type RecurringProjectionRule = {
   categoryName: string | null
   categoryIconKey: string | null
   categoryColorKey: string | null
-  categoryDirection: 'income' | 'expense' | null
+  categoryDirection: CategoryDirection | null
   sourceWalletId: string | null
   sourceWalletName: string | null
   destinationWalletId: string | null
@@ -70,12 +72,19 @@ export type RecurringProjectionRule = {
   endsOn: string | null
 }
 
-export function parsePlannedListQuery(value: unknown): PlannedListInput {
+// Recurring rules are projected in memory, one item per occurrence; two years keeps even a
+// daily rule at ~730 items.
+const MAX_PLANNED_RANGE_DAYS = 731
+
+export function parsePlannedListQuery(value: unknown, today = getPragueToday()): PlannedListInput {
   const query = asRecord(value)
   assertOnlyKeys(query, ['walletIds', 'dateFrom', 'dateTo', 'categoryId', 'labelId'])
   const dateFrom = parseCalendarDate(query.dateFrom, 'Datum od')
   const dateTo = parseCalendarDate(query.dateTo, 'Datum do')
   if (dateFrom > dateTo) throw new DomainError(400, 'Datum od nesmí být po datu do.')
+  // Measured from the first projected day: the past part of a range never generates items.
+  const { dateFrom: projectedFrom } = getPlannedRange({ dateFrom, dateTo }, today)
+  if (dateTo > addDays(projectedFrom, MAX_PLANNED_RANGE_DAYS)) throw new DomainError(400, 'Naplánované lze zobrazit nejvýš na dva roky dopředu.')
   return {
     walletIds: query.walletIds === undefined ? null : parseWalletIds(query.walletIds),
     dateFrom,
@@ -85,7 +94,7 @@ export function parsePlannedListQuery(value: unknown): PlannedListInput {
   }
 }
 
-export function getPlannedRange(input: PlannedListInput, today = getPragueToday()) {
+export function getPlannedRange(input: Pick<PlannedListInput, 'dateFrom' | 'dateTo'>, today = getPragueToday()) {
   const firstFutureDate = addDays(today, 1)
   return { dateFrom: input.dateFrom > firstFutureDate ? input.dateFrom : firstFutureDate, dateTo: input.dateTo }
 }
@@ -168,15 +177,6 @@ function toProjectedItem(rule: RecurringProjectionRule, occurrenceDate: string, 
     impactCzk: calculateTransferImpactCzk({ amountCzk: rule.amountCzk, sourceWalletId: rule.sourceWalletId, destinationWalletId: rule.destinationWalletId, selectedWalletIds }),
     transferDate: occurrenceDate, note: rule.note, labels: rule.labels,
   }
-}
-
-function parseWalletIds(value: unknown) {
-  if (typeof value !== 'string' || !value) throw new DomainError(400, 'Výběr peněženek není platný.')
-  const walletIds = value.split(',')
-  if (walletIds.length > 50 || walletIds.some((walletId) => !walletId)) throw new DomainError(400, 'Výběr peněženek není platný.')
-  const parsed = walletIds.map((walletId) => parseUuid(walletId, 'Peněženka'))
-  if (new Set(parsed).size !== parsed.length) throw new DomainError(400, 'Výběr peněženek obsahuje duplicitu.')
-  return parsed
 }
 
 function addDays(value: string, amount: number) {

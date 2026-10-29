@@ -25,7 +25,7 @@ test('opens Transactions with the selected wallet prefiltered', async ({ page })
   await page.getByRole('listitem').filter({ hasText: wallet.name }).click()
 
   await expect(page.getByRole('heading', { name: 'Transakce' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Nastavit filtr účtů' })).toContainText(wallet.name)
+  await expect(page.getByRole('button', { name: 'Nastavit filtr peněženek' })).toContainText(wallet.name)
   await expect.poll(() => feedApi.requests().length).toBe(2)
   expect(feedApi.requests()[1].searchParams.get('walletIds')).toBe(wallet.id)
 })

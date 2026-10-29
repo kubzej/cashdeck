@@ -7,15 +7,10 @@ import {
   parseWholeCzk,
 } from '../management/domain.js'
 import { assertDifferentWallets } from '../transfers/domain.js'
-import { getPragueToday, type RecurringFrequency } from './schedule.js'
+import { MAX_NAME_LENGTH, recurringFrequencies, recurringRuleKinds, type RecurringFrequency, type RecurringRuleKind } from '../catalog.js'
 
-export const recurringRuleKinds = ['transaction', 'transfer'] as const
-export type RecurringRuleKind = (typeof recurringRuleKinds)[number]
-
-const recurringFrequencies: readonly RecurringFrequency[] = [
-  'daily', 'weekly', 'biweekly', 'monthly', 'every_two_months',
-  'every_three_months', 'semiannual', 'yearly', 'custom_days',
-]
+export { recurringRuleKinds, type RecurringRuleKind }
+import { parseLabelIds, parseOptionalNote, parsePositiveAmount } from '../parsing.js'
 
 export type RecurringRuleInput = {
   name: string
@@ -44,7 +39,7 @@ export function assertForwardSchedule(nextOccurrenceDate: string, endsOn: string
   }
 }
 
-export function parseRecurringRule(body: unknown, today = getPragueToday()): RecurringRuleInput {
+export function parseRecurringRule(body: unknown): RecurringRuleInput {
   const value = asRecord(body)
   assertOnlyKeys(value, [
     'name', 'kind', 'amountCzk', 'walletId', 'categoryId', 'sourceWalletId', 'destinationWalletId',
@@ -64,7 +59,7 @@ export function parseRecurringRule(body: unknown, today = getPragueToday()): Rec
     sourceWalletId: null,
     destinationWalletId: null,
     note: parseOptionalNote(value.note),
-    labelIds: parseLabelIds(value.labelIds),
+    labelIds: value.labelIds === undefined ? [] : parseLabelIds(value.labelIds),
     frequency: parseFrequency(value.frequency),
     customIntervalDays: parseCustomInterval(value.frequency, value.customIntervalDays),
     nextOccurrenceDate,
@@ -89,19 +84,13 @@ export function parseRecurringRule(body: unknown, today = getPragueToday()): Rec
   return input
 }
 
-export function parseRecurringRuleListQuery(value: unknown) {
-  const query = asRecord(value)
-  assertOnlyKeys(query, [])
-  return undefined
-}
-
 function parseKind(value: unknown): RecurringRuleKind {
   if (typeof value === 'string' && (recurringRuleKinds as readonly string[]).includes(value)) return value as RecurringRuleKind
   throw new DomainError(400, 'Typ opakování musí být transakce nebo převod.')
 }
 
 function parseFrequency(value: unknown): RecurringFrequency {
-  if (typeof value === 'string' && recurringFrequencies.includes(value as RecurringFrequency)) return value as RecurringFrequency
+  if (typeof value === 'string' && (recurringFrequencies as readonly string[]).includes(value)) return value as RecurringFrequency
   throw new DomainError(400, 'Frekvence opakování není podporovaná.')
 }
 
@@ -118,31 +107,8 @@ function parseCustomInterval(frequencyValue: unknown, value: unknown) {
 function parseName(value: unknown) {
   if (typeof value !== 'string') throw new DomainError(400, 'Název opakování je povinný.')
   const name = value.trim()
-  if (!name || name.length > 120) throw new DomainError(400, 'Název opakování musí mít 1 až 120 znaků.')
+  if (!name || name.length > MAX_NAME_LENGTH) throw new DomainError(400, `Název opakování musí mít 1 až ${MAX_NAME_LENGTH} znaků.`)
   return name
-}
-
-function parsePositiveAmount(value: unknown) {
-  const amount = parseWholeCzk(value, 'Částka', { allowNegative: false })
-  if (amount < 1) throw new DomainError(400, 'Částka musí být alespoň 1 Kč.')
-  return amount
-}
-
-function parseOptionalNote(value: unknown) {
-  if (value === null || value === undefined) return null
-  if (typeof value !== 'string') throw new DomainError(400, 'Poznámka musí být text.')
-  const note = value.trim()
-  if (!note) return null
-  if (note.length > 2000) throw new DomainError(400, 'Poznámka může mít nejvýše 2 000 znaků.')
-  return note
-}
-
-function parseLabelIds(value: unknown) {
-  if (value === undefined) return []
-  if (!Array.isArray(value)) throw new DomainError(400, 'Štítky musí být seznam ID.')
-  const labelIds = value.map((labelId) => parseUuid(labelId, 'Štítek'))
-  if (labelIds.length !== new Set(labelIds).size) throw new DomainError(400, 'Štítky se nesmí opakovat.')
-  return labelIds
 }
 
 function parseOptionalDate(value: unknown, field: string) {

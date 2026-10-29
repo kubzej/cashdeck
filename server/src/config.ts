@@ -7,24 +7,19 @@ export type ServerConfig = {
   databaseUrl: string
   frontendOrigin: string
   host: string
-  // Kept for a possible future revert — see the note on `sessionSigningSecret` below.
-  // No longer read by the active auth guard, so it's optional at boot.
-  neonAuthUrl?: string
   port: number
   recurringJobSecret?: string
   // Local passphrase-unlock auth, replacing Neon Auth's email/password sign-in as of
   // 2026-08-21: Neon Auth's session cookie doesn't survive in an installed iOS PWA
   // (standalone display mode) — https://github.com/neondatabase/neon/issues/12934.
-  // `src/lib/auth-client.ts` and the `@neondatabase/auth` dependency are kept in the repo
-  // in case that gets fixed and it's worth switching back.
   sessionSigningSecret: string
   appAccessPassphrase: string
   appUserId: string
 }
 
-export function loadConfig(): ServerConfig {
+export function loadConfig(envFile = path.join(serverRoot, '.env.local')): ServerConfig {
   try {
-    process.loadEnvFile(path.join(serverRoot, '.env.local'))
+    process.loadEnvFile(envFile)
   } catch (error: unknown) {
     if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') {
       throw error
@@ -36,11 +31,16 @@ export function loadConfig(): ServerConfig {
     throw new Error('DATABASE_URL is required in server/.env.local.')
   }
 
-  const neonAuthUrl = process.env.NEON_AUTH_URL?.replace(/\/+$/, '') || undefined
-
   const frontendOrigin = process.env.FRONTEND_ORIGIN
   if (!frontendOrigin) {
     throw new Error('FRONTEND_ORIGIN is required in server/.env.local.')
+  }
+  // CORS compares this string with the browser's Origin header, so it must be a bare origin.
+  // A typo or a trailing path would only show up later as a CORS error in the browser.
+  try {
+    if (new URL(frontendOrigin).origin !== frontendOrigin) throw new Error('not an origin')
+  } catch {
+    throw new Error('FRONTEND_ORIGIN must be an origin such as https://cashdeck.netlify.app (scheme and host, no path or trailing slash).')
   }
 
   const port = Number(process.env.PORT ?? 8000)
@@ -67,7 +67,6 @@ export function loadConfig(): ServerConfig {
     databaseUrl,
     frontendOrigin,
     host: process.env.HOST ?? '127.0.0.1',
-    neonAuthUrl,
     port,
     recurringJobSecret: parseRecurringJobSecret(process.env.RECURRING_JOB_SECRET),
     sessionSigningSecret,

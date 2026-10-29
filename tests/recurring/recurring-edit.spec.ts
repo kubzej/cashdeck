@@ -60,7 +60,7 @@ async function openRuleEditor(page: Parameters<typeof mockAuthAndApi>[0]): Promi
   await mockWalletsApi(page, wallets)
   await mockCategoriesApi(page, [
     { id: 'category-home', name: 'Domov', direction: 'expense', iconKey: 'house', colorKey: 'orange', sortOrder: 0 },
-    { id: 'category-subscription', name: 'Předplatné', direction: 'expense', iconKey: 'repeat-2', colorKey: 'purple', sortOrder: 1 },
+    { id: 'category-subscription', name: 'Předplatné', direction: 'expense', iconKey: 'repeat-2', colorKey: 'violet', sortOrder: 1 },
   ])
   await mockLabelsApi(page, [{ id: 'label-1', name: 'bydlení' }])
   await mockTransactionsApi(page)
@@ -77,7 +77,7 @@ async function openRuleEditor(page: Parameters<typeof mockAuthAndApi>[0]): Promi
 const rule = {
   id: 'rule-1', name: 'Nájem', kind: 'transaction' as const, amountCzk: 18000,
   walletId: wallets[0].id, walletName: wallets[0].name, categoryId: 'category-home', categoryName: 'Domov',
-  categoryIconKey: 'house', categoryColorKey: 'orange', categoryDirection: 'expense' as const,
+  categoryIconKey: 'house' as const, categoryColorKey: 'orange' as const, categoryDirection: 'expense' as const,
   sourceWalletId: null, sourceWalletName: null, destinationWalletId: null, destinationWalletName: null,
   note: 'Původní poznámka', labels: [{ id: 'label-1', name: 'bydlení' }], frequency: 'monthly' as const,
   customIntervalDays: null, nextOccurrenceDate: '2026-09-20', endsOn: '2026-12-20', status: 'active' as const,

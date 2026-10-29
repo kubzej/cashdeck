@@ -1,19 +1,22 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowRightLeft, CircleAlert } from 'lucide-react'
+import { ArrowRightLeft } from 'lucide-react'
+import { MAX_NOTE_LENGTH } from '../../../server/src/catalog'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { DatePicker } from '../../components/ui/calendar'
+import { AmountField } from '../../components/amount-field'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
-import { FormLoadError } from '../../components/form-load-error'
+import { FormSubmissionError } from '../../components/form-submission-error'
+import { LoadError } from '../../components/load-error'
 import { ScreenHeader } from '../../components/screen-header'
-import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { Label as FormLabel } from '../../components/ui/label'
 import { Skeleton } from '../../components/ui/skeleton'
-import { createDecimalKeyBlocker, DECIMAL_INPUT_ERROR, parsePositiveWholeCzk, sanitizeAmountInput } from '../../lib/amount-input'
+import { amountErrorMessage, parsePositiveWholeCzk } from '../../lib/amount-input'
 import { formatIsoDate, getPragueToday, parseIsoDate } from '../../lib/prague-date'
 import { InlineLabelPicker } from '../labels/inline-label-picker'
+import { mergeLabels } from '../labels/label-chips'
 import { listLabels, type Label } from '../labels/api'
 import { listWallets, type Wallet } from '../wallets/api'
 import { WalletPickerDialog } from '../wallets/wallet-picker-dialog'
@@ -82,7 +85,7 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
     if (!values.sourceWalletId) nextErrors.sourceWalletId = 'Vyber odkud peníze převádíš.'
     if (!values.destinationWalletId) nextErrors.destinationWalletId = 'Vyber kam peníze převádíš.'
     if (values.sourceWalletId && values.sourceWalletId === values.destinationWalletId) nextErrors.destinationWalletId = 'Vyber jinou cílovou peněženku.'
-    if (amountCzk === null) nextErrors.amountCzk = 'Zadej celý počet korun větší než nula.'
+    if (amountCzk === null) nextErrors.amountCzk = amountErrorMessage(values.amountCzk)
     if (!values.transferDate) nextErrors.transferDate = 'Vyber datum.'
     else if (transferMinDate && values.transferDate < transferMinDate) nextErrors.transferDate = 'Datum nemůže být před založením peněženky.'
     setErrors(nextErrors)
@@ -122,31 +125,24 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
       titleId="transfer-form-title"
       backLabel="Zpět na transakce"
       onBack={onCancel}
-      action={transfer ? <DeleteConfirmationDialog title="Smazat převod?" description="Tento převod bude trvale smazán." triggerLabel="Smazat převod" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+      action={transfer ? <DeleteConfirmationDialog title="Smazat převod?" description="Tento převod bude trvale smazán." triggerLabel="Smazat převod" isDeleting={isDeleting} error={deleteError} onConfirm={() => void handleDelete()} /> : undefined}
     />
-    {status === 'error' ? <FormLoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
+    {status === 'error' ? <LoadError title="Formulář se nepodařilo načíst" onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
     {status !== 'error' ? <form className="transaction-form transfer-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
-      {submissionError ? <SubmissionError isEdit={Boolean(transfer)} message={submissionError} /> : null}
+      {submissionError ? <FormSubmissionError subject="Převod" action={transfer ? 'edit' : 'save'} message={submissionError} /> : null}
       <Card aria-label="Částka převodu" padding="none" className="transaction-amount-panel transfer-amount-panel">
         <div className="transfer-amount-panel__heading"><ArrowRightLeft aria-hidden="true" /><span>Převáděná částka</span></div>
-        <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
-          <FieldLabel>Částka</FieldLabel>
-          <div className="transaction-amount">
-            <Input autoFocus type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={values.amountCzk} placeholder="0" aria-label="Částka v korunách" onKeyDown={createDecimalKeyBlocker(() => setErrors((current) => ({ ...current, amountCzk: DECIMAL_INPUT_ERROR })))} onChange={(event) => { const { value: amountCzk, error } = sanitizeAmountInput(event.currentTarget.value); setErrors((current) => ({ ...current, amountCzk: error })); setValues((current) => ({ ...current, amountCzk })) }} />
-            <span>Kč</span>
-          </div>
-          <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
-        </Field>
+        <AmountField autoFocus value={values.amountCzk} error={errors.amountCzk} onChange={(amountCzk) => setValues((current) => ({ ...current, amountCzk }))} onErrorChange={(amountCzk) => setErrors((current) => ({ ...current, amountCzk }))} />
       </Card>
       <div className="transaction-primary-pickers transfer-wallet-pickers">
         <Field invalid={Boolean(errors.sourceWalletId)} className="transaction-primary-picker">
           <FieldLabel>Z peněženky</FieldLabel>
-          {status === 'loading' ? <Skeleton className="h-[4.25rem] w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={sourceWallet} placeholder="Vyber zdroj" onSelect={(sourceWalletId) => setValues((current) => ({ ...current, sourceWalletId }))} buttonClassName="transaction-primary-picker-button" />}
+          {status === 'loading' ? <Skeleton className="h-17 w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={sourceWallet} placeholder="Vyber zdroj" onSelect={(sourceWalletId) => { setValues((current) => ({ ...current, sourceWalletId })); setErrors((current) => ({ ...current, sourceWalletId: undefined, destinationWalletId: values.destinationWalletId ? undefined : current.destinationWalletId, transferDate: undefined })) }} buttonClassName="transaction-primary-picker-button" />}
           <FieldError match={Boolean(errors.sourceWalletId)}>{errors.sourceWalletId}</FieldError>
         </Field>
         <Field invalid={Boolean(errors.destinationWalletId)} className="transaction-primary-picker">
           <FieldLabel>Do peněženky</FieldLabel>
-          {status === 'loading' ? <Skeleton className="h-[4.25rem] w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={destinationWallet} placeholder="Vyber cíl" onSelect={(destinationWalletId) => setValues((current) => ({ ...current, destinationWalletId }))} buttonClassName="transaction-primary-picker-button" />}
+          {status === 'loading' ? <Skeleton className="h-17 w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={destinationWallet} placeholder="Vyber cíl" onSelect={(destinationWalletId) => { setValues((current) => ({ ...current, destinationWalletId })); setErrors((current) => ({ ...current, destinationWalletId: undefined, transferDate: undefined })) }} buttonClassName="transaction-primary-picker-button" />}
           <FieldError match={Boolean(errors.destinationWalletId)}>{errors.destinationWalletId}</FieldError>
         </Field>
       </div>
@@ -154,21 +150,19 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
       <section className="transaction-details" aria-label="Další podrobnosti">
         <Field invalid={Boolean(errors.transferDate)}>
           <FieldLabel>Datum</FieldLabel>
-          <DatePicker className="transaction-date-picker" value={parseIsoDate(values.transferDate)} minDate={transferMinDate ? parseIsoDate(transferMinDate) : undefined} onValueChange={(date) => setValues((current) => ({ ...current, transferDate: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} />
+          <DatePicker className="transaction-date-picker" value={parseIsoDate(values.transferDate)} minDate={transferMinDate ? parseIsoDate(transferMinDate) : undefined} onValueChange={(date) => { setValues((current) => ({ ...current, transferDate: formatIsoDate(date) })); setErrors((current) => ({ ...current, transferDate: undefined })) }} locale="cs-CZ" startOfWeek={1} />
           <FieldError match={Boolean(errors.transferDate)}>{errors.transferDate}</FieldError>
         </Field>
         <Field>
           <FieldLabel>Poznámka</FieldLabel>
-          <Input value={values.note} placeholder="Volitelné" maxLength={2000} onChange={(event) => { const note = event.currentTarget.value; setValues((current) => ({ ...current, note })) }} />
+          <Input value={values.note} placeholder="Volitelné" maxLength={MAX_NOTE_LENGTH} onChange={(event) => { const note = event.currentTarget.value; setValues((current) => ({ ...current, note })) }} />
         </Field>
       </section>
       <Button type="submit" size="lg" className="transaction-form-submit" loading={isSubmitting} disabled={status === 'loading' || wallets.length < 2}>{transfer ? 'Uložit změny' : 'Uložit převod'}</Button>
       {wallets.length < 2 ? <p className="transaction-form-hint">Pro převod potřebuješ alespoň dvě peněženky.</p> : null}
-      {transfer && deleteError ? <SubmissionError isDelete message={deleteError} /> : null}
+      {transfer && deleteError ? <FormSubmissionError subject="Převod" action="delete" message={deleteError} /> : null}
     </form> : null}
   </section>
 }
 
-function SubmissionError({ message, isEdit = false, isDelete = false }: { message: string; isEdit?: boolean; isDelete?: boolean }) { return <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>{isDelete ? 'Převod se nepodařilo smazat' : `Převod se nepodařilo ${isEdit ? 'upravit' : 'uložit'}`}</FeedbackStateTitle><FeedbackStateDescription>{message}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> }
 function initialValues(transfer?: Transfer): TransferFormValues { return { sourceWalletId: transfer?.sourceWalletId ?? '', destinationWalletId: transfer?.destinationWalletId ?? '', amountCzk: transfer ? String(transfer.amountCzk) : '', transferDate: transfer?.transferDate ?? getPragueToday(), note: transfer?.note ?? '', labelIds: transfer?.labels.map((label) => label.id) ?? [] } }
-function mergeLabels(selected: Transfer['labels'], recent: Label[]) { return [...selected, ...recent.filter((recentLabel) => !selected.some((selectedLabel) => selectedLabel.id === recentLabel.id))].slice(0, 8) }

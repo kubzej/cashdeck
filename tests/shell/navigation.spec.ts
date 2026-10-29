@@ -4,11 +4,14 @@ import { openSignedInApp } from '../support/auth'
 test('switches between all signed-in destinations', async ({ page }) => {
   await openSignedInApp(page)
 
+  await expect(page.locator('.bottom-nav button')).toHaveText(['Transakce', 'Peněženky', 'Přehled', 'Nezávislost', 'Nastavení'])
+
   const destinations = [
     ['Peněženky', 'Zatím bez peněženek'],
     ['Přehled', 'Celkové bohatství'],
+    ['Nezávislost', null],
     ['Nastavení', null],
-    ['Transakce', 'Zatím bez transakcí'],
+    ['Transakce', 'V tomto období nic není'],
   ] as const
 
   for (const [label, placeholder] of destinations) {

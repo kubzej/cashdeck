@@ -1,13 +1,6 @@
-export type RecurringFrequency =
-  | 'daily'
-  | 'weekly'
-  | 'biweekly'
-  | 'monthly'
-  | 'every_two_months'
-  | 'every_three_months'
-  | 'semiannual'
-  | 'yearly'
-  | 'custom_days'
+import type { RecurringFrequency } from '../catalog.js'
+
+export type { RecurringFrequency }
 
 export type RecurringSchedule = {
   frequency: RecurringFrequency

@@ -47,7 +47,7 @@ test('edits an ended recurring rule\'s name without its frozen schedule being re
 const endedRule = {
   id: 'rule-ended', name: 'Nájem', kind: 'transaction' as const, amountCzk: 18000,
   walletId: 'wallet-1', walletName: 'Běžný účet', categoryId: 'category-home', categoryName: 'Domov',
-  categoryIconKey: 'house', categoryColorKey: 'orange', categoryDirection: 'expense' as const,
+  categoryIconKey: 'house' as const, categoryColorKey: 'orange' as const, categoryDirection: 'expense' as const,
   sourceWalletId: null, sourceWalletName: null, destinationWalletId: null, destinationWalletName: null,
   note: 'Historická poznámka', labels: [{ id: 'label-1', name: 'bydlení' }], frequency: 'monthly' as const,
   customIntervalDays: null, nextOccurrenceDate: '2026-09-20', endsOn: '2026-08-20', status: 'ended' as const,

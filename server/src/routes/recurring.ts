@@ -17,7 +17,7 @@ export function createRecurringRuleRoutes(repository: RecurringRuleRepository, r
 
     app.post('/api/recurring-rules', { preHandler: requireAuth }, async (request, reply) => {
       const today = getPragueToday()
-      const input = parseRecurringRule(request.body, today)
+      const input = parseRecurringRule(request.body)
       assertForwardSchedule(input.nextOccurrenceDate, input.endsOn, today)
       const rule = await repository.createRule(request.authUser.id, input, today)
       return reply.code(201).send(rule)
@@ -26,7 +26,7 @@ export function createRecurringRuleRoutes(repository: RecurringRuleRepository, r
     app.patch('/api/recurring-rules/:ruleId', { preHandler: requireAuth }, async (request) => {
       const ruleId = parseUuid((request.params as Record<string, unknown>).ruleId, 'ID opakování')
       const today = getPragueToday()
-      const rule = await repository.updateRule(request.authUser.id, ruleId, parseRecurringRule(request.body, today), today)
+      const rule = await repository.updateRule(request.authUser.id, ruleId, parseRecurringRule(request.body), today)
       if (!rule) throw new DomainError(404, 'Opakování neexistuje.')
       return rule
     })

@@ -1,3 +1,8 @@
 allowBuilds:
   core-js: false
   esbuild: true
+
+# fast-uri <3.1.9 has SSRF/host-confusion advisories; ajv's ^3 range allows the fix but pnpm
+# won't move an already-locked transitive version on its own.
+overrides:
+  fast-uri@3: ^3.1.9

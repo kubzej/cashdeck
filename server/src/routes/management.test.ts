@@ -5,18 +5,22 @@ import { createApp } from '../app.js'
 import type { AuthGuard } from '../auth.js'
 import type { ServerConfig } from '../config.js'
 import { DomainError } from '../management/domain.js'
-import type { ManagementRepository } from '../management/repository.js'
+import type { ManagementRepository, Wallet } from '../management/repository.js'
 
 const userId = 'user-1'
 const walletId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef123'
 const categoryId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef124'
 const labelId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef125'
 
+const walletFixture: Wallet = {
+  id: walletId, name: 'AirBank', colorKey: 'teal', walletType: 'checking', countsTowardIndependence: false, availableNow: false,
+  openingBalanceCzk: 0, currentBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 0, isHidden: false, openingBalanceLocked: false,
+}
+
 const config: ServerConfig = {
   databaseUrl: 'postgres://unused',
   frontendOrigin: 'http://localhost:5173',
   host: '127.0.0.1',
-  neonAuthUrl: 'https://auth.test/neondb/auth',
   port: 8000,
   sessionSigningSecret: 'test-session-signing-secret-32-characters-long',
   appAccessPassphrase: 'test-passphrase',
@@ -81,10 +85,13 @@ test('protects management routes and scopes them to the verified user', async ()
 
 test('returns the current wallet balance alongside its opening balance', async () => {
   const { app, repository } = await createTestApp()
-  repository.listWallets.mockResolvedValueOnce([{
+  vi.mocked(repository.listWallets).mockResolvedValueOnce([{
     id: walletId,
     name: 'Běžný účet',
     colorKey: 'teal',
+    walletType: 'checking',
+    countsTowardIndependence: false,
+    availableNow: false,
     openingBalanceCzk: 78000,
     currentBalanceCzk: 123456,
     openingBalanceDate: '2026-01-01',
@@ -136,7 +143,7 @@ test('normalizes category and label writes before they reach the repository', as
   expect(labelResponse.statusCode).toBe(201)
   expect(repository.createLabel).toHaveBeenCalledWith(userId, 'foundationgalaxy')
 
-  repository.updateLabel.mockResolvedValueOnce({ id: labelId, name: 'globus' })
+  vi.mocked(repository.updateLabel).mockResolvedValueOnce({ id: labelId, name: 'globus' })
   const updatedLabel = await app.inject({
     method: 'PATCH',
     url: `/api/labels/${labelId}`,
@@ -146,7 +153,7 @@ test('normalizes category and label writes before they reach the repository', as
   expect(updatedLabel.statusCode).toBe(200)
   expect(repository.updateLabel).toHaveBeenCalledWith(userId, labelId, 'globus')
 
-  repository.deleteLabel.mockResolvedValueOnce(true)
+  vi.mocked(repository.deleteLabel).mockResolvedValueOnce(true)
   const deletedLabel = await app.inject({
     method: 'DELETE',
     url: `/api/labels/${labelId}`,
@@ -159,9 +166,9 @@ test('normalizes category and label writes before they reach the repository', as
 
 test('validates and scopes wallet writes to the verified user', async () => {
   const { app, repository } = await createTestApp()
-  repository.createWallet.mockResolvedValueOnce({ id: walletId, name: 'AirBank' })
-  repository.updateWallet.mockResolvedValueOnce({ id: walletId, name: 'AirBank' })
-  repository.deleteWallet.mockResolvedValueOnce(true)
+  vi.mocked(repository.createWallet).mockResolvedValueOnce(walletFixture)
+  vi.mocked(repository.updateWallet).mockResolvedValueOnce(walletFixture)
+  vi.mocked(repository.deleteWallet).mockResolvedValueOnce(true)
 
   const created = await app.inject({
     method: 'POST',
@@ -222,7 +229,7 @@ test('validates and scopes wallet writes to the verified user', async () => {
 
 test('creates a balance adjustment from the actual wallet balance without creating a transaction', async () => {
   const { app, repository } = await createTestApp()
-  repository.createBalanceAdjustment.mockResolvedValueOnce({
+  vi.mocked(repository.createBalanceAdjustment).mockResolvedValueOnce({
     adjustment: {
       id: 'c00f7a6a-d0c1-4f08-9bd4-643415bef126',
       walletId,
@@ -244,7 +251,7 @@ test('creates a balance adjustment from the actual wallet balance without creati
   expect(repository.createBalanceAdjustment).toHaveBeenCalledWith(userId, walletId, 125000)
   expect(created.json()).toEqual(expect.objectContaining({ currentBalanceCzk: 125000, adjustment: expect.objectContaining({ operation: 'add', amountCzk: 1544 }) }))
 
-  repository.createBalanceAdjustment.mockResolvedValueOnce({ adjustment: null, currentBalanceCzk: 125000 })
+  vi.mocked(repository.createBalanceAdjustment).mockResolvedValueOnce({ adjustment: null, currentBalanceCzk: 125000 })
   const unchanged = await app.inject({
     method: 'POST',
     url: `/api/wallets/${walletId}/balance-adjustments`,
@@ -318,7 +325,7 @@ test('rejects category direction changes and maps lifecycle and opening-date con
   expect(invalidUpdate.statusCode).toBe(400)
   expect(repository.updateCategory).not.toHaveBeenCalled()
 
-  repository.deleteWallet.mockRejectedValueOnce({ code: '23503', constraint: 'transactions_wallet_same_user_fkey' })
+  vi.mocked(repository.deleteWallet).mockRejectedValueOnce({ code: '23503', constraint: 'transactions_wallet_same_user_fkey', table: 'wallets' })
   const conflict = await app.inject({
     method: 'DELETE',
     url: `/api/wallets/${walletId}`,
@@ -327,7 +334,7 @@ test('rejects category direction changes and maps lifecycle and opening-date con
   expect(conflict.statusCode).toBe(409)
   expect(conflict.json()).toEqual({ error: 'Peněženku nelze smazat, obsahuje transakce.' })
 
-  repository.deleteWallet.mockRejectedValueOnce({ code: '23503' })
+  vi.mocked(repository.deleteWallet).mockRejectedValueOnce({ code: '23503' })
   const unknownConflict = await app.inject({
     method: 'DELETE',
     url: `/api/wallets/${walletId}`,
@@ -336,7 +343,7 @@ test('rejects category direction changes and maps lifecycle and opening-date con
   expect(unknownConflict.statusCode).toBe(409)
   expect(unknownConflict.json()).toEqual({ error: 'Tuto položku nelze smazat, je stále používaná.' })
 
-  repository.updateWallet.mockRejectedValueOnce({
+  vi.mocked(repository.updateWallet).mockRejectedValueOnce({
     code: 'P0001',
     message: 'Wallet opening balance cannot change after linked financial records exist',
   })
@@ -349,7 +356,7 @@ test('rejects category direction changes and maps lifecycle and opening-date con
   expect(openingDateConflict.statusCode).toBe(409)
   expect(openingDateConflict.json()).toEqual({ error: 'Počáteční zůstatek nelze změnit, peněženka už má pohyby.' })
 
-  repository.createWallet.mockRejectedValueOnce({ code: '23505', constraint: 'wallets_user_id_normalized_name_unique' })
+  vi.mocked(repository.createWallet).mockRejectedValueOnce({ code: '23505', constraint: 'wallets_user_id_normalized_name_unique' })
   const duplicateName = await app.inject({
     method: 'POST',
     url: '/api/wallets',
@@ -406,7 +413,7 @@ test('rejects a wallet marked available-now without also counting toward indepen
 test('accepts a wallet type and both independence flags together on create', async () => {
   const { app, repository } = await createTestApp()
 
-  repository.createWallet.mockResolvedValueOnce({
+  vi.mocked(repository.createWallet).mockResolvedValueOnce({
     id: 'c00f7a6a-d0c1-4f08-9bd4-643415bef123',
     name: 'Broker',
     colorKey: 'teal',
@@ -435,7 +442,7 @@ test('accepts a wallet type and both independence flags together on create', asy
 
 test('rejects reordering wallets with a stale or incomplete id set', async () => {
   const { app, repository } = await createTestApp()
-  repository.reorderWallets.mockRejectedValueOnce(new DomainError(409, 'Pořadí peněženek neodpovídá aktuálním datům.'))
+  vi.mocked(repository.reorderWallets).mockRejectedValueOnce(new DomainError(409, 'Pořadí peněženek neodpovídá aktuálním datům.'))
 
   const response = await app.inject({
     method: 'PUT',
@@ -473,5 +480,34 @@ test('can list recently used labels for a transaction form', async () => {
 
   expect(response.statusCode).toBe(200)
   expect(repository.listLabels).toHaveBeenCalledWith(userId, null, null, 8, 'recent')
+  await app.close()
+})
+
+test('rejects a wallet opening balance date in the future, on create and on update', async () => {
+  const { app, repository } = await createTestApp()
+  const tomorrow = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10)
+
+  const created = await app.inject({ method: 'POST', url: '/api/wallets', headers: { authorization: 'Bearer test-token' }, payload: { name: 'Nový účet', colorKey: 'teal', openingBalanceCzk: 0, openingBalanceDate: tomorrow } })
+  expect(created.statusCode).toBe(400)
+  expect(created.json()).toEqual({ error: 'Datum počátečního zůstatku nemůže být v budoucnosti.' })
+
+  const updated = await app.inject({ method: 'PATCH', url: `/api/wallets/${walletId}`, headers: { authorization: 'Bearer test-token' }, payload: { openingBalanceDate: tomorrow } })
+  expect(updated.statusCode).toBe(400)
+  expect(repository.createWallet).not.toHaveBeenCalled()
+  expect(repository.updateWallet).not.toHaveBeenCalled()
+  await app.close()
+})
+
+test('names the independence-flag conflict instead of returning the generic check-violation message', async () => {
+  const { app, repository } = await createTestApp()
+
+  vi.mocked(repository.updateWallet).mockRejectedValueOnce({ code: '23514', constraint: 'wallets_available_now_requires_counting' })
+  const flags = await app.inject({ method: 'PATCH', url: `/api/wallets/${walletId}`, headers: { authorization: 'Bearer test-token' }, payload: { availableNow: true } })
+  expect(flags.statusCode).toBe(409)
+  expect(flags.json()).toEqual({ error: 'Peněženka dostupná hned musí být zároveň počítaná do nezávislosti.' })
+
+  vi.mocked(repository.updateWallet).mockRejectedValueOnce({ code: '23514', constraint: 'some_other_check' })
+  const other = await app.inject({ method: 'PATCH', url: `/api/wallets/${walletId}`, headers: { authorization: 'Bearer test-token' }, payload: { name: 'Nový název' } })
+  expect(other.json()).toEqual({ error: 'Změna je v konfliktu s existujícími daty.' })
   await app.close()
 })

@@ -1,8 +1,13 @@
+// Repository tests run against a mocked `pg` pool: they check which queries and parameters the
+// repository sends and how it handles the rows it is handed (transactions, cache invalidation,
+// validation), never what Postgres would return. SQL correctness is not covered here.
+
 import type { Pool } from 'pg'
 import { expect, test, vi } from 'vitest'
 import { createFeedRepository } from './repository.js'
 
-const sameTimestamp = new Date('2026-08-21T10:00:00.000Z')
+// Microsecond precision, as Postgres stores it — a millisecond-truncated cursor would skip rowB.
+const sameTimestamp = '2026-08-21T10:00:00.123456Z'
 
 const rowA = {
   kind: 'transaction' as const, id: 'aaaaaaaa-0000-4000-8000-000000000001',
@@ -53,7 +58,7 @@ test('two records sharing the same activity date and timestamp are still paginat
   const values = page2Values as unknown[]
   // last 4 cursor params before the limit: activityDate, createdAt, kind, id
   const cursorValues = values.slice(-5, -1)
-  expect(cursorValues).toEqual(['2026-08-21', sameTimestamp.toISOString(), 'transaction', rowA.id])
+  expect(cursorValues).toEqual(['2026-08-21', sameTimestamp, 'transaction', rowA.id])
 })
 
 test('listFeed joins the recurring rule that generated a transaction or transfer, and maps its name through', async () => {
@@ -95,14 +100,14 @@ test('search matches a transaction or transfer by the name of the recurring rule
 })
 
 function encodeTestCursor() {
-  return Buffer.from(JSON.stringify({ activityDate: '2026-08-21', createdAt: sameTimestamp.toISOString(), kind: 'transaction', id: rowA.id })).toString('base64url')
+  return Buffer.from(JSON.stringify({ activityDate: '2026-08-21', createdAt: sameTimestamp, kind: 'transaction', id: rowA.id })).toString('base64url')
 }
 
 test('getBounds finds the earliest date per table via order-by-limit-1, not a union-all scan with an outer min()', async () => {
   const query = vi.fn().mockResolvedValue({ rows: [{ earliest_activity_date: '2025-01-01' }] })
   const repository = createFeedRepository({ query } as unknown as Pool)
 
-  await repository.getBounds('user-1', { walletIds: null, categoryId: null, labelId: null })
+  await repository.getBounds('user-1', { walletIds: null, categoryId: undefined, labelId: undefined })
 
   const [sql] = query.mock.calls[0]
   const normalized = String(sql).replace(/\s+/g, ' ')
@@ -116,7 +121,18 @@ test('getBounds returns a null earliestActivityDate when there is no matching ac
   const query = vi.fn().mockResolvedValue({ rows: [] })
   const repository = createFeedRepository({ query } as unknown as Pool)
 
-  const result = await repository.getBounds('user-1', { walletIds: null, categoryId: null, labelId: null })
+  const result = await repository.getBounds('user-1', { walletIds: null, categoryId: undefined, labelId: undefined })
 
   expect(result).toEqual({ earliestActivityDate: null })
+})
+
+test('feed search text is bound with LIKE wildcards escaped, so "50%" is a literal', async () => {
+  const query = vi.fn().mockResolvedValue({ rows: [] })
+  const repository = createFeedRepository({ query } as unknown as Pool)
+
+  await repository.listFeed('user-1', { ...baseInput, search: '50%_' })
+
+  const [, values] = query.mock.calls[0]
+  expect(values).toContain('50\\%\\_')
+  expect(values).not.toContain('50%_')
 })

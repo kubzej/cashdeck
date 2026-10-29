@@ -5,7 +5,7 @@ import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, Dial
 import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldDescription, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
-import { createDecimalKeyBlocker } from '../../lib/amount-input'
+import { createDecimalKeyBlocker, parseSignedWholeCzk } from '../../lib/amount-input'
 import { formatCzk } from '../../lib/format-czk'
 import { createBalanceAdjustment, type Wallet } from './api'
 
@@ -15,7 +15,7 @@ export function BalanceAdjustmentDialog({ wallet, onOpenChange, onAdjusted }: { 
   const [hasDecimalInput, setHasDecimalInput] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const parsedActualBalance = useMemo(() => parseWholeCzk(actualBalance), [actualBalance])
+  const parsedActualBalance = useMemo(() => parseSignedWholeCzk(actualBalance), [actualBalance])
   const difference = parsedActualBalance === null ? null : parsedActualBalance - recordedBalance
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -61,13 +61,6 @@ export function BalanceAdjustmentDialog({ wallet, onOpenChange, onAdjusted }: { 
       </form>
     </DialogContent>
   </Dialog>
-}
-
-function parseWholeCzk(value: string) {
-  const normalized = value.replaceAll(' ', '').replaceAll('\u00a0', '')
-  if (!/^-?\d+$/.test(normalized)) return null
-  const amount = Number(normalized)
-  return Number.isSafeInteger(amount) ? amount : null
 }
 
 function formatWholeNumber(value: number) { return new Intl.NumberFormat('cs-CZ').format(value) }

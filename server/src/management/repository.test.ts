@@ -1,3 +1,7 @@
+// Repository tests run against a mocked `pg` pool: they check which queries and parameters the
+// repository sends and how it handles the rows it is handed (transactions, cache invalidation,
+// validation), never what Postgres would return. SQL correctness is not covered here.
+
 import type { Pool } from 'pg'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { invalidateWealthCache } from '../wealth-cache.js'
@@ -51,4 +55,77 @@ test('createWallet and deleteWallet both invalidate the wealth cache', async () 
 
   await repository.deleteWallet('user-1', 'wallet-1')
   expect(invalidateWealthCache).toHaveBeenCalledTimes(2)
+})
+
+test('listLabels rejects a cursor whose id is not a UUID before querying', async () => {
+  const query = vi.fn().mockResolvedValue({ rows: [] })
+  const repository = createManagementRepository({ query } as unknown as Pool)
+  const cursor = Buffer.from(JSON.stringify({ name: 'jidlo', id: 'not-a-uuid' })).toString('base64url')
+
+  await expect(repository.listLabels('user-1', null, cursor, 20, 'alphabetical')).rejects.toMatchObject({ statusCode: 400 })
+  expect(query).not.toHaveBeenCalled()
+})
+
+test('label search text is escaped before it is wrapped in the LIKE pattern', async () => {
+  const query = vi.fn().mockResolvedValue({ rows: [] })
+  const repository = createManagementRepository({ query } as unknown as Pool)
+
+  await repository.listLabels('user-1', '100%_', null, 20, 'alphabetical')
+  await repository.listLabels('user-1', '100%_', null, 20, 'recent')
+
+  for (const [, values] of query.mock.calls) expect(values).toContain('%100\\%\\_%')
+})
+
+test('updateWallet invalidates the wealth cache only when a wallet was actually changed', async () => {
+  const query = vi.fn()
+    .mockResolvedValueOnce({ rows: [{ id: 'wallet-1' }] }) // update ... returning id
+    .mockResolvedValueOnce({ rows: [] }) // getWallet read-back
+    .mockResolvedValueOnce({ rows: [] }) // update on a wallet that is not the user's
+  const repository = createManagementRepository({ query } as unknown as Pool)
+
+  await repository.updateWallet('user-1', 'wallet-1', { name: 'Nový název' })
+  expect(invalidateWealthCache).toHaveBeenCalledTimes(1)
+
+  expect(await repository.updateWallet('user-1', 'wallet-2', { name: 'Cizí' })).toBeNull()
+  expect(invalidateWealthCache).toHaveBeenCalledTimes(1)
+})
+
+function adjustmentClient(currentBalanceCzk: string) {
+  return {
+    query: vi.fn()
+      .mockResolvedValueOnce(undefined) // begin
+      .mockResolvedValueOnce({ rows: [{ id: 'wallet-1' }] }) // lock wallet
+      .mockResolvedValueOnce({ rows: [{ current_balance_czk: currentBalanceCzk }] }) // current balance
+      .mockResolvedValueOnce({ rows: [{ id: 'adjustment-1', wallet_id: 'wallet-1', amount_czk: '500', operation: 'add', adjustment_date: '2026-08-21' }] }) // insert
+      .mockResolvedValueOnce(undefined), // commit
+    release: vi.fn(),
+  }
+}
+
+test('a balance adjustment invalidates the wealth cache after it is committed', async () => {
+  const client = adjustmentClient('1000')
+  const repository = createManagementRepository({ connect: vi.fn().mockResolvedValue(client) } as unknown as Pool)
+
+  const result = await repository.createBalanceAdjustment('user-1', 'wallet-1', 1500)
+
+  expect(result?.adjustment).toMatchObject({ amountCzk: 500, operation: 'add' })
+  expect(client.query).toHaveBeenCalledWith('commit')
+  expect(invalidateWealthCache).toHaveBeenCalledTimes(1)
+})
+
+test('a balance that already matches writes nothing and leaves the wealth cache alone', async () => {
+  const client = {
+    query: vi.fn()
+      .mockResolvedValueOnce(undefined) // begin
+      .mockResolvedValueOnce({ rows: [{ id: 'wallet-1' }] }) // lock wallet
+      .mockResolvedValueOnce({ rows: [{ current_balance_czk: '1000' }] }) // current balance
+      .mockResolvedValueOnce(undefined), // commit
+    release: vi.fn(),
+  }
+  const repository = createManagementRepository({ connect: vi.fn().mockResolvedValue(client) } as unknown as Pool)
+
+  const result = await repository.createBalanceAdjustment('user-1', 'wallet-1', 1000)
+
+  expect(result?.adjustment).toBeNull()
+  expect(invalidateWealthCache).not.toHaveBeenCalled()
 })

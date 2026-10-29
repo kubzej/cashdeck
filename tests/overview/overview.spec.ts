@@ -80,7 +80,7 @@ test('opens an exact category filter in the transaction list', async ({ page }) 
   await expect(summary).toContainText('-18 500 Kč')
   await expect(summary).toContainText('2 transakce')
   await expect(summary).toContainText('12 %')
-  await expect(page.getByText('Zatím bez transakcí', { exact: true })).toBeVisible()
+  await expect(page.getByText('Nic neodpovídá filtrům', { exact: true })).toBeVisible()
 })
 
 test('keeps an overview label filter exact in both actual and planned activity, then resets it completely', async ({ page }) => {
@@ -147,4 +147,36 @@ test('uses actual wealth terminology and keeps edge tooltips inside the flow cha
   const lastTooltipBox = await tooltip.boundingBox()
   if (!lastTooltipBox) throw new Error('Last tooltip is not visible')
   expect(lastTooltipBox.x + lastTooltipBox.width).toBeLessThanOrEqual(chartBox.x + chartBox.width)
+})
+
+test('a category whose icon is no longer in the catalog still renders, with a fallback icon', async ({ page }) => {
+  await mockAuthAndApi(page)
+  const [first, ...rest] = overviewFixture.categories
+  await mockOverviewApi(page, { ...overviewFixture, categories: [{ ...first, iconKey: 'removed-icon' as typeof first.iconKey, colorKey: 'not-a-color' as typeof first.colorKey }, ...rest] })
+  await page.goto('/')
+  await signIn(page)
+  await page.locator('.bottom-nav').getByRole('button', { name: 'Přehled', exact: true }).click()
+
+  await expect(page.getByText('Celkové bohatství', { exact: true })).toBeVisible()
+  await expect(page.getByText(first.name, { exact: true })).toBeVisible()
+  await expect(page.getByText('Tuto obrazovku se nepodařilo zobrazit', { exact: true })).toHaveCount(0)
+})
+
+test('the category donut appears only where it compares amounts of one direction', async ({ page }) => {
+  await openSignedInApp(page)
+  await page.locator('.bottom-nav').getByRole('button', { name: 'Přehled', exact: true }).click()
+  const donut = page.getByRole('img', { name: 'Podíl všech kategorií v období' })
+
+  await expect(page.getByRole('heading', { name: 'Kategorie', exact: true })).toBeVisible()
+  await expect(donut).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Výdaje', exact: true }).click()
+  await expect(donut).toBeVisible()
+
+  await page.getByRole('button', { name: 'Příjmy', exact: true }).click()
+  await expect(donut).toBeVisible()
+
+  await page.getByRole('button', { name: 'Cashflow', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Kategorie', exact: true })).toBeVisible()
+  await expect(donut).toHaveCount(0)
 })

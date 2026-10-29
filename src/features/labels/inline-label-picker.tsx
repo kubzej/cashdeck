@@ -3,6 +3,7 @@ import { Check, Plus, Search, Tag, X } from 'lucide-react'
 import { Input } from '../../components/ui/input'
 import { Label as FormLabel } from '../../components/ui/label'
 import { createLabel, listLabels, type Label } from './api'
+import { limitSuggestedLabels } from './label-chips'
 
 type InlineLabelPickerProps = {
   labels: Label[]
@@ -47,8 +48,9 @@ export function InlineLabelPicker({ labels, selectedIds, onLabelsChange, onValue
     setCreationError(null)
     try {
       const label = await createLabel(name)
-      onLabelsChange([label, ...labels.filter((item) => item.id !== label.id)].slice(0, 8))
-      onValueChange(selectedIds.includes(label.id) ? selectedIds : [...selectedIds, label.id])
+      const nextSelectedIds = selectedIds.includes(label.id) ? selectedIds : [...selectedIds, label.id]
+      onLabelsChange(limitSuggestedLabels([label, ...labels.filter((item) => item.id !== label.id)], nextSelectedIds))
+      onValueChange(nextSelectedIds)
       setQuery('')
     } catch (error) {
       setCreationError(error instanceof Error ? error.message : 'Štítek se nepodařilo vytvořit.')
@@ -61,8 +63,9 @@ export function InlineLabelPicker({ labels, selectedIds, onLabelsChange, onValue
     if (selectedIds.includes(label.id)) {
       onValueChange(selectedIds.filter((id) => id !== label.id))
     } else {
-      onLabelsChange([label, ...labels.filter((item) => item.id !== label.id)].slice(0, 8))
-      onValueChange([...selectedIds, label.id])
+      const nextSelectedIds = [...selectedIds, label.id]
+      onLabelsChange(limitSuggestedLabels([label, ...labels.filter((item) => item.id !== label.id)], nextSelectedIds))
+      onValueChange(nextSelectedIds)
     }
     setQuery('')
   }

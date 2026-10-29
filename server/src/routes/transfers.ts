@@ -1,13 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify'
 import type { AuthGuard } from '../auth.js'
 import { DomainError, parseUuid } from '../management/domain.js'
-import { parseCreateTransfer, parseTransferListQuery, parseUpdateTransfer } from '../transfers/domain.js'
+import { parseCreateTransfer, parseUpdateTransfer } from '../transfers/domain.js'
 import type { TransferRepository } from '../transfers/repository.js'
 
 export function createTransferRoutes(repository: TransferRepository, requireAuth: AuthGuard): FastifyPluginAsync {
   return async function transferRoutes(app) {
-    app.get('/api/transfers', { preHandler: requireAuth }, async (request) => repository.listTransfers(request.authUser.id, parseTransferListQuery(request.query)))
-
     app.post('/api/transfers', { preHandler: requireAuth }, async (request, reply) => {
       const transfer = await repository.createTransfer(request.authUser.id, parseCreateTransfer(request.body))
       return reply.code(201).send(transfer)

@@ -1,3 +1,7 @@
+// Repository tests run against a mocked `pg` pool: they check which queries and parameters the
+// repository sends and how it handles the rows it is handed (transactions, cache invalidation,
+// validation), never what Postgres would return. SQL correctness is not covered here.
+
 import type { Pool } from 'pg'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { invalidateWealthCache } from '../wealth-cache.js'
@@ -26,6 +30,9 @@ test('updateTransaction with an empty labelIds array actually removes existing l
   expect(insertCall).toBeUndefined()
   expect(result?.labels).toEqual([])
   expect(invalidateWealthCache).toHaveBeenCalledTimes(1)
+  // Invalidating before commit would let a concurrent read cache the pre-commit state.
+  const commitOrder = query.mock.invocationCallOrder[query.mock.calls.findIndex(([sql]) => sql === 'commit')]
+  expect(vi.mocked(invalidateWealthCache).mock.invocationCallOrder[0]).toBeGreaterThan(commitOrder!)
 })
 
 test('createTransaction and deleteTransaction both invalidate the wealth cache', async () => {

@@ -161,3 +161,8 @@ function solveYearsToTarget(checkpoints: ScenarioPoint[], pauseYears: number, an
 
   return null
 }
+
+/** The calendar year reached `years` from now, rounded to a whole year. */
+export function targetYear(years: number) {
+  return new Date().getFullYear() + Math.round(years)
+}

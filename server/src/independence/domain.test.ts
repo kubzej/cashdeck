@@ -60,6 +60,14 @@ test('rejects a blank irregular expense name', () => {
   expect(() => parseIrregularExpenseInput({ name: '   ', amountCzk: 100_000, frequencyYears: 5 })).toThrow(DomainError)
 })
 
+test('bounds the irregular expense name at 120 characters and the frequency at 1 to 100 years', () => {
+  expect(parseIrregularExpenseInput({ name: 'x'.repeat(120), amountCzk: 100_000, frequencyYears: 100 }).frequencyYears).toBe(100)
+  expect(() => parseIrregularExpenseInput({ name: 'x'.repeat(121), amountCzk: 100_000, frequencyYears: 5 })).toThrow('Název může mít nejvýše 120 znaků.')
+  expect(() => parseIrregularExpenseInput({ name: 'Auto', amountCzk: 100_000, frequencyYears: 101 })).toThrow('Frekvence v letech musí být celé číslo od 1 do 100.')
+  expect(() => parseIrregularExpenseInput({ name: 'Auto', amountCzk: 100_000, frequencyYears: 2_147_483_648 })).toThrow(DomainError)
+  expect(() => parseIrregularExpenseUpdateInput({ frequencyYears: 1000 })).toThrow(DomainError)
+})
+
 test('allows a partial irregular expense update but rejects an empty one', () => {
   expect(parseIrregularExpenseUpdateInput({ amountCzk: 450_000 })).toEqual({ amountCzk: 450_000 })
   expect(() => parseIrregularExpenseUpdateInput({})).toThrow(DomainError)

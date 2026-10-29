@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRightLeft, CalendarClock, CircleAlert, RefreshCw } from 'lucide-react'
-import { Button } from '../../components/ui/button'
+import { ArrowRightLeft, CalendarClock } from 'lucide-react'
+import { LoadError } from '../../components/load-error'
+import { formatLongDate } from '../../lib/format'
 import { ScreenHeader } from '../../components/screen-header'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List, ListItem, ListItemActions, ListItemContent, ListItemLeading, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
 import { formatCzk } from '../../lib/format-czk'
@@ -41,6 +41,7 @@ export function PlannedScreen({ filters, selection, onBack, onSelectTransaction,
       })
       .catch(() => { if (!controller.signal.aborted) setStatus('error') })
     return () => controller.abort()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the deps list the stable walletKey and date fields, not the walletIds array / range object that get a new identity on every render
   }, [range?.dateFrom, range?.dateTo, walletKey, selectionKey, retryKey])
 
   return <section className="planned-screen" aria-labelledby="planned-title">
@@ -59,9 +60,9 @@ function PlannedContent({ status, items, onRetry, onSelectTransaction, onSelectT
   onSelectTransfer: (transfer: Transfer) => void
 }) {
   if (status === 'loading') return <div className="planned-loading" aria-label="Načítání naplánovaných položek"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
-  if (status === 'error') return <FeedbackState status="error" layout="panel" className="planned-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Naplánované se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={onRetry}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState>
+  if (status === 'error') return <LoadError title="Naplánované se nepodařilo načíst" className="planned-feedback" onRetry={onRetry} />
   if (items.length === 0) return <EmptyState variant="quiet" size="lg" className="planned-empty"><EmptyStateIcon><CalendarClock aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Bez naplánovaných položek</EmptyStateTitle><EmptyStateDescription>V tomto budoucím období nic nečeká.</EmptyStateDescription></EmptyState>
-  return <div className="planned-list" aria-label="Seznam naplánovaných položek">{groupItems(items).map(([date, entries]) => <section className="planned-day" key={date}><h2>{formatDate(date)}</h2><List gap="sm">{entries.map((item) => <PlannedRow key={item.id} item={item} onSelectTransaction={onSelectTransaction} onSelectTransfer={onSelectTransfer} />)}</List></section>)}</div>
+  return <div className="planned-list" aria-label="Seznam naplánovaných položek">{groupItems(items).map(([date, entries]) => <section className="planned-day" key={date}><h2>{formatLongDate(date)}</h2><List gap="sm">{entries.map((item) => <PlannedRow key={item.id} item={item} onSelectTransaction={onSelectTransaction} onSelectTransfer={onSelectTransfer} />)}</List></section>)}</div>
 }
 
 function PlannedRow({ item, onSelectTransaction, onSelectTransfer }: { item: PlannedItem; onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void }) {
@@ -106,7 +107,7 @@ function getItemDate(item: PlannedItem) {
 
 function getItemSubtitle(item: PlannedItem) {
   if (item.kind === 'transaction') return `v ${item.walletName}`
-  return `${item.sourceWalletName} do ${item.destinationWalletName}`
+  return `z ${item.sourceWalletName} do ${item.destinationWalletName}`
 }
 
 function getAmountClass(item: PlannedItem) {
@@ -120,7 +121,3 @@ function formatItemAmount(item: PlannedItem) {
   return formatCzk(value, { signed: true })
 }
 
-function formatDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number)
-  return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(year, month - 1, day))
-}

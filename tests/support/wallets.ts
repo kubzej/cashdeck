@@ -1,4 +1,5 @@
-import { expect, type Page, type Route } from '@playwright/test'
+import { type Page, type Route } from '@playwright/test'
+import { rejectUnauthorized } from './authorization'
 
 export type WalletFixture = {
   id: string
@@ -46,7 +47,7 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
   const requestBodies = new Map<'POST' | 'PATCH' | 'PUT', unknown>()
 
   await page.route('http://api.test/api/wallets**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
 
     const request = route.request()
     const method = request.method() as WalletRequestMethod
@@ -84,7 +85,7 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
       const { actualBalanceCzk } = request.postDataJSON() as { actualBalanceCzk: number }
       const wallet = wallets.find((item) => item.id === walletId)
       if (!wallet) {
-        await route.fulfill(json({ message: 'Peněženka neexistuje.' }, 404))
+        await route.fulfill(json({ error: 'Peněženka neexistuje.' }, 404))
         return
       }
       const currentBalanceCzk = wallet.currentBalanceCzk ?? wallet.openingBalanceCzk
@@ -108,7 +109,7 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
       const input = request.postDataJSON() as WalletUpdateInput
       wallets = wallets.map((wallet) => wallet.id === walletId ? { ...wallet, ...input } : wallet)
       const wallet = wallets.find((item) => item.id === walletId)
-      await route.fulfill(wallet ? json(wallet) : json({ message: 'Peněženka neexistuje.' }, 404))
+      await route.fulfill(wallet ? json(wallet) : json({ error: 'Peněženka neexistuje.' }, 404))
       return
     }
 
@@ -130,7 +131,7 @@ export async function mockWalletsApi(page: Page, initialWallets: WalletFixture[]
       return
     }
 
-    await route.fulfill(json({ message: `Nepodporovaný wallet požadavek: ${request.method()} ${pathname}` }, 500))
+    await route.fulfill(json({ error: `Nepodporovaný wallet požadavek: ${request.method()} ${pathname}` }, 500))
   })
 
   return {
@@ -169,6 +170,6 @@ async function fulfillFailure(route: Route, failures: Map<WalletRequestMethod, Q
 
   if (failure.remaining <= 1) failures.delete(method)
   else failures.set(method, { ...failure, remaining: failure.remaining - 1 })
-  await route.fulfill(json({ message: failure.message }, failure.status))
+  await route.fulfill(json({ error: failure.message }, failure.status))
   return true
 }

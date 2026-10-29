@@ -1,3 +1,7 @@
+// Repository tests run against a mocked `pg` pool: they check which queries and parameters the
+// repository sends and how it handles the rows it is handed (transactions, cache invalidation,
+// validation), never what Postgres would return. SQL correctness is not covered here.
+
 import type { Pool } from 'pg'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { invalidateWealthCache } from '../wealth-cache.js'
@@ -141,7 +145,7 @@ test('generateDue processes each due rule in its own transaction, so one rule fa
   expect(clientA.query).toHaveBeenCalledWith('commit')
   expect(clientB.query).toHaveBeenCalledWith('rollback')
   expect(clientB.query).not.toHaveBeenCalledWith('commit')
-  expect(result.failedRuleIds).toEqual(['rule-b'])
+  expect(result.failures).toEqual([{ ruleId: 'rule-b', message: 'connection reset' }])
   expect(result.processedRules).toBe(0)
   expect(invalidateWealthCache).not.toHaveBeenCalled()
 })
@@ -184,4 +188,76 @@ test('reorderRules rejects a stale or incomplete rule id set without writing any
   const writeCalls = client.query.mock.calls.filter(([sql]) => String(sql).toLowerCase().includes('set sort_order'))
   expect(writeCalls).toHaveLength(0)
   expect(client.query).toHaveBeenCalledWith('rollback')
+})
+
+function createRuleClient(dueRows: unknown[]) {
+  const query = vi.fn(async (sql: string) => {
+    const normalized = sql.toLowerCase()
+    if (normalized.includes('insert into recurring_rules')) return { rows: [{ id: 'rule-1' }] }
+    if (normalized.includes('from recurring_rules') && normalized.includes('for update skip locked')) return { rows: dueRows }
+    if (normalized.includes('select exists')) return { rows: [{ exists: false }] }
+    if (normalized.includes('insert into transactions')) return { rows: [{ id: 'transaction-1' }] }
+    if (normalized.includes('r.user_id = $1 and r.id = $2')) return { rows: [ruleRow] }
+    return { rows: [] }
+  })
+  return { query, release: vi.fn() }
+}
+
+const dueRuleRow = {
+  id: 'rule-1', user_id: 'user-1', kind: 'transaction', amount_czk: '15000', transaction_wallet_id: 'wallet-1', category_id: 'category-1',
+  source_wallet_id: null, destination_wallet_id: null, note: null, frequency: 'monthly', custom_interval_days: null,
+  schedule_anchor_date: '2026-02-28', next_occurrence_date: '2026-02-28', ends_on: null,
+}
+
+test('creating a rule that is due today invalidates the wealth cache only after the transaction commits', async () => {
+  const client = createRuleClient([dueRuleRow])
+  const repository = createRecurringRuleRepository({ connect: vi.fn().mockResolvedValue(client) } as unknown as Pool)
+
+  await repository.createRule('user-1', baseInput, '2026-02-28')
+
+  expect(client.query.mock.calls.some(([sql]) => sql.toLowerCase().includes('insert into transactions'))).toBe(true)
+  expect(invalidateWealthCache).toHaveBeenCalledTimes(1)
+  const commitOrder = client.query.mock.invocationCallOrder[client.query.mock.calls.findIndex(([sql]) => sql === 'commit')]
+  expect(vi.mocked(invalidateWealthCache).mock.invocationCallOrder[0]).toBeGreaterThan(commitOrder!)
+})
+
+test('creating a rule with nothing due yet leaves the wealth cache alone', async () => {
+  const client = createRuleClient([])
+  const repository = createRecurringRuleRepository({ connect: vi.fn().mockResolvedValue(client) } as unknown as Pool)
+
+  await repository.createRule('user-1', { ...baseInput, nextOccurrenceDate: '2026-03-28' }, '2026-02-28')
+
+  expect(invalidateWealthCache).not.toHaveBeenCalled()
+})
+
+test('generateDue creates the due occurrence, advances the rule and invalidates the wealth cache once it is committed', async () => {
+  const dueRule = {
+    id: 'rule-a', user_id: 'user-1', kind: 'transaction', amount_czk: '15000', transaction_wallet_id: 'wallet-1', category_id: 'category-1',
+    source_wallet_id: null, destination_wallet_id: null, note: null, frequency: 'monthly', custom_interval_days: null,
+    schedule_anchor_date: '2026-02-15', next_occurrence_date: '2026-02-15', ends_on: null,
+  }
+  const calls: { sql: string; params: unknown[] }[] = []
+  const client = {
+    query: vi.fn(async (sql: string, params: unknown[] = []) => {
+      const normalized = sql.replace(/\s+/g, ' ')
+      calls.push({ sql: normalized, params })
+      if (normalized.startsWith('select id, user_id, kind')) return { rows: [dueRule] }
+      if (normalized.includes('select exists(')) return { rows: [{ exists: false }] }
+      if (normalized.startsWith('insert into transactions')) return { rows: [{ id: 'transaction-1' }] }
+      return { rows: [] }
+    }),
+    release: vi.fn(),
+  }
+  const pool = { query: vi.fn().mockResolvedValue({ rows: [{ id: 'rule-a' }] }), connect: vi.fn().mockResolvedValue(client) } as unknown as Pool
+  const repository = createRecurringRuleRepository(pool)
+
+  const result = await repository.generateDue('2026-03-01')
+
+  expect(result).toEqual({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0, failures: [] })
+  const insert = calls.find((call) => call.sql.startsWith('insert into transactions'))
+  expect(insert?.params).toEqual(['user-1', 'wallet-1', 'category-1', '15000', '2026-02-15', null])
+  const advance = calls.find((call) => call.sql.startsWith('update recurring_rules'))
+  expect(advance?.params).toEqual(['user-1', 'rule-a', '2026-03-15', 'active'])
+  expect(client.query).toHaveBeenCalledWith('commit')
+  expect(invalidateWealthCache).toHaveBeenCalledTimes(1)
 })

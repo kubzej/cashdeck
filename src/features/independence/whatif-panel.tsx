@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
+import { formatCompactMoney, formatYears } from '../../lib/format'
+import { parseNonNegativeCzk, parseNonNegativeInteger, parseScenarioPercent, resolveField } from '../../lib/amount-input'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent } from '../../components/ui/card'
-import { Field, FieldDescription, FieldLabel } from '../../components/ui/field'
+import { Field, FieldDescription, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { Switch } from '../../components/ui/switch'
 import { formatCzk } from '../../lib/format-czk'
@@ -47,15 +49,30 @@ export function WhatIfPanel({ totalWealthCzk, independenceNumberCzk, annualIrreg
     setValues((current) => ({ ...current, [key]: value }))
   }
 
-  const monthlyContributionCzk = parseNonNegativeCzk(values.monthlyContributionCzk) ?? settings.monthlyContributionCzk
-  const pauseMonths = parseNonNegativeInteger(values.pauseMonths) ?? 0
-  const lumpSumCzk = parseSignedCzk(values.lumpSumCzk) ?? 0
-  const lumpSumMonth = parseNonNegativeInteger(values.lumpSumMonth) ?? 0
-  const realReturnPercent = parsePercent(values.realReturnPercent, -10, 20) ?? settings.expectedRealReturnPercent
-  const withdrawalRatePercent = parsePercent(values.withdrawalRatePercent, 0.01, 20) ?? settings.withdrawalRatePercent
-  const expensesDeltaPercent = parseSignedPercent(values.expensesDeltaPercent, -50, 100) ?? 0
-  const customTargetCzk = values.customTargetCzk.trim() === '' ? null : parseNonNegativeCzk(values.customTargetCzk)
-  const hasCustomTarget = customTargetCzk !== null && customTargetCzk > 0
+  // Nothing here is saved, so a field only has to be a number, apart from what the maths cannot take
+  // (a return of -100 % or less, a withdrawal rate of 0 or less, expenses below zero). Text that is
+  // filled in but unusable keeps the saved value and says so.
+  const monthlyContribution = resolveField(values.monthlyContributionCzk, parseNonNegativeCzk(values.monthlyContributionCzk), settings.monthlyContributionCzk, 'Zadej celé koruny.')
+  const pause = resolveField(values.pauseMonths, parseNonNegativeInteger(values.pauseMonths), 0, 'Zadej celý počet měsíců.')
+  const lumpSum = resolveField(values.lumpSumCzk, parseSignedCzk(values.lumpSumCzk), 0, 'Zadej celé koruny, může být i záporné.')
+  const lumpSumAt = resolveField(values.lumpSumMonth, parseNonNegativeInteger(values.lumpSumMonth), 0, 'Zadej celý počet měsíců.')
+  const realReturn = resolveField(values.realReturnPercent, parseScenarioPercent(values.realReturnPercent, { above: -100 }), settings.expectedRealReturnPercent, 'Zadej číslo větší než −100 a nejvýše 10 000.')
+  const withdrawalRate = resolveField(values.withdrawalRatePercent, parseScenarioPercent(values.withdrawalRatePercent, { above: 0 }), settings.withdrawalRatePercent, 'Zadej číslo větší než 0 a nejvýše 10 000.')
+  const expensesDelta = resolveField(values.expensesDeltaPercent, parseSignedPercent(values.expensesDeltaPercent), 0, 'Zadej číslo od −100 do 10 000.')
+  const customTarget = resolveField(values.customTargetCzk, parseNonNegativeCzk(values.customTargetCzk), 0, 'Zadej celé koruny.')
+  const monthlyContributionCzk = monthlyContribution.value
+  const pauseMonths = pause.value
+  const lumpSumCzk = lumpSum.value
+  const lumpSumMonth = lumpSumAt.value
+  const realReturnPercent = realReturn.value
+  const withdrawalRatePercent = withdrawalRate.value
+  const expensesDeltaPercent = expensesDelta.value
+  const customTargetCzk = customTarget.value
+  const hasCustomTarget = customTargetCzk > 0
+  const errors = {
+    monthlyContributionCzk: monthlyContribution.error, pauseMonths: pause.error, lumpSumCzk: lumpSum.error, lumpSumMonth: lumpSumAt.error,
+    realReturnPercent: realReturn.error, withdrawalRatePercent: withdrawalRate.error, expensesDeltaPercent: expensesDelta.error, customTargetCzk: customTarget.error,
+  }
 
   const baseline = useMemo(() => computeScenario({
     startWealthCzk: totalWealthCzk,
@@ -110,49 +127,57 @@ export function WhatIfPanel({ totalWealthCzk, independenceNumberCzk, annualIrreg
         <ScenarioChart baseline={baseline.points} scenario={scenario.points} baselineTargetCzk={independenceNumberCzk} scenarioTargetCzk={scenarioTargetCzk} horizonYears={horizonYears} />
 
         <form className="independence-whatif__form" onSubmit={(event) => event.preventDefault()} noValidate>
-          <Field>
+          <Field invalid={Boolean(errors.monthlyContributionCzk)}>
             <FieldLabel>Měsíční vklad</FieldLabel>
             <Input type="text" inputMode="numeric" value={values.monthlyContributionCzk} onChange={(event) => setValue('monthlyContributionCzk', event.currentTarget.value)} />
+            <FieldError match={Boolean(errors.monthlyContributionCzk)}>{errors.monthlyContributionCzk}</FieldError>
           </Field>
-          <Field>
+          <Field invalid={Boolean(errors.pauseMonths)}>
             <FieldLabel>Pauza spoření (měsíců)</FieldLabel>
             <Input type="text" inputMode="numeric" placeholder="0" value={values.pauseMonths} onChange={(event) => setValue('pauseMonths', event.currentTarget.value)} />
+            <FieldError match={Boolean(errors.pauseMonths)}>{errors.pauseMonths}</FieldError>
             <FieldDescription>Po tuto dobu od teď se neukládá žádný měsíční vklad, pak pokračuje normálně.</FieldDescription>
           </Field>
           <div className="independence-whatif__group">
             <span className="independence-whatif__group-label">Jednorázová částka</span>
             <div className="independence-whatif__group-row">
-              <Field>
+              <Field invalid={Boolean(errors.lumpSumCzk)}>
                 <FieldLabel>Kolik</FieldLabel>
                 <Input type="text" inputMode="numeric" placeholder="0" value={values.lumpSumCzk} onChange={(event) => setValue('lumpSumCzk', event.currentTarget.value)} />
+                <FieldError match={Boolean(errors.lumpSumCzk)}>{errors.lumpSumCzk}</FieldError>
               </Field>
-              <Field>
+              <Field invalid={Boolean(errors.lumpSumMonth)}>
                 <FieldLabel>Za kolik měsíců</FieldLabel>
                 <Input type="text" inputMode="numeric" placeholder="0" value={values.lumpSumMonth} onChange={(event) => setValue('lumpSumMonth', event.currentTarget.value)} disabled={lumpSumCzk === 0} />
+                <FieldError match={Boolean(errors.lumpSumMonth)}>{errors.lumpSumMonth}</FieldError>
               </Field>
             </div>
             <p className="independence-whatif__group-hint">Kladná = vklad (např. dědictví), záporná = výběr (např. koupě auta). Netýká se pauzy ani měsíčního vkladu.</p>
           </div>
-          <Field>
+          <Field invalid={Boolean(errors.realReturnPercent)}>
             <FieldLabel>Očekávaný reálný výnos (%)</FieldLabel>
             <Input type="text" inputMode="decimal" value={values.realReturnPercent} onChange={(event) => setValue('realReturnPercent', event.currentTarget.value)} />
+            <FieldError match={Boolean(errors.realReturnPercent)}>{errors.realReturnPercent}</FieldError>
           </Field>
           <div className="independence-whatif__group">
             <span className="independence-whatif__group-label">Cílová částka</span>
-            <Field>
+            <Field invalid={Boolean(errors.customTargetCzk)}>
               <FieldLabel>Vlastní cíl (nepovinné)</FieldLabel>
               <Input type="text" inputMode="numeric" placeholder={new Intl.NumberFormat('cs-CZ').format(independenceNumberCzk)} value={values.customTargetCzk} onChange={(event) => setValue('customTargetCzk', event.currentTarget.value)} />
+              <FieldError match={Boolean(errors.customTargetCzk)}>{errors.customTargetCzk}</FieldError>
             </Field>
             <p className="independence-whatif__group-hint">{hasCustomTarget ? 'Přepisuje cíl spočítaný z výběrové sazby a nákladů níže — ta pole teď nemají vliv.' : `Necháš-li prázdné, cíl se dopočítá z výběrové sazby a nákladů níže (teď ${formatCzk(independenceNumberCzk)}).`}</p>
           </div>
-          <Field>
+          <Field invalid={Boolean(errors.withdrawalRatePercent)}>
             <FieldLabel>Výběrová sazba (%)</FieldLabel>
             <Input type="text" inputMode="decimal" value={values.withdrawalRatePercent} onChange={(event) => setValue('withdrawalRatePercent', event.currentTarget.value)} disabled={hasCustomTarget} />
+            <FieldError match={Boolean(errors.withdrawalRatePercent)}>{errors.withdrawalRatePercent}</FieldError>
             <FieldDescription>Nižší sazba = konzervativnější odhad = vyšší cílová částka. Přímo mění cíl, ne jen rychlost růstu.</FieldDescription>
           </Field>
-          <Field>
+          <Field invalid={Boolean(errors.expensesDeltaPercent)}>
             <FieldLabel>Změna ročních nákladů (%)</FieldLabel>
             <Input type="text" inputMode="decimal" placeholder="0" value={values.expensesDeltaPercent} onChange={(event) => setValue('expensesDeltaPercent', event.currentTarget.value)} disabled={hasCustomTarget} />
+            <FieldError match={Boolean(errors.expensesDeltaPercent)}>{errors.expensesDeltaPercent}</FieldError>
             <FieldDescription>Kladné číslo = vyšší náklady, se znaménkem „-" nižší. Cílová částka {formatCzk(independenceNumberCzk)} se přepočítá na {formatCzk(scenarioTargetCzk)}.</FieldDescription>
           </Field>
           {annualIrregularCzk > 0 ? (
@@ -197,7 +222,7 @@ function ScenarioChart({ baseline, scenario, baselineTargetCzk, scenarioTargetCz
         <polyline points={visibleScenario.map(toPoint).join(' ')} className="independence-whatif__chart-scenario" />
         <polyline points={visibleBaseline.map(toPoint).join(' ')} className="independence-whatif__chart-baseline" />
       </svg>
-      <div className="independence-whatif__chart-dates"><span>dnes</span><span>za {formatYearsShort(horizonYears)}</span></div>
+      <div className="independence-whatif__chart-dates"><span>dnes</span><span>za {formatYears(horizonYears)}</span></div>
     </div>
   )
 }
@@ -212,31 +237,13 @@ function formatDelta(baselineYears: number | null, scenarioYears: number | null)
   const deltaYears = scenarioYears - baselineYears
   if (Math.abs(deltaYears) < 0.05) return 'beze změny'
   const sign = deltaYears > 0 ? '+' : '−'
-  return `${sign}${formatYearsShort(Math.abs(deltaYears))}`
+  return `${sign}${formatYears(Math.abs(deltaYears))}`
 }
 
 function formatYearsToTarget(years: number | null) {
   if (years === null) return 'bez projekce'
   if (years === 0) return 'už teď'
-  return `za ${formatYearsShort(years)}`
-}
-
-function formatCompactMoney(value: number) {
-  return new Intl.NumberFormat('cs-CZ', { notation: 'compact', maximumFractionDigits: 1 }).format(value) + ' Kč'
-}
-
-function formatYearsShort(years: number) {
-  if (years < 1) return `${Math.round(years * 12)} měsíců`
-  const whole = Math.round(years * 10) / 10
-  return `${new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 1 }).format(whole)} let`
-}
-
-function parseNonNegativeCzk(value: string) {
-  const normalized = value.replaceAll(/\s/g, '')
-  if (normalized === '') return 0
-  if (!/^\d+$/.test(normalized)) return null
-  const amount = Number(normalized)
-  return Number.isSafeInteger(amount) ? amount : null
+  return `za ${formatYears(years)}`
 }
 
 function parseSignedCzk(value: string) {
@@ -247,23 +254,8 @@ function parseSignedCzk(value: string) {
   return Number.isSafeInteger(amount) ? amount : null
 }
 
-function parseNonNegativeInteger(value: string) {
-  const normalized = value.trim()
-  if (normalized === '') return 0
-  if (!/^\d+$/.test(normalized)) return null
-  const amount = Number(normalized)
-  return Number.isSafeInteger(amount) ? amount : null
-}
-
-function parsePercent(value: string, min: number, max: number) {
-  const normalized = value.replace(',', '.').trim()
-  if (!/^-?\d+(\.\d+)?$/.test(normalized)) return null
-  const amount = Number(normalized)
-  return amount >= min && amount <= max ? amount : null
-}
-
-function parseSignedPercent(value: string, min: number, max: number) {
+function parseSignedPercent(value: string) {
   const normalized = value.replace(',', '.').trim()
   if (normalized === '' || normalized === '-') return 0
-  return parsePercent(normalized, min, max)
+  return parseScenarioPercent(normalized, { atLeast: -100 })
 }

@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test'
 import { mockFeedApi } from './feed'
 import { mockWalletsApi } from './wallets'
 import { mockOverviewApi } from './overview'
+import { rejectUnauthorized, testToken } from './authorization'
 
 export const testUser = {
   id: 'user-1',
@@ -9,12 +10,13 @@ export const testUser = {
 
 export const testPassphrase = 'test-passphrase'
 
-type AuthMockOptions = {
-  signedIn?: boolean
-}
+// The fixtures use fixed 2026 dates; without a fixed "today" they fall out of the current month
+// as real time passes. Only Date is faked — timers (debounce, retries) keep running normally.
+export const testToday = new Date('2026-08-21T10:00:00+02:00')
 
-export async function mockAuthAndApi(page: Page, { signedIn = false }: AuthMockOptions = {}) {
-  let isAuthenticated = signedIn
+export async function mockAuthAndApi(page: Page) {
+  let isAuthenticated = false
+  await page.clock.setFixedTime(testToday)
 
   await page.route('http://api.test/api/unlock', async (route) => {
     const body = route.request().postDataJSON() as { passphrase?: string }
@@ -24,7 +26,7 @@ export async function mockAuthAndApi(page: Page, { signedIn = false }: AuthMockO
     }
 
     isAuthenticated = true
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ token: 'token-1' }) })
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ token: testToken }) })
   })
 
   await page.route('http://api.test/api/session', async (route) => {
@@ -33,10 +35,10 @@ export async function mockAuthAndApi(page: Page, { signedIn = false }: AuthMockO
       return
     }
 
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
     await route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ userId: testUser.id }),
+      body: JSON.stringify({ userId: testUser.id, token: testToken }),
     })
   })
 

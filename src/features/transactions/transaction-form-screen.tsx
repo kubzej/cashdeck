@@ -1,23 +1,24 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Check, CircleAlert, Tag } from 'lucide-react'
+import { MAX_NOTE_LENGTH } from '../../../server/src/catalog'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { DatePicker } from '../../components/ui/calendar'
+import { AmountField } from '../../components/amount-field'
 import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
-import { FormLoadError } from '../../components/form-load-error'
+import { FormSubmissionError } from '../../components/form-submission-error'
+import { LoadError } from '../../components/load-error'
 import { ScreenHeader } from '../../components/screen-header'
-import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog'
-import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { Label as FormLabel } from '../../components/ui/label'
 import { Skeleton } from '../../components/ui/skeleton'
-import { createDecimalKeyBlocker, DECIMAL_INPUT_ERROR, parsePositiveWholeCzk, sanitizeAmountInput } from '../../lib/amount-input'
+import { amountErrorMessage, parsePositiveWholeCzk } from '../../lib/amount-input'
 import { formatIsoDate, getPragueToday, parseIsoDate } from '../../lib/prague-date'
 import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group'
-import { CategoryIcon } from '../categories/category-icon'
+import { CategoryPickerDialog } from '../categories/category-picker-dialog'
 import { listCategories, type Category, type CategoryDirection } from '../categories/api'
 import { InlineLabelPicker } from '../labels/inline-label-picker'
+import { mergeLabels } from '../labels/label-chips'
 import { listLabels, type Label } from '../labels/api'
 import { listWallets, type Wallet } from '../wallets/api'
 import { WalletPickerDialog } from '../wallets/wallet-picker-dialog'
@@ -89,7 +90,7 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
     const amountCzk = parsePositiveWholeCzk(values.amountCzk)
     if (!values.walletId) nextErrors.walletId = 'Vyber peněženku.'
     if (!values.categoryId) nextErrors.categoryId = 'Vyber kategorii.'
-    if (amountCzk === null) nextErrors.amountCzk = 'Zadej celý počet korun větší než nula.'
+    if (amountCzk === null) nextErrors.amountCzk = amountErrorMessage(values.amountCzk)
     if (!values.transactionDate) nextErrors.transactionDate = 'Vyber datum.'
     else if (selectedWallet && values.transactionDate < selectedWallet.openingBalanceDate) nextErrors.transactionDate = 'Datum nemůže být před založením peněženky.'
     setErrors(nextErrors)
@@ -129,34 +130,27 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
       titleId="transaction-form-title"
       backLabel="Zpět na transakce"
       onBack={onCancel}
-      action={transaction ? <DeleteConfirmationDialog title="Smazat transakci?" description="Tato transakce bude trvale smazána." triggerLabel="Smazat transakci" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+      action={transaction ? <DeleteConfirmationDialog title="Smazat transakci?" description="Tato transakce bude trvale smazána." triggerLabel="Smazat transakci" isDeleting={isDeleting} error={deleteError} onConfirm={() => void handleDelete()} /> : undefined}
     />
-    {status === 'error' ? <FormLoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
+    {status === 'error' ? <LoadError title="Formulář se nepodařilo načíst" onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
     {status !== 'error' ? <form className="transaction-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
-      {submissionError ? <SubmissionError isEdit={Boolean(transaction)} message={submissionError} /> : null}
+      {submissionError ? <FormSubmissionError subject="Transakci" action={transaction ? 'edit' : 'save'} message={submissionError} /> : null}
       <ToggleGroup type="single" value={values.direction} onValueChange={(next) => { if (next) changeDirection(next as CategoryDirection) }} width="full" className="transaction-direction" aria-label="Typ transakce">
         <ToggleGroupItem value="expense">Výdaj</ToggleGroupItem>
         <ToggleGroupItem value="income">Příjem</ToggleGroupItem>
       </ToggleGroup>
       <Card aria-label="Částka transakce" padding="none" className="transaction-amount-panel">
-        <Field invalid={Boolean(errors.amountCzk)} className="transaction-amount-field">
-          <FieldLabel>Částka</FieldLabel>
-          <div className="transaction-amount">
-            <Input autoFocus type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={values.amountCzk} placeholder="0" aria-label="Částka v korunách" onKeyDown={createDecimalKeyBlocker(() => setErrors((current) => ({ ...current, amountCzk: DECIMAL_INPUT_ERROR })))} onChange={(event) => { const { value: amountCzk, error } = sanitizeAmountInput(event.currentTarget.value); setErrors((current) => ({ ...current, amountCzk: error })); setValues((current) => ({ ...current, amountCzk })) }} />
-            <span>Kč</span>
-          </div>
-          <FieldError match={Boolean(errors.amountCzk)}>{errors.amountCzk}</FieldError>
-        </Field>
+        <AmountField autoFocus value={values.amountCzk} error={errors.amountCzk} onChange={(amountCzk) => setValues((current) => ({ ...current, amountCzk }))} onErrorChange={(amountCzk) => setErrors((current) => ({ ...current, amountCzk }))} />
       </Card>
       <div className="transaction-primary-pickers">
         <Field invalid={Boolean(errors.categoryId)} className="transaction-primary-picker">
           <FieldLabel>Kategorie</FieldLabel>
-          {status === 'loading' ? <Skeleton className="h-[4.25rem] w-full" /> : <CategoryPicker categories={selectableCategories} selectedCategory={selectedCategory} onSelect={(categoryId) => setValues((current) => ({ ...current, categoryId }))} />}
+          {status === 'loading' ? <Skeleton className="h-17 w-full" /> : <CategoryPickerDialog categories={selectableCategories} selectedCategory={selectedCategory} onSelect={(categoryId) => { setValues((current) => ({ ...current, categoryId })); setErrors((current) => ({ ...current, categoryId: undefined })) }} />}
           <FieldError match={Boolean(errors.categoryId)}>{errors.categoryId}</FieldError>
         </Field>
         <Field invalid={Boolean(errors.walletId)} className="transaction-primary-picker">
           <FieldLabel>Peněženka</FieldLabel>
-          {status === 'loading' ? <Skeleton className="h-[4.25rem] w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={selectedWallet} placeholder="Vyber peněženku" onSelect={(walletId) => setValues((current) => ({ ...current, walletId }))} buttonClassName="transaction-primary-picker-button" />}
+          {status === 'loading' ? <Skeleton className="h-17 w-full" /> : <WalletPickerDialog wallets={wallets} selectedWallet={selectedWallet} placeholder="Vyber peněženku" onSelect={(walletId) => { setValues((current) => ({ ...current, walletId })); setErrors((current) => ({ ...current, walletId: undefined, transactionDate: undefined })) }} buttonClassName="transaction-primary-picker-button" />}
           <FieldError match={Boolean(errors.walletId)}>{errors.walletId}</FieldError>
         </Field>
       </div>
@@ -164,36 +158,19 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
       <section className="transaction-details" aria-label="Další podrobnosti">
         <Field invalid={Boolean(errors.transactionDate)}>
           <FieldLabel>Datum</FieldLabel>
-          <DatePicker className="transaction-date-picker" value={parseIsoDate(values.transactionDate)} minDate={selectedWallet ? parseIsoDate(selectedWallet.openingBalanceDate) : undefined} onValueChange={(date) => setValues((current) => ({ ...current, transactionDate: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} />
+          <DatePicker className="transaction-date-picker" value={parseIsoDate(values.transactionDate)} minDate={selectedWallet ? parseIsoDate(selectedWallet.openingBalanceDate) : undefined} onValueChange={(date) => { setValues((current) => ({ ...current, transactionDate: formatIsoDate(date) })); setErrors((current) => ({ ...current, transactionDate: undefined })) }} locale="cs-CZ" startOfWeek={1} />
           <FieldError match={Boolean(errors.transactionDate)}>{errors.transactionDate}</FieldError>
         </Field>
         <Field>
           <FieldLabel>Poznámka</FieldLabel>
-          <Input value={values.note} placeholder="Volitelné" maxLength={2000} onChange={(event) => { const note = event.currentTarget.value; setValues((current) => ({ ...current, note })) }} />
+          <Input value={values.note} placeholder="Volitelné" maxLength={MAX_NOTE_LENGTH} onChange={(event) => { const note = event.currentTarget.value; setValues((current) => ({ ...current, note })) }} />
         </Field>
       </section>
       <Button type="submit" size="lg" className="transaction-form-submit" loading={isSubmitting} disabled={status === 'loading' || wallets.length === 0 || selectableCategories.length === 0}>{transaction ? 'Uložit změny' : 'Uložit transakci'}</Button>
       {wallets.length === 0 || selectableCategories.length === 0 ? <p className="transaction-form-hint">Pro uložení potřebuješ alespoň jednu peněženku a kategorii pro tento typ transakce.</p> : null}
-      {transaction && deleteError ? <SubmissionError isDelete message={deleteError} /> : null}
+      {transaction && deleteError ? <FormSubmissionError subject="Transakci" action="delete" message={deleteError} /> : null}
     </form> : null}
   </section>
 }
 
-function CategoryPicker({ categories, selectedCategory, onSelect }: { categories: Category[]; selectedCategory: Category | null; onSelect: (categoryId: string) => void }) {
-  const [open, setOpen] = useState(false)
-  return <Dialog open={open} onOpenChange={setOpen}>
-    <DialogTrigger render={<Button type="button" variant="outline" className="transaction-picker-button" data-selected={selectedCategory ? '' : undefined} />}>
-      {selectedCategory ? <><CategoryIcon iconKey={selectedCategory.iconKey} colorKey={selectedCategory.colorKey} /><span>{selectedCategory.name}</span></> : <><Tag aria-hidden="true" /><span>Vyber kategorii</span></>}
-    </DialogTrigger>
-    <DialogContent size="default" className="transaction-picker-dialog">
-      <DialogHeader><DialogTitle>Vyber kategorii</DialogTitle></DialogHeader>
-      <DialogBody><div className="transaction-category-grid">
-        {categories.map((category) => <button key={category.id} className={`transaction-category-option color-key--${category.colorKey}`} data-selected={selectedCategory?.id === category.id || undefined} type="button" onClick={() => { onSelect(category.id); setOpen(false) }}><CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /><span>{category.name}</span>{selectedCategory?.id === category.id ? <Check aria-hidden="true" /> : null}</button>)}
-      </div></DialogBody>
-    </DialogContent>
-  </Dialog>
-}
-
-function SubmissionError({ message, isEdit = false, isDelete = false }: { message: string; isEdit?: boolean; isDelete?: boolean }) { return <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>{isDelete ? 'Transakci se nepodařilo smazat' : `Transakci se nepodařilo ${isEdit ? 'upravit' : 'uložit'}`}</FeedbackStateTitle><FeedbackStateDescription>{message}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> }
 function initialValues(transaction?: Transaction): TransactionFormValues { return { direction: transaction?.direction ?? 'expense', walletId: transaction?.walletId ?? '', categoryId: transaction?.categoryId ?? '', amountCzk: transaction ? String(transaction.amountCzk) : '', transactionDate: transaction?.transactionDate ?? getPragueToday(), note: transaction?.note ?? '', labelIds: transaction?.labels.map((label) => label.id) ?? [] } }
-function mergeLabels(selected: Transaction['labels'], recent: Label[]) { return [...selected, ...recent.filter((recentLabel) => !selected.some((selectedLabel) => selectedLabel.id === recentLabel.id))].slice(0, 8) }

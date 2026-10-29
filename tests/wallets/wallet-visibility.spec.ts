@@ -134,3 +134,24 @@ test('reorders visible wallets while a hidden wallet stays out of the drag list 
   await expect.poll(() => walletApi.wallets().map((wallet) => wallet.id)).toEqual(['wallet-2', 'wallet-1', 'wallet-3'])
   await expect.poll(() => walletApi.wallets().find((wallet) => wallet.id === 'wallet-3')?.isHidden).toBe(true)
 })
+
+test('says so when a hidden wallet cannot be shown again, and shows it on the next try', async ({ page }) => {
+  const hiddenWallet: WalletFixture = { ...walletWithHistory, isHidden: true }
+  await mockAuthAndApi(page)
+  const walletApi = await mockWalletsApi(page, [hiddenWallet])
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Peněženky' }).click()
+  await page.getByRole('button', { name: 'Skryté peněženky (1)' }).click()
+  walletApi.failNext('PATCH', { message: 'Dočasně nedostupné.' })
+  await page.getByRole('button', { name: 'Zobrazit', exact: true }).click()
+
+  await expect(page.getByText('Peněženku se nepodařilo zobrazit', { exact: true })).toBeVisible()
+  await expect(page.getByText('Dočasně nedostupné.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Zobrazit', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Zobrazit', exact: true }).click()
+  await expect(page.getByRole('listitem').filter({ hasText: hiddenWallet.name })).toBeVisible()
+  await expect(page.getByText('Peněženku se nepodařilo zobrazit', { exact: true })).not.toBeVisible()
+})

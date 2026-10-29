@@ -101,7 +101,7 @@ const wallets = [
 const transactionRule = {
   id: 'rule-transaction', name: 'Nájem', kind: 'transaction' as const, amountCzk: 18000,
   walletId: wallets[0].id, walletName: wallets[0].name, categoryId: 'category-home', categoryName: 'Domov',
-  categoryIconKey: 'house', categoryColorKey: 'orange', categoryDirection: 'expense' as const,
+  categoryIconKey: 'house' as const, categoryColorKey: 'orange' as const, categoryDirection: 'expense' as const,
   sourceWalletId: null, sourceWalletName: null, destinationWalletId: null, destinationWalletName: null,
   note: null, labels: [], frequency: 'monthly' as const,
   customIntervalDays: null, nextOccurrenceDate: '2099-08-18', endsOn: null, status: 'active' as const,

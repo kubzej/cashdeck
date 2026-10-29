@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarRange, Check, Search, WalletCards, X } from 'lucide-react'
+import { formatCount } from '../../lib/format'
+import type { FeedPeriod } from '../../../server/src/catalog'
 import { Button } from '../../components/ui/button'
 import { DatePicker } from '../../components/ui/calendar'
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
@@ -10,7 +12,7 @@ import type { Wallet } from '../wallets/api'
 import { WalletTypeIcon } from '../wallets/wallet-type-icon'
 import './feed-filters.css'
 
-export type FeedPeriod = 'week' | 'month' | 'year' | 'all' | 'custom'
+export type { FeedPeriod }
 
 export type FeedFilterValue = {
   walletIds: string[]
@@ -70,7 +72,7 @@ function WalletFilterDialog({ wallets, selectedWalletIds, label, onApply }: { wa
   }
 
   return <Dialog open={open} onOpenChange={setOpen}>
-    <Button variant="outline" className="feed-filter-button" aria-label="Nastavit filtr účtů" onClick={() => setOpen(true)}><WalletCards aria-hidden="true" /><span>{label}</span></Button>
+    <Button variant="outline" className="feed-filter-button" aria-label="Nastavit filtr peněženek" onClick={() => setOpen(true)}><WalletCards aria-hidden="true" /><span>{label}</span></Button>
     <DialogContent size="sm" className="feed-filter-dialog">
       <DialogHeader><DialogTitle>Peněženky</DialogTitle></DialogHeader>
       <DialogBody><div className="feed-wallet-options">
@@ -113,13 +115,19 @@ function PeriodFilterDialog({ value, label, onApply }: { value: FeedFilterValue;
 function getWalletLabel(selectedWalletIds: string[], wallets: Wallet[]) {
   if (selectedWalletIds.length === 0) return 'Všechny peněženky'
   if (selectedWalletIds.length === 1) return wallets.find((wallet) => wallet.id === selectedWalletIds[0])?.name ?? '1 peněženka'
-  return `${selectedWalletIds.length} peněženky`
+  return formatCount(selectedWalletIds.length, 'peněženka', 'peněženky', 'peněženek')
 }
 
 export function shiftFeedPeriod(anchor: string, period: Exclude<FeedPeriod, 'all' | 'custom'>, offset: number) {
   const date = parseIsoDate(anchor)
   if (period === 'week') date.setDate(date.getDate() + offset * 7)
-  if (period === 'month') date.setMonth(date.getMonth() + offset)
+  if (period === 'month') {
+    // The anchor only identifies a month. Starting from the 29th–31st, setMonth would overflow
+    // into the month after a shorter one (Oct 31 - 1 month = "Sep 31" = Oct 1) and the pager
+    // would stay put or skip a month.
+    date.setDate(1)
+    date.setMonth(date.getMonth() + offset)
+  }
   if (period === 'year') date.setFullYear(date.getFullYear() + offset)
   return formatIsoDate(date)
 }

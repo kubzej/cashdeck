@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { DomainError } from '../management/domain.js'
-import { parseOverviewQuery, parseOverviewSelectionQuery, resolveOverviewGranularity } from './domain.js'
+import { assertOverviewBucketLimit, parseOverviewQuery, parseOverviewSelectionQuery, resolveOverviewGranularity } from './domain.js'
 
 const walletId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef123'
 
@@ -53,4 +53,17 @@ test('rejects invalid or reversed selection trend queries', () => {
   expect(() => parseOverviewSelectionQuery({ type: 'category', id: 'not-a-uuid', dateFrom: '2026-08-01', dateTo: '2026-08-31', granularity: 'day' })).toThrow(DomainError)
   expect(() => parseOverviewSelectionQuery({ type: 'category', id: categoryId, dateFrom: '2026-08-31', dateTo: '2026-08-01', granularity: 'day' })).toThrow(DomainError)
   expect(() => parseOverviewSelectionQuery({ type: 'category', id: categoryId, dateFrom: '2026-08-01', dateTo: '2026-08-31', granularity: 'invalid' })).toThrow(DomainError)
+})
+
+test('a week, month or year period spanning far longer than itself no longer forces fine-grained buckets', () => {
+  expect(resolveOverviewGranularity('month', '2026-08-01', '2026-08-31')).toBe('day')
+  expect(resolveOverviewGranularity('month', '2000-01-01', '2026-08-31')).toBe('quarter')
+  expect(resolveOverviewGranularity('week', '2026-01-01', '2026-08-31')).toBe('month')
+  expect(resolveOverviewGranularity('year', '2020-01-01', '2026-12-31')).toBe('quarter')
+})
+
+test('rejects ranges that would generate more than 1000 chart buckets', () => {
+  expect(() => assertOverviewBucketLimit('1926-01-01', '2026-12-31', 'quarter')).not.toThrow()
+  expect(() => assertOverviewBucketLimit('0001-01-01', '9999-12-31', 'quarter')).toThrow('Zvolené období je pro přehled příliš dlouhé.')
+  expect(() => parseOverviewSelectionQuery({ type: 'total', dateFrom: '2000-01-01', dateTo: '2026-08-31', granularity: 'day' })).toThrow('Zvolené období je pro přehled příliš dlouhé.')
 })

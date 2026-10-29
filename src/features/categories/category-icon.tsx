@@ -235,7 +235,8 @@ const icons: Record<CategoryIconKey, ComponentType<{ className?: string; 'aria-h
 }
 
 export function CategoryIcon({ iconKey, colorKey, className = '' }: { iconKey: CategoryIconKey; colorKey: CategoryColorKey; className?: string }) {
-  const Icon = icons[iconKey]
+  // An unknown key (e.g. an icon removed from the catalog later) must not take the screen down.
+  const Icon = icons[iconKey] ?? Tags
   return <Icon className={`category-icon color-key--${colorKey} ${className}`.trim()} aria-hidden />
 }
 

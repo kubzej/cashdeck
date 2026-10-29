@@ -1,3 +1,7 @@
+// Repository tests run against a mocked `pg` pool: they check which queries and parameters the
+// repository sends and how it handles the rows it is handed (transactions, cache invalidation,
+// validation), never what Postgres would return. SQL correctness is not covered here.
+
 import type { Pool } from 'pg'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { invalidateWealthCache } from '../wealth-cache.js'
@@ -5,18 +9,6 @@ import { createTransferRepository } from './repository.js'
 
 vi.mock('../wealth-cache.js', () => ({ invalidateWealthCache: vi.fn() }))
 beforeEach(() => vi.mocked(invalidateWealthCache).mockClear())
-
-test('listTransfers excludes transfers where either wallet endpoint is hidden', async () => {
-  const query = vi.fn().mockResolvedValue({ rows: [] })
-  const repository = createTransferRepository({ query } as unknown as Pool)
-
-  await repository.listTransfers('user-1', { walletId: null, dateFrom: null, dateTo: null, cursor: null, limit: 20 })
-
-  const [sql] = query.mock.calls[0]
-  const normalized = String(sql).replace(/\s+/g, ' ')
-  expect(normalized).toContain('not source_wallet_filter.is_hidden')
-  expect(normalized).toContain('not destination_wallet_filter.is_hidden')
-})
 
 test('updateTransfer persists a changed destination wallet so both old and new wallet balances recalculate from it', async () => {
   const query = vi.fn()

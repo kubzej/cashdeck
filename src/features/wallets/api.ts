@@ -1,11 +1,10 @@
 import { apiRequest } from '../../lib/api-client'
-import { colorKeys, type ColorKey } from '../../lib/color-keys'
+import { colorKeys, walletTypes, type ColorKey, type WalletType } from '../../../server/src/catalog'
 
 export const walletColorKeys = colorKeys
 export type WalletColorKey = ColorKey
 
-export const walletTypes = ['cash', 'checking', 'savings', 'investment', 'pension', 'crypto', 'other'] as const
-export type WalletType = (typeof walletTypes)[number]
+export { walletTypes, type WalletType }
 
 export type Wallet = {
   id: string
