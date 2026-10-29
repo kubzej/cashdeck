@@ -25,6 +25,18 @@ test('validates required wallet fields and retries a failed creation', async ({ 
   await expect(page.getByRole('listitem').filter({ hasText: 'Rezerva' })).toContainText('150 000 Kč')
 })
 
+test('limits the wallet name to the length the server accepts', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page)
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Peněženky' }).click()
+  await page.locator('[data-slot="empty-state"]').getByRole('button', { name: 'Přidat peněženku' }).click()
+  await page.getByLabel('Název').fill('x'.repeat(130))
+  await expect(page.getByLabel('Název')).toHaveValue('x'.repeat(120))
+})
+
 test('edits every wallet field and preserves the updated opening-balance date', async ({ page }) => {
   const wallet: WalletFixture = {
     id: 'wallet-1',

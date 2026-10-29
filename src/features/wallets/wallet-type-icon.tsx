@@ -25,7 +25,7 @@ const labels: Record<WalletType, string> = {
 }
 
 export function WalletTypeIcon({ walletType, className = '' }: { walletType: WalletType; className?: string }) {
-  const Icon = icons[walletType]
+  const Icon = icons[walletType] ?? WalletCards
   return <Icon className={className} aria-hidden />
 }
 

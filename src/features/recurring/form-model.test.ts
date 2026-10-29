@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { initialRecurringRuleFormValues, toRecurringRuleInput, validateRecurringRuleForm, type RecurringRuleFormValues } from './form-model'
+import { formatFrequency, frequencyLabels, initialRecurringRuleFormValues, toRecurringRuleInput, validateRecurringRuleForm, type RecurringRuleFormValues } from './form-model'
 
 const today = '2026-08-20'
 
@@ -70,3 +70,17 @@ describe('recurring rule form model', () => {
     expect(stored).toMatchObject({ amountCzk: '23000', labelIds: ['label-1'], nextOccurrenceDate: '2026-09-20', endsOn: '2026-12-20' })
   })
 })
+
+describe('formatFrequency', () => {
+  test('uses the fixed label for regular frequencies', () => {
+    expect(formatFrequency({ frequency: 'monthly', customIntervalDays: null })).toBe('Každý měsíc')
+    expect(formatFrequency({ frequency: 'every_three_months', customIntervalDays: null })).toBe(frequencyLabels.every_three_months)
+  })
+
+  test('puts a custom interval of days in agreement', () => {
+    expect(formatFrequency({ frequency: 'custom_days', customIntervalDays: 1 })).toBe('Každý den')
+    expect(formatFrequency({ frequency: 'custom_days', customIntervalDays: 3 })).toBe('Každé 3 dny')
+    expect(formatFrequency({ frequency: 'custom_days', customIntervalDays: 10 })).toBe('Každých 10 dní')
+  })
+})
+

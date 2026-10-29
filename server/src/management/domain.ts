@@ -1,116 +1,17 @@
-import { categoryIconKeys, type CategoryIconKey } from './category-catalog.js'
+import {
+  categoryDirections,
+  categoryIconKeys,
+  colorKeys,
+  MAX_AMOUNT_CZK,
+  MAX_NAME_LENGTH,
+  walletTypes,
+  type CategoryDirection,
+  type CategoryIconKey,
+  type ColorKey,
+  type WalletType,
+} from '../catalog.js'
 
-export { categoryIconKeys, type CategoryIconKey }
-
-export const categoryDirections = ['income', 'expense'] as const
-export type CategoryDirection = (typeof categoryDirections)[number]
-
-export const colorKeys = [
-  'slate-light',
-  'slate',
-  'slate-dark',
-  'gray-light',
-  'gray',
-  'gray-dark',
-  'red-light',
-  'red',
-  'red-dark',
-  'orange-light',
-  'orange',
-  'orange-dark',
-  'yellow-light',
-  'yellow',
-  'yellow-dark',
-  'amber-light',
-  'amber',
-  'amber-dark',
-  'lime-light',
-  'lime',
-  'lime-dark',
-  'green-light',
-  'green',
-  'green-dark',
-  'teal-light',
-  'teal',
-  'teal-dark',
-  'cyan-light',
-  'cyan',
-  'cyan-dark',
-  'sky-light',
-  'sky',
-  'sky-dark',
-  'blue-light',
-  'blue',
-  'blue-dark',
-  'indigo-light',
-  'indigo',
-  'indigo-dark',
-  'violet-light',
-  'violet',
-  'violet-dark',
-  'pink-light',
-  'pink',
-  'pink-dark',
-  'rose-light',
-  'rose',
-  'rose-dark',
-  'brown-light',
-  'brown',
-  'brown-dark',
-] as const
-export type ColorKey = (typeof colorKeys)[number]
-
-export const walletTypes = ['cash', 'checking', 'savings', 'investment', 'pension', 'crypto', 'other'] as const
-export type WalletType = (typeof walletTypes)[number]
-
-export type DefaultCategory = {
-  name: string
-  direction: CategoryDirection
-  iconKey: CategoryIconKey
-  colorKey: ColorKey
-}
-
-export const defaultCategories: readonly DefaultCategory[] = [
-  { name: 'Domov', direction: 'expense', iconKey: 'house', colorKey: 'orange' },
-  { name: 'Hypotéka', direction: 'expense', iconKey: 'landmark', colorKey: 'amber' },
-  { name: 'Předplatné', direction: 'expense', iconKey: 'repeat-2', colorKey: 'violet' },
-  { name: 'Sport', direction: 'expense', iconKey: 'dumbbell', colorKey: 'green' },
-  { name: 'Cigarety', direction: 'expense', iconKey: 'cigarette', colorKey: 'slate' },
-  { name: 'Slavia', direction: 'expense', iconKey: 'flag', colorKey: 'red' },
-  { name: 'Dar', direction: 'expense', iconKey: 'heart-handshake', colorKey: 'rose' },
-  { name: 'Vzdělávání', direction: 'expense', iconKey: 'graduation-cap', colorKey: 'sky' },
-  { name: 'Zábava', direction: 'expense', iconKey: 'clapperboard', colorKey: 'violet' },
-  { name: 'Dárek', direction: 'expense', iconKey: 'gift', colorKey: 'pink' },
-  { name: 'Oblečení', direction: 'expense', iconKey: 'shirt', colorKey: 'cyan' },
-  { name: 'Elektronika', direction: 'expense', iconKey: 'smartphone', colorKey: 'blue' },
-  { name: 'Zdraví', direction: 'expense', iconKey: 'heart-pulse', colorKey: 'red' },
-  { name: 'Nákup', direction: 'expense', iconKey: 'shopping-basket', colorKey: 'teal' },
-  { name: 'Dovolená', direction: 'expense', iconKey: 'plane', colorKey: 'sky' },
-  { name: 'Párty', direction: 'expense', iconKey: 'party-popper', colorKey: 'pink' },
-  { name: 'MHD', direction: 'expense', iconKey: 'tram-front', colorKey: 'indigo' },
-  { name: 'Účty', direction: 'expense', iconKey: 'receipt-text', colorKey: 'cyan' },
-  { name: 'Restaurace', direction: 'expense', iconKey: 'utensils', colorKey: 'orange' },
-  { name: 'Práce', direction: 'expense', iconKey: 'briefcase-business', colorKey: 'blue' },
-  { name: 'Auto', direction: 'expense', iconKey: 'car-front', colorKey: 'slate' },
-  { name: 'Ostatní', direction: 'expense', iconKey: 'ellipsis', colorKey: 'slate' },
-  { name: 'Výplata', direction: 'income', iconKey: 'banknote-arrow-up', colorKey: 'green' },
-  { name: 'Dárek', direction: 'income', iconKey: 'gift', colorKey: 'pink' },
-  { name: 'Refundace', direction: 'income', iconKey: 'rotate-ccw', colorKey: 'cyan' },
-  { name: 'Extra příjem', direction: 'income', iconKey: 'circle-plus', colorKey: 'teal' },
-  { name: 'Dar', direction: 'income', iconKey: 'heart-handshake', colorKey: 'rose' },
-  { name: 'Prodej', direction: 'income', iconKey: 'tags', colorKey: 'orange' },
-  { name: 'Ostatní', direction: 'income', iconKey: 'ellipsis', colorKey: 'slate' },
-]
-
-export function defaultCategorySeeds() {
-  const nextSortOrder: Record<CategoryDirection, number> = { income: 0, expense: 0 }
-
-  return defaultCategories.map((category) => {
-    const sortOrder = nextSortOrder[category.direction]
-    nextSortOrder[category.direction] += 1
-    return { ...category, sortOrder }
-  })
-}
+export { categoryDirections, categoryIconKeys, colorKeys, walletTypes, type CategoryDirection, type CategoryIconKey, type ColorKey, type WalletType }
 
 export class DomainError extends Error {
   constructor(
@@ -177,6 +78,10 @@ export function parseWholeCzk(value: unknown, field: string, options: { allowNeg
     throw new DomainError(400, `${field} musí být celé číslo v Kč.`)
   }
 
+  if (Math.abs(value) > MAX_AMOUNT_CZK) {
+    throw new DomainError(400, `${field} je příliš velké číslo.`)
+  }
+
   if (!options.allowNegative && value < 0) {
     throw new DomainError(400, `${field} nesmí být záporné.`)
   }
@@ -235,8 +140,8 @@ function normalizeText(value: unknown, field: string) {
   }
 
   const normalized = value.trim().replace(/\s+/g, ' ')
-  if (!normalized || normalized.length > 120) {
-    throw new DomainError(400, `${field} musí mít 1 až 120 znaků.`)
+  if (!normalized || normalized.length > MAX_NAME_LENGTH) {
+    throw new DomainError(400, `${field} musí mít 1 až ${MAX_NAME_LENGTH} znaků.`)
   }
 
   return normalized

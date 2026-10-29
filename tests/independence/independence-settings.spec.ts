@@ -144,6 +144,54 @@ test('adds, edits, and deletes an irregular expense', async ({ page }) => {
   await expect(page.getByText(/ročně 60\s?000 Kč/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Smazat Výměna auta' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Smazat', exact: true }).click()
   await expect(page.getByText('Výměna auta', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Zatím žádné nepravidelné výdaje.', { exact: true })).toBeVisible()
+})
+
+test('asks before deleting an irregular expense, and cancelling keeps it', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page, [wallet])
+  const independenceApi = await mockIndependenceApi(page, { settings: savedSettings, irregularExpenses: [{ id: 'irregular-1', name: 'Výměna auta', amountCzk: 400_000, frequencyYears: 8, sortOrder: 0 }] })
+  await page.goto('/')
+  await signIn(page)
+  await page.getByRole('button', { name: 'Nastavení', exact: true }).click()
+  await page.getByRole('button', { name: 'Nastavení nezávislosti' }).click()
+
+  await page.getByRole('button', { name: 'Smazat Výměna auta' }).click()
+  await expect(page.getByRole('alertdialog').getByText('Smazat nepravidelný výdaj?', { exact: true })).toBeVisible()
+  expect(independenceApi.irregularExpenses()).toHaveLength(1)
+
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Zrušit' }).click()
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
+  await expect(page.getByText('Výměna auta', { exact: true })).toBeVisible()
+  expect(independenceApi.irregularExpenses()).toHaveLength(1)
+})
+
+test('a failed delete of an irregular expense is explained inside the dialog and can be retried', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page, [wallet])
+  const independenceApi = await mockIndependenceApi(page, { settings: savedSettings, irregularExpenses: [{ id: 'irregular-1', name: 'Výměna auta', amountCzk: 400_000, frequencyYears: 8, sortOrder: 0 }] })
+  let failuresLeft = 1
+  await page.route('http://api.test/api/independence/irregular-expenses/**', async (route) => {
+    if (route.request().method() === 'DELETE' && failuresLeft > 0) {
+      failuresLeft -= 1
+      await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Dočasně nedostupné.' }) })
+      return
+    }
+    await route.fallback()
+  })
+  await page.goto('/')
+  await signIn(page)
+  await page.getByRole('button', { name: 'Nastavení', exact: true }).click()
+  await page.getByRole('button', { name: 'Nastavení nezávislosti' }).click()
+
+  await page.getByRole('button', { name: 'Smazat Výměna auta' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Smazat', exact: true }).click()
+
+  await expect(page.getByRole('alertdialog').getByRole('alert')).toHaveText('Dočasně nedostupné.')
+  expect(independenceApi.irregularExpenses()).toHaveLength(1)
+
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Smazat', exact: true }).click()
+  await expect(page.getByText('Výměna auta', { exact: true })).toHaveCount(0)
 })

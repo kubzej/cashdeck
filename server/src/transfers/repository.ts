@@ -1,8 +1,9 @@
-import { Buffer } from 'node:buffer'
 import type { Pool, PoolClient } from 'pg'
+import { withTransaction } from '../database.js'
 import { DomainError } from '../management/domain.js'
-import { assertDifferentWallets, type TransferInput, type TransferListInput, type TransferUpdateInput } from './domain.js'
+import { assertDifferentWallets, type TransferInput, type TransferUpdateInput } from './domain.js'
 import { invalidateWealthCache } from '../wealth-cache.js'
+import { parseLabels } from '../parsing.js'
 
 export type TransferLabel = { id: string; name: string }
 
@@ -18,16 +19,12 @@ export type Transfer = {
   labels: TransferLabel[]
 }
 
-export type TransferPage = { items: Transfer[]; nextCursor: string | null }
-
 export type TransferRepository = {
-  listTransfers(userId: string, input: TransferListInput): Promise<TransferPage>
   createTransfer(userId: string, input: TransferInput): Promise<Transfer>
   updateTransfer(userId: string, transferId: string, input: TransferUpdateInput): Promise<Transfer | null>
   deleteTransfer(userId: string, transferId: string): Promise<boolean>
 }
 
-type TransferCursor = { transferDate: string; createdAt: string; id: string }
 type TransferRow = {
   id: string
   source_wallet_id: string
@@ -44,36 +41,8 @@ type Queryable = Pick<Pool, 'query'> | Pick<PoolClient, 'query'>
 
 export function createTransferRepository(pool: Pool): TransferRepository {
   return {
-    async listTransfers(userId, input) {
-      const cursor = input.cursor ? decodeCursor(input.cursor) : null
-      const values: unknown[] = [userId]
-      const filters = ['tr.user_id = $1']
-      if (input.walletId) {
-        values.push(input.walletId)
-        filters.push(`(tr.source_wallet_id = $${values.length}::uuid or tr.destination_wallet_id = $${values.length}::uuid)`)
-      }
-      if (input.dateFrom) {
-        values.push(input.dateFrom)
-        filters.push(`tr.transfer_date >= $${values.length}::date`)
-      }
-      if (input.dateTo) {
-        values.push(input.dateTo)
-        filters.push(`tr.transfer_date <= $${values.length}::date`)
-      }
-      if (cursor) {
-        values.push(cursor.transferDate, cursor.createdAt, cursor.id)
-        filters.push(`(tr.transfer_date, tr.created_at, tr.id) < ($${values.length - 2}::date, $${values.length - 1}::timestamptz, $${values.length}::uuid)`)
-      }
-      values.push(input.limit + 1)
-
-      const result = await pool.query<TransferRow>(transferSelect(filters.join(' and '), `$${values.length}`, true), values)
-      const rows = result.rows.slice(0, input.limit)
-      const last = rows.at(-1)
-      return { items: rows.map(toTransfer), nextCursor: result.rows.length > input.limit && last ? encodeCursor(last) : null }
-    },
-
     async createTransfer(userId, input) {
-      return withTransaction(pool, async (client) => {
+      const transfer = await withTransaction(pool, async (client) => {
         const created = await client.query<{ id: string }>(
           `insert into transfers (user_id, source_wallet_id, destination_wallet_id, amount_czk, transfer_date, note)
            values ($1, $2, $3, $4, $5, $6)
@@ -83,13 +52,14 @@ export function createTransferRepository(pool: Pool): TransferRepository {
         const transferId = created.rows[0]?.id
         if (!transferId) throw new Error('Vytvoření převodu nevrátilo ID.')
         await replaceTransferLabels(client, userId, transferId, input.labelIds)
-        invalidateWealthCache()
         return requireTransfer(client, userId, transferId)
       })
+      invalidateWealthCache()
+      return transfer
     },
 
     async updateTransfer(userId, transferId, input) {
-      return withTransaction(pool, async (client) => {
+      const transfer = await withTransaction(pool, async (client) => {
         const existing = await client.query<{ source_wallet_id: string; destination_wallet_id: string }>(
           `select source_wallet_id, destination_wallet_id
            from transfers
@@ -122,9 +92,10 @@ export function createTransferRepository(pool: Pool): TransferRepository {
           )
         }
         if (input.labelIds !== undefined) await replaceTransferLabels(client, userId, transferId, input.labelIds)
-        invalidateWealthCache()
         return requireTransfer(client, userId, transferId)
       })
+      if (transfer) invalidateWealthCache()
+      return transfer
     },
 
     async deleteTransfer(userId, transferId) {
@@ -135,20 +106,13 @@ export function createTransferRepository(pool: Pool): TransferRepository {
   }
 }
 
-function transferSelect(filters: string, limit: string, excludeHiddenWallets = false) {
-  const hiddenFilter = excludeHiddenWallets
-    ? `
-      and not source_wallet_filter.is_hidden
-      and not destination_wallet_filter.is_hidden`
-    : ''
+function transferSelect(filters: string, limit: string) {
   return `with page as (
     select tr.id, tr.source_wallet_id, tr.destination_wallet_id, tr.amount_czk,
       to_char(tr.transfer_date, 'YYYY-MM-DD') as transfer_date,
       tr.note, tr.created_at
     from transfers tr
-    join wallets source_wallet_filter on source_wallet_filter.user_id = tr.user_id and source_wallet_filter.id = tr.source_wallet_id
-    join wallets destination_wallet_filter on destination_wallet_filter.user_id = tr.user_id and destination_wallet_filter.id = tr.destination_wallet_id
-    where ${filters}${hiddenFilter}
+    where ${filters}
     order by tr.transfer_date desc, tr.created_at desc, tr.id desc
     limit ${limit}
   )
@@ -203,39 +167,4 @@ function toTransfer(row: TransferRow): Transfer {
     note: row.note,
     labels: parseLabels(row.labels),
   }
-}
-
-function parseLabels(value: unknown): TransferLabel[] {
-  const labels = typeof value === 'string' ? JSON.parse(value) : value
-  if (!Array.isArray(labels)) return []
-  return labels.filter((label): label is TransferLabel => typeof label === 'object' && label !== null && 'id' in label && 'name' in label && typeof label.id === 'string' && typeof label.name === 'string')
-}
-
-async function withTransaction<T>(pool: Pool, callback: (client: PoolClient) => Promise<T>) {
-  const client = await pool.connect()
-  try {
-    await client.query('begin')
-    const result = await callback(client)
-    await client.query('commit')
-    return result
-  } catch (error) {
-    await client.query('rollback')
-    throw error
-  } finally {
-    client.release()
-  }
-}
-
-function encodeCursor(row: TransferRow) {
-  return Buffer.from(JSON.stringify({ transferDate: row.transfer_date, createdAt: row.created_at.toISOString(), id: row.id } satisfies TransferCursor)).toString('base64url')
-}
-
-function decodeCursor(cursor: string): TransferCursor {
-  try {
-    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<TransferCursor>
-    if (typeof parsed.transferDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.transferDate) && typeof parsed.createdAt === 'string' && !Number.isNaN(new Date(parsed.createdAt).valueOf()) && typeof parsed.id === 'string' && /^[0-9a-f-]{36}$/i.test(parsed.id)) return parsed as TransferCursor
-  } catch {
-    // The generic validation error below intentionally does not expose parser details.
-  }
-  throw new DomainError(400, 'Kurzór převodů není platný.')
 }

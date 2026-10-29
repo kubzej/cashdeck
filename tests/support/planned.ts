@@ -1,5 +1,6 @@
-import { expect, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
 import type { PlannedItem, PlannedResult } from '../../src/features/planned/api'
+import { rejectUnauthorized } from './authorization'
 
 export type PlannedApiMock = {
   requests: () => URL[]
@@ -11,11 +12,11 @@ export async function mockPlannedApi(page: Page, items: PlannedItem[]) {
   let queuedFailure: { status: number; message: string } | null = null
 
   await page.route('http://api.test/api/planned**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
     if (queuedFailure) {
       const failure = queuedFailure
       queuedFailure = null
-      await route.fulfill({ contentType: 'application/json', status: failure.status, body: JSON.stringify({ message: failure.message }) })
+      await route.fulfill({ contentType: 'application/json', status: failure.status, body: JSON.stringify({ error: failure.message }) })
       return
     }
     requests.push(route.request().url())

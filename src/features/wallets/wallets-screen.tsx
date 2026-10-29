@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { ChevronDown, ChevronUp, CircleAlert, Pencil, Plus, RefreshCw, WalletCards } from 'lucide-react'
+import { ChevronDown, ChevronUp, CircleAlert, Pencil, Plus, WalletCards } from 'lucide-react'
+import { LoadError } from '../../components/load-error'
 import { Button } from '../../components/ui/button'
 import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
+import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List, ListItem, ListItemActions, ListItemContent, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
 import { formatCzk } from '../../lib/format-czk'
+import { useSortableList } from '../../lib/sortable-list'
 import { listWallets, reorderWallets, updateWallet, type Wallet } from './api'
 import { SortableWalletRow } from './sortable-wallet-row'
 import { WalletTypeIcon } from './wallet-type-icon'
@@ -16,11 +18,13 @@ import './wallets.css'
 export function WalletsScreen({ onCreate, onSelect, onManage }: { onCreate: () => void; onSelect: (wallet: Wallet) => void; onManage: (wallet: Wallet) => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [wallets, setWallets] = useState<Wallet[]>([])
-  const [reorderError, setReorderError] = useState<string | null>(null)
-  const [isReordering, setIsReordering] = useState(false)
+  const [actionError, setActionError] = useState<{ title: string; message: string } | null>(null)
   const [showHidden, setShowHidden] = useState(false)
   const [unhidingId, setUnhidingId] = useState<string | null>(null)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const { sensors, isReordering, handleDragEnd: reorderByDrag } = useSortableList({
+    onStart: () => setActionError(null),
+    onError: (error) => setActionError({ title: 'Pořadí se nepodařilo uložit', message: error instanceof Error ? error.message : 'Pořadí peněženek se nepodařilo uložit.' }),
+  })
 
   const visibleWallets = useMemo(() => wallets.filter((wallet) => !wallet.isHidden), [wallets])
   const hiddenWallets = useMemo(() => wallets.filter((wallet) => wallet.isHidden), [wallets])
@@ -42,39 +46,25 @@ export function WalletsScreen({ onCreate, onSelect, onManage }: { onCreate: () =
 
   async function handleUnhide(wallet: Wallet) {
     setUnhidingId(wallet.id)
+    setActionError(null)
     try {
       await updateWallet(wallet.id, { isHidden: false })
       await loadWallets()
+    } catch (error) {
+      setActionError({ title: 'Peněženku se nepodařilo zobrazit', message: error instanceof Error ? error.message : 'Zkus to prosím znovu.' })
     } finally {
       setUnhidingId(null)
     }
   }
 
   async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
-    const oldIndex = visibleWallets.findIndex((wallet) => wallet.id === active.id)
-    const newIndex = visibleWallets.findIndex((wallet) => wallet.id === over.id)
-    if (oldIndex < 0 || newIndex < 0) return
-
-    const nextVisible = [...visibleWallets]
-    const [movedWallet] = nextVisible.splice(oldIndex, 1)
-    nextVisible.splice(newIndex, 0, movedWallet)
-    // reorderWallets requires the complete id set (visible + hidden); hidden wallets are
-    // appended after the visible ones since their relative order isn't shown anywhere.
-    const nextWallets = [...nextVisible, ...hiddenWallets]
-    setIsReordering(true)
-    setReorderError(null)
-
-    try {
+    await reorderByDrag(event, visibleWallets, async (nextVisible) => {
+      // reorderWallets requires the complete id set (visible + hidden); hidden wallets are
+      // appended after the visible ones since their relative order isn't shown anywhere.
+      const nextWallets = [...nextVisible, ...hiddenWallets]
       await reorderWallets(nextWallets.map((wallet) => wallet.id))
       setWallets(nextWallets)
-    } catch (error) {
-      setReorderError(error instanceof Error ? error.message : 'Pořadí peněženek se nepodařilo uložit.')
-    } finally {
-      setIsReordering(false)
-    }
+    })
   }
 
   if (status === 'loading') {
@@ -83,11 +73,7 @@ export function WalletsScreen({ onCreate, onSelect, onManage }: { onCreate: () =
 
   if (status === 'error') {
     return (
-      <FeedbackState status="error" layout="panel" className="wallets-feedback">
-        <FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon>
-        <FeedbackStateContent><FeedbackStateTitle>Peněženky se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent>
-        <FeedbackStateActions><Button variant="outline" onClick={() => void loadWallets()}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions>
-      </FeedbackState>
+      <LoadError title="Peněženky se nepodařilo načíst" className="wallets-feedback" onRetry={() => void loadWallets()} />
     )
   }
 
@@ -104,7 +90,7 @@ export function WalletsScreen({ onCreate, onSelect, onManage }: { onCreate: () =
 
   return (
     <section className="wallets-screen" aria-label="Peněženky">
-      {reorderError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Pořadí se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{reorderError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
+      {actionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>{actionError.title}</FeedbackStateTitle><FeedbackStateDescription>{actionError.message}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
       {visibleWallets.length > 0 ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => void handleDragEnd(event)}>
         <SortableContext items={visibleWallets.map((wallet) => wallet.id)} strategy={verticalListSortingStrategy}>
           <List gap="sm">{visibleWallets.map((wallet) => <SortableWalletRow key={wallet.id} wallet={wallet} disabled={isReordering} onSelect={onSelect} onManage={onManage} onAdjusted={() => void loadWallets()} />)}</List>

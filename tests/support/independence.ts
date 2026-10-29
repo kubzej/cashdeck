@@ -1,5 +1,6 @@
-import { expect, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
 import type { IndependenceProgress, IndependenceSettings, IrregularExpense } from '../../src/features/independence/api'
+import { rejectUnauthorized } from './authorization'
 
 const defaultProgress: IndependenceProgress = {
   hasSettings: false,
@@ -32,7 +33,7 @@ export async function mockIndependenceApi(page: Page, options: {
   let nextId = irregularExpenses.length + 1
 
   await page.route('http://api.test/api/independence/**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
     const request = route.request()
     const pathname = new URL(request.url()).pathname
 
@@ -65,7 +66,7 @@ export async function mockIndependenceApi(page: Page, options: {
       const input = request.postDataJSON() as Partial<IrregularExpense>
       irregularExpenses = irregularExpenses.map((item) => item.id === id ? { ...item, ...input } : item)
       const item = irregularExpenses.find((entry) => entry.id === id)
-      await route.fulfill(item ? json(item) : json({ message: 'Položka neexistuje.' }, 404))
+      await route.fulfill(item ? json(item) : json({ error: 'Položka neexistuje.' }, 404))
       return
     }
 
@@ -73,7 +74,7 @@ export async function mockIndependenceApi(page: Page, options: {
       const id = pathname.split('/').at(-1)
       const existed = irregularExpenses.some((item) => item.id === id)
       irregularExpenses = irregularExpenses.filter((item) => item.id !== id)
-      await route.fulfill(existed ? { status: 204 } : json({ message: 'Položka neexistuje.' }, 404))
+      await route.fulfill(existed ? { status: 204 } : json({ error: 'Položka neexistuje.' }, 404))
       return
     }
 
@@ -87,7 +88,7 @@ export async function mockIndependenceApi(page: Page, options: {
       return
     }
 
-    await route.fulfill(json({ message: `Nepodporovaný independence požadavek: ${request.method()} ${pathname}` }, 500))
+    await route.fulfill(json({ error: `Nepodporovaný independence požadavek: ${request.method()} ${pathname}` }, 500))
   })
 
   return {

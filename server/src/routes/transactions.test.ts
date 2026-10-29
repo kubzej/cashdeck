@@ -16,7 +16,6 @@ const config: ServerConfig = {
   databaseUrl: 'postgres://unused',
   frontendOrigin: 'http://localhost:5173',
   host: '127.0.0.1',
-  neonAuthUrl: 'https://auth.test/neondb/auth',
   port: 8000,
   sessionSigningSecret: 'test-session-signing-secret-32-characters-long',
   appAccessPassphrase: 'test-passphrase',
@@ -137,5 +136,22 @@ test('rejects zero and negative amounts, duplicate labels, and anonymous writes'
   const anonymous = await app.inject({ method: 'POST', url: '/api/transactions' })
   expect(anonymous.statusCode).toBe(401)
   expect(repository.createTransaction).not.toHaveBeenCalled()
+  await app.close()
+})
+
+test('tells the user a referenced wallet is gone instead of claiming a delete was blocked', async () => {
+  const repository = createRepository()
+  const app = await createApp({ config, database: { end: vi.fn() } as unknown as Pool, transactionRepository: repository, requireAuth: requireTestAuth })
+  vi.mocked(repository.createTransaction).mockRejectedValueOnce({ code: '23503', constraint: 'transactions_wallet_same_user_fkey', table: 'transactions' })
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/transactions',
+    headers: { authorization: 'Bearer test-token' },
+    payload: { walletId, categoryId, amountCzk: 100, transactionDate: '2026-08-20', note: null, labelIds: [] },
+  })
+
+  expect(response.statusCode).toBe(409)
+  expect(response.json()).toEqual({ error: 'Vybraná peněženka, kategorie nebo štítek už neexistuje.' })
   await app.close()
 })

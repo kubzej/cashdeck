@@ -1,7 +1,10 @@
 import type { Pool, PoolClient } from 'pg'
+import type { CategoryDirection } from '../catalog.js'
+import { withTransaction } from '../database.js'
 import { DomainError } from '../management/domain.js'
 import type { TransactionInput, TransactionUpdateInput } from './domain.js'
 import { invalidateWealthCache } from '../wealth-cache.js'
+import { parseLabels } from '../parsing.js'
 
 export type TransactionLabel = {
   id: string
@@ -16,7 +19,7 @@ export type Transaction = {
   categoryName: string
   categoryIconKey: string
   categoryColorKey: string
-  direction: 'income' | 'expense'
+  direction: CategoryDirection
   amountCzk: number
   transactionDate: string
   note: string | null
@@ -37,7 +40,7 @@ type TransactionRow = {
   category_name: string
   category_icon_key: string
   category_color_key: string
-  direction: 'income' | 'expense'
+  direction: CategoryDirection
   amount_czk: string
   transaction_date: string
   note: string | null
@@ -50,7 +53,7 @@ type Queryable = Pick<Pool, 'query'> | Pick<PoolClient, 'query'>
 export function createTransactionRepository(pool: Pool): TransactionRepository {
   return {
     async createTransaction(userId, input) {
-      return withTransaction(pool, async (client) => {
+      const transaction = await withTransaction(pool, async (client) => {
         const created = await client.query<{ id: string }>(
           `insert into transactions (user_id, wallet_id, category_id, amount_czk, transaction_date, note)
            values ($1, $2, $3, $4, $5, $6)
@@ -60,13 +63,14 @@ export function createTransactionRepository(pool: Pool): TransactionRepository {
         const transactionId = created.rows[0]?.id
         if (!transactionId) throw new Error('Vytvoření transakce nevrátilo ID.')
         await replaceTransactionLabels(client, userId, transactionId, input.labelIds)
-        invalidateWealthCache()
         return requireTransaction(client, userId, transactionId)
       })
+      invalidateWealthCache()
+      return transaction
     },
 
     async updateTransaction(userId, transactionId, input) {
-      return withTransaction(pool, async (client) => {
+      const transaction = await withTransaction(pool, async (client) => {
         const assignments: string[] = []
         const values: unknown[] = [userId, transactionId]
         const add = (column: string, value: unknown) => {
@@ -93,9 +97,10 @@ export function createTransactionRepository(pool: Pool): TransactionRepository {
         }
 
         if (input.labelIds !== undefined) await replaceTransactionLabels(client, userId, transactionId, input.labelIds)
-        invalidateWealthCache()
         return requireTransaction(client, userId, transactionId)
       })
+      if (transaction) invalidateWealthCache()
+      return transaction
     },
 
     async deleteTransaction(userId, transactionId) {
@@ -192,26 +197,5 @@ function toTransaction(row: TransactionRow): Transaction {
     transactionDate: row.transaction_date,
     note: row.note,
     labels: parseLabels(row.labels),
-  }
-}
-
-function parseLabels(value: unknown): TransactionLabel[] {
-  const labels = typeof value === 'string' ? JSON.parse(value) : value
-  if (!Array.isArray(labels)) return []
-  return labels.filter((label): label is TransactionLabel => typeof label === 'object' && label !== null && 'id' in label && 'name' in label && typeof label.id === 'string' && typeof label.name === 'string')
-}
-
-async function withTransaction<T>(pool: Pool, callback: (client: PoolClient) => Promise<T>) {
-  const client = await pool.connect()
-  try {
-    await client.query('begin')
-    const result = await callback(client)
-    await client.query('commit')
-    return result
-  } catch (error) {
-    await client.query('rollback')
-    throw error
-  } finally {
-    client.release()
   }
 }

@@ -1,8 +1,8 @@
-import { CircleAlert, RefreshCw, WifiOff } from 'lucide-react'
+import { WifiOff } from 'lucide-react'
 import { LoginScreen } from '../auth/login-screen'
 import { useAuth } from '../auth/auth-context'
-import { Button } from '../components/ui/button'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../components/ui/feedback-state'
+import { LoadError } from '../components/load-error'
+import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../components/ui/feedback-state'
 import { Skeleton } from '../components/ui/skeleton'
 import { AppShell } from './app-shell'
 
@@ -24,5 +24,5 @@ function AuthUnavailableState() {
 }
 
 function AuthErrorState({ message, onRetry }: { message: string | null; onRetry: () => Promise<void> }) {
-  return <main className="auth-state-screen"><FeedbackState status="error" layout="panel" className="auth-state-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Přihlášení není dostupné</FeedbackStateTitle><FeedbackStateDescription>{message ?? 'Zkontroluj připojení a zkus to znovu.'}</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => void onRetry()}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState></main>
+  return <main className="auth-state-screen"><LoadError title="Přihlášení není dostupné" description={message ?? 'Zkontroluj připojení a zkus to znovu.'} className="auth-state-feedback" onRetry={() => void onRetry()} /></main>
 }

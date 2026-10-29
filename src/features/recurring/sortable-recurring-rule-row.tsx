@@ -1,11 +1,12 @@
 import type { CSSProperties } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { ArrowRightLeft, GripVertical, ReceiptText } from 'lucide-react'
+import { formatFrequency } from './form-model'
+import { formatLongDate } from '../../lib/format'
 import { Button } from '../../components/ui/button'
 import { ListItem, ListItemActions, ListItemContent, ListItemDescription, ListItemTitle } from '../../components/ui/list'
 import { CategoryIcon } from '../categories/category-icon'
 import { formatCzk } from '../../lib/format-czk'
-import { parseIsoDate } from '../../lib/prague-date'
 import { type RecurringRule } from './api'
 
 export function SortableRecurringRuleRow({ rule, disabled, onSelect }: { rule: RecurringRule; disabled: boolean; onSelect: (rule: RecurringRule) => void }) {
@@ -26,8 +27,8 @@ export function SortableRecurringRuleRow({ rule, disabled, onSelect }: { rule: R
     <ListItemContent>
       <ListItemTitle>{rule.name}</ListItemTitle>
       <ListItemDescription className="recurring-row__wallet">{isTransfer ? `z ${rule.sourceWalletName} do ${rule.destinationWalletName}` : `v ${rule.walletName}`}</ListItemDescription>
-      <ListItemDescription>{rule.status === 'ended' ? 'Ukončeno' : `${formatFrequency(rule)}, ${formatDate(rule.nextOccurrenceDate)}`}</ListItemDescription>
-      {rule.endsOn ? <ListItemDescription className="recurring-row__end">{rule.status === 'ended' ? `Ukončeno ${formatDate(rule.endsOn)}` : `Končí ${formatDate(rule.endsOn)}`}</ListItemDescription> : null}
+      <ListItemDescription>{rule.status === 'ended' ? 'Ukončeno' : `${formatFrequency(rule)}, ${formatLongDate(rule.nextOccurrenceDate)}`}</ListItemDescription>
+      {rule.endsOn ? <ListItemDescription className="recurring-row__end">{rule.status === 'ended' ? `Ukončeno ${formatLongDate(rule.endsOn)}` : `Končí ${formatLongDate(rule.endsOn)}`}</ListItemDescription> : null}
       {rule.labels.length > 0 ? <div className="recurring-row__labels" aria-label="Štítky">{rule.labels.map((label) => <span key={label.id} className="recurring-row__label">{label.name}</span>)}</div> : null}
       {rule.note ? <ListItemDescription className="recurring-row__note">{rule.note}</ListItemDescription> : null}
     </ListItemContent>
@@ -50,15 +51,3 @@ export function SortableRecurringRuleRow({ rule, disabled, onSelect }: { rule: R
   </ListItem>
 }
 
-export function formatFrequency(rule: Pick<RecurringRule, 'frequency' | 'customIntervalDays'>) {
-  const labels: Record<Exclude<RecurringRule['frequency'], 'custom_days'>, string> = {
-    daily: 'Denně', weekly: 'Každý týden', biweekly: 'Každé 2 týdny', monthly: 'Každý měsíc',
-    every_two_months: 'Každé 2 měsíce', every_three_months: 'Každé 3 měsíce',
-    semiannual: 'Jednou za půl roku', yearly: 'Ročně',
-  }
-  return rule.frequency === 'custom_days' ? `Každých ${rule.customIntervalDays} dní` : labels[rule.frequency]
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }).format(parseIsoDate(value))
-}

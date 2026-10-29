@@ -1,4 +1,5 @@
 import type { Pool } from 'pg'
+import type { CategoryDirection, RecurringRuleKind } from '../catalog.js'
 import { calculateTransferImpactCzk } from '../feed/domain.js'
 import {
   getPlannedRange,
@@ -6,13 +7,13 @@ import {
   sortPlannedItems,
   summarizePlanned,
   type PlannedItem,
-  type PlannedLabel,
   type PlannedListInput,
   type PlannedListResult,
   type PlannedTransaction,
   type PlannedTransfer,
   type RecurringProjectionRule,
 } from './domain.js'
+import { parseLabels } from '../parsing.js'
 
 export type PlannedRepository = {
   listPlanned(userId: string, input: PlannedListInput): Promise<PlannedListResult>
@@ -26,7 +27,7 @@ type ManualTransactionRow = {
   category_name: string
   category_icon_key: string
   category_color_key: string
-  direction: 'income' | 'expense'
+  direction: CategoryDirection
   amount_czk: string
   transaction_date: string
   note: string | null
@@ -48,7 +49,7 @@ type ManualTransferRow = {
 type RecurringRuleRow = {
   id: string
   name: string
-  kind: 'transaction' | 'transfer'
+  kind: RecurringRuleKind
   amount_czk: string
   wallet_id: string | null
   wallet_name: string | null
@@ -56,7 +57,7 @@ type RecurringRuleRow = {
   category_name: string | null
   category_icon_key: string | null
   category_color_key: string | null
-  category_direction: 'income' | 'expense' | null
+  category_direction: CategoryDirection | null
   source_wallet_id: string | null
   source_wallet_name: string | null
   destination_wallet_id: string | null
@@ -253,10 +254,4 @@ function toRecurringProjectionRule(row: RecurringRuleRow): RecurringProjectionRu
     customIntervalDays: row.custom_interval_days, scheduleAnchorDate: row.schedule_anchor_date,
     nextOccurrenceDate: row.next_occurrence_date, endsOn: row.ends_on,
   }
-}
-
-function parseLabels(value: unknown): PlannedLabel[] {
-  const labels = typeof value === 'string' ? JSON.parse(value) : value
-  if (!Array.isArray(labels)) return []
-  return labels.filter((label): label is PlannedLabel => typeof label === 'object' && label !== null && 'id' in label && 'name' in label && typeof label.id === 'string' && typeof label.name === 'string')
 }

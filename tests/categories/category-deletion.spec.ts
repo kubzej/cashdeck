@@ -23,6 +23,8 @@ test('shows a deletion error and removes the category after retrying confirmatio
   await page.getByRole('button', { name: 'Smazat kategorii' }).click()
   await page.getByRole('button', { name: 'Smazat', exact: true }).click()
   await expect(page.getByText('Kategorii se nepodařilo smazat', { exact: true })).toBeVisible()
+  // The reason is shown inside the dialog, not only on the page under its backdrop.
+  await expect(page.getByRole('alertdialog').getByRole('alert')).toHaveText('Smazání je dočasně nedostupné.')
 
   await page.getByRole('button', { name: 'Zrušit' }).click()
   await page.getByRole('button', { name: 'Smazat kategorii' }).click()

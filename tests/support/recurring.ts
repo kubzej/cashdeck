@@ -1,5 +1,6 @@
-import { expect, type Page, type Route } from '@playwright/test'
+import { type Page, type Route } from '@playwright/test'
 import type { RecurringRule, RecurringRuleInput } from '../../src/features/recurring/api'
+import { rejectUnauthorized } from './authorization'
 
 export type RecurringRulesApiMock = {
   failNext: (method: RecurringRequestMethod, failure?: Partial<RecurringApiFailure>) => void
@@ -16,7 +17,7 @@ export async function mockRecurringRulesApi(page: Page, initialRules: RecurringR
   const failures = new Map<RecurringRequestMethod, QueuedRecurringApiFailure>()
 
   await page.route('http://api.test/api/recurring-rules**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
 
     const request = route.request()
     const pathname = new URL(request.url()).pathname
@@ -40,7 +41,7 @@ export async function mockRecurringRulesApi(page: Page, initialRules: RecurringR
       const input = request.postDataJSON() as RecurringRuleInput
       const existing = rules.find((rule) => rule.id === ruleId)
       if (!existing) {
-        await route.fulfill(json({ message: 'Opakování neexistuje.' }, 404))
+        await route.fulfill(json({ error: 'Opakování neexistuje.' }, 404))
         return
       }
       const rule = { ...fromInput(existing.id, input), status: 'active' as const }
@@ -67,7 +68,7 @@ export async function mockRecurringRulesApi(page: Page, initialRules: RecurringR
       return
     }
 
-    await route.fulfill(json({ message: `Nepodporovaný recurring požadavek: ${request.method()} ${pathname}` }, 500))
+    await route.fulfill(json({ error: `Nepodporovaný recurring požadavek: ${request.method()} ${pathname}` }, 500))
   })
 
   return {
@@ -125,6 +126,6 @@ async function fulfillFailure(route: Route, failures: Map<RecurringRequestMethod
   if (!failure) return false
 
   failures.delete(method)
-  await route.fulfill(json({ message: failure.message }, failure.status))
+  await route.fulfill(json({ error: failure.message }, failure.status))
   return true
 }

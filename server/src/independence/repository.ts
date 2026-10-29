@@ -1,5 +1,6 @@
 import type { Pool } from 'pg'
 import { DomainError, type WalletType } from '../management/domain.js'
+import { financialEventsCte } from '../sql/financial-events.js'
 import { withWealthCache } from '../wealth-cache.js'
 import type { IndependenceSettingsInput, IrregularExpenseInput } from './domain.js'
 
@@ -161,6 +162,7 @@ function solveYearsToTarget(startWealthCzk: number, targetCzk: number, annualCon
   return Math.ceil(high * 10) / 10
 }
 
+// Hidden wallets are archived: they count toward independence no more than toward Overview wealth.
 const walletBalancesSql = `
   with prague_today as (
     select (now() at time zone 'Europe/Prague')::date as value
@@ -230,47 +232,24 @@ const walletBalancesSql = `
       (w.opening_balance_czk + coalesce(wallet_deltas.delta_czk, 0))::bigint as current_balance_czk
     from wallets w
     left join wallet_deltas on wallet_deltas.wallet_id = w.id
-    where w.user_id = $1 and w.counts_toward_independence
+    where w.user_id = $1 and w.counts_toward_independence and not w.is_hidden
   )
   select wallet_type, available_now, current_balance_czk::text as current_balance_czk
   from wallet_balances
 `
 
-// Trailing 12 monthly buckets of total independence wealth (wallets flagged counts_toward_independence,
-// regardless of available_now) — mirrors overview/repository.ts's wealthSeriesSql shape, scoped down.
+// Trailing 12 monthly buckets of total independence wealth (visible wallets flagged
+// counts_toward_independence, regardless of available_now) — mirrors overview/repository.ts's wealthSeriesSql shape, scoped down.
 const wealthSeriesSql = `
   with wallet_scope as (
     select id, opening_balance_czk, opening_balance_date
     from wallets
-    where user_id = $1 and counts_toward_independence
+    where user_id = $1 and counts_toward_independence and not is_hidden
   ),
-  financial_events as materialized (
-    select opening_balance_date as event_date, opening_balance_czk::bigint as delta_czk
-    from wallet_scope
-    union all
-    select t.transaction_date, case c.direction when 'income' then t.amount_czk else -t.amount_czk end
-    from transactions t
-    join wallet_scope w on w.id = t.wallet_id
-    join categories c on c.user_id = t.user_id and c.id = t.category_id
-    where t.user_id = $1 and t.transaction_date >= w.opening_balance_date
-    union all
-    select tr.transfer_date, -tr.amount_czk
-    from transfers tr
-    join wallet_scope w on w.id = tr.source_wallet_id
-    where tr.user_id = $1 and tr.transfer_date >= w.opening_balance_date
-    union all
-    select tr.transfer_date, tr.amount_czk
-    from transfers tr
-    join wallet_scope w on w.id = tr.destination_wallet_id
-    where tr.user_id = $1 and tr.transfer_date >= w.opening_balance_date
-    union all
-    select adjustment_date, case operation when 'add' then amount_czk else -amount_czk end
-    from balance_adjustments adjustment
-    join wallet_scope w on w.id = adjustment.wallet_id
-    where adjustment.user_id = $1 and adjustment.adjustment_date >= w.opening_balance_date
-  ),
+  ${financialEventsCte},
   bounds as (
-    select date_trunc('month', (now() at time zone 'Europe/Prague')::date)::date as this_month
+    select (now() at time zone 'Europe/Prague')::date as today,
+      date_trunc('month', (now() at time zone 'Europe/Prague')::date)::date as this_month
   ),
   base as (
     select coalesce(sum(delta_czk) filter (where event_date < (select this_month - interval '11 months' from bounds)), 0)::bigint as amount_czk
@@ -284,6 +263,9 @@ const wealthSeriesSql = `
     select date_trunc('month', event_date)::date as bucket_start, sum(delta_czk)::bigint as delta_czk
     from financial_events
     where event_date >= (select this_month - interval '11 months' from bounds)
+      -- Future-dated events would put the current month's point above the headline total,
+      -- which only counts activity up to today.
+      and event_date <= (select today from bounds)
     group by 1
   )
   select to_char(b.bucket_start, 'YYYY-MM-DD') as bucket_date,
@@ -386,14 +368,13 @@ export function createIndependenceRepository(pool: Pool): IndependenceRepository
     },
 
     async getProgress(userId) {
-      const [settingsResult, irregularExpenses, walletBalancesResult] = await Promise.all([
+      const [settingsResult, irregularExpenses, balances] = await Promise.all([
         pool.query<SettingsRow>('select * from independence_settings where user_id = $1', [userId]),
         this.listIrregularExpenses(userId),
-        withWealthCache(`independence:wallet-balances:${userId}`, () => pool.query<WalletBalanceRow>(walletBalancesSql, [userId])),
+        withWealthCache(`independence:wallet-balances:${userId}`, async () => (await pool.query<WalletBalanceRow>(walletBalancesSql, [userId])).rows),
       ])
 
       const settings = settingsResult.rows[0] ? toSettings(settingsResult.rows[0]) : null
-      const balances = walletBalancesResult.rows
       const totalWealthCzk = balances.reduce((sum, row) => sum + Number(row.current_balance_czk), 0)
       const availableWealthCzk = balances.filter((row) => row.available_now).reduce((sum, row) => sum + Number(row.current_balance_czk), 0)
       const wealthByType = toWealthByType(balances)
@@ -449,8 +430,8 @@ export function createIndependenceRepository(pool: Pool): IndependenceRepository
     },
 
     async getWealthSeries(userId) {
-      const result = await withWealthCache(`independence:wealth-series:${userId}`, () => pool.query<{ bucket_date: string; amount_czk: string }>(wealthSeriesSql, [userId]))
-      return result.rows.map((row) => ({ date: row.bucket_date, amountCzk: Number(row.amount_czk) }))
+      const rows = await withWealthCache(`independence:wealth-series:${userId}`, async () => (await pool.query<{ bucket_date: string; amount_czk: string }>(wealthSeriesSql, [userId])).rows)
+      return rows.map((row) => ({ date: row.bucket_date, amountCzk: Number(row.amount_czk) }))
     },
   }
 }

@@ -1,3 +1,4 @@
+import { MAX_NAME_LENGTH } from '../catalog.js'
 import { asRecord, assertOnlyKeys, DomainError, parseWholeCzk } from '../management/domain.js'
 
 export type IndependenceSettingsInput = {
@@ -81,6 +82,7 @@ function parseIrregularExpenseName(value: unknown): string {
   if (typeof value !== 'string') throw new DomainError(400, 'Název musí být text.')
   const trimmed = value.trim()
   if (!trimmed) throw new DomainError(400, 'Zadej název položky.')
+  if (trimmed.length > MAX_NAME_LENGTH) throw new DomainError(400, `Název může mít nejvýše ${MAX_NAME_LENGTH} znaků.`)
   return trimmed
 }
 
@@ -91,8 +93,8 @@ function parsePositiveCzk(value: unknown): number {
 }
 
 function parsePositiveFrequency(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
-    throw new DomainError(400, 'Frekvence v letech musí být kladné celé číslo.')
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 100) {
+    throw new DomainError(400, 'Frekvence v letech musí být celé číslo od 1 do 100.')
   }
   return value
 }

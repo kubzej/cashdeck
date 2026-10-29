@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { CircleAlert, Eye, EyeOff } from 'lucide-react'
+import { parseSignedWholeCzk } from '../../lib/amount-input'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { ColorPicker } from '../../components/color-picker'
@@ -15,6 +16,7 @@ import { formatIsoDate, getPragueToday, parseIsoDate } from '../../lib/prague-da
 import { createWallet, deleteWallet, updateWallet, type Wallet, type WalletColorKey, type WalletType } from './api'
 import { WalletTypePicker } from './wallet-type-icon'
 import './wallets.css'
+import { MAX_NAME_LENGTH } from '../../../server/src/catalog'
 
 type WalletFormValues = {
   name: string
@@ -53,7 +55,7 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors: Partial<Record<keyof WalletFormValues, string>> = {}
-    const openingBalanceCzk = parseWholeCzk(values.openingBalanceCzk)
+    const openingBalanceCzk = parseSignedWholeCzk(values.openingBalanceCzk)
     if (!values.name.trim()) nextErrors.name = 'Zadej název peněženky.'
     if (!openingBalanceLocked && openingBalanceCzk === null) nextErrors.openingBalanceCzk = 'Zadej celý počet korun.'
     if (!openingBalanceLocked && !values.openingBalanceDate) nextErrors.openingBalanceDate = 'Vyber datum.'
@@ -127,7 +129,7 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
               <EyeOff aria-hidden="true" />
             </Button>
           ) : (
-            <DeleteConfirmationDialog title="Smazat peněženku?" description={`Peněženka „${wallet.name}“ bude trvale smazána.`} triggerLabel="Smazat peněženku" isDeleting={isDeleting} onConfirm={() => void handleDelete()} />
+            <DeleteConfirmationDialog title="Smazat peněženku?" description={`Peněženka „${wallet.name}“ bude trvale smazána.`} triggerLabel="Smazat peněženku" isDeleting={isDeleting} error={deleteError} onConfirm={() => void handleDelete()} />
           )
         ) : undefined}
       />
@@ -135,7 +137,7 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Peněženku se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
         <Field invalid={Boolean(errors.name)}>
           <FieldLabel>Název</FieldLabel>
-          <Input autoFocus value={values.name} placeholder="Např. Hotovost" onChange={(event) => { const name = event.currentTarget.value; setValues((current) => ({ ...current, name })) }} />
+          <Input autoFocus value={values.name} maxLength={MAX_NAME_LENGTH} placeholder="Např. Hotovost" onChange={(event) => { const name = event.currentTarget.value; setValues((current) => ({ ...current, name })) }} />
           <FieldError match={Boolean(errors.name)}>{errors.name}</FieldError>
         </Field>
         <fieldset className="wallet-color-field">
@@ -176,7 +178,7 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
         </Field>
         <Field invalid={Boolean(errors.openingBalanceDate)}>
           <FieldLabel>Datum počátečního zůstatku</FieldLabel>
-          <DatePicker value={parseIsoDate(values.openingBalanceDate)} disabled={openingBalanceLocked} onValueChange={(date) => setValues((current) => ({ ...current, openingBalanceDate: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} />
+          <DatePicker value={parseIsoDate(values.openingBalanceDate)} maxDate={parseIsoDate(getPragueToday())} disabled={openingBalanceLocked} onValueChange={(date) => setValues((current) => ({ ...current, openingBalanceDate: formatIsoDate(date) }))} locale="cs-CZ" startOfWeek={1} />
           <FieldError match={Boolean(errors.openingBalanceDate)}>{errors.openingBalanceDate}</FieldError>
         </Field>
         <Button type="submit" size="lg" className="wallet-form-submit" loading={isSubmitting}>{wallet ? 'Uložit změny' : 'Uložit peněženku'}</Button>
@@ -185,12 +187,5 @@ export function WalletFormScreen({ wallet, onCancel, onSaved, onDeleted }: { wal
       </form>
     </section>
   )
-}
-
-function parseWholeCzk(value: string) {
-  const normalized = value.replaceAll(' ', '').replaceAll('\u00a0', '')
-  if (!/^-?\d+$/.test(normalized)) return null
-  const amount = Number(normalized)
-  return Number.isSafeInteger(amount) ? amount : null
 }
 

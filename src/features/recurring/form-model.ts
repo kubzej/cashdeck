@@ -1,4 +1,5 @@
-import { parsePositiveWholeCzk } from '../../lib/amount-input'
+import { amountErrorMessage, parsePositiveWholeCzk } from '../../lib/amount-input'
+import { pluralCs } from '../../lib/format'
 import type { CategoryDirection } from '../categories/api'
 import type { RecurringFrequency, RecurringRule, RecurringRuleInput, RecurringRuleKind } from './api'
 
@@ -59,7 +60,7 @@ export function validateRecurringRuleForm(values: RecurringRuleFormValues, input
   const errors: RecurringRuleFormErrors = {}
   if (!values.name.trim()) errors.name = 'Zadej název opakování.'
   if (!input) {
-    errors.amountCzk = 'Zadej celý počet korun větší než nula.'
+    errors.amountCzk = amountErrorMessage(values.amountCzk)
     if (values.frequency === 'custom_days') errors.customIntervalDays = 'Zadej počet dní větší než nula.'
   }
   // An ended rule's schedule (next occurrence possibly in the past, after its end date) is
@@ -83,3 +84,17 @@ export function validateRecurringRuleForm(values: RecurringRuleFormValues, input
   }
   return errors
 }
+
+export const frequencyLabels: Record<RecurringFrequency, string> = {
+  daily: 'Denně', weekly: 'Každý týden', biweekly: 'Každé 2 týdny', monthly: 'Každý měsíc',
+  every_two_months: 'Každé 2 měsíce', every_three_months: 'Každé 3 měsíce',
+  semiannual: 'Jednou za půl roku', yearly: 'Ročně', custom_days: 'Vlastní interval',
+}
+
+/** How a rule's repeat interval reads in a list: "Každý měsíc", "Každé 3 dny", "Každých 10 dní". */
+export function formatFrequency(rule: Pick<RecurringRule, 'frequency' | 'customIntervalDays'>) {
+  if (rule.frequency !== 'custom_days') return frequencyLabels[rule.frequency]
+  const days = rule.customIntervalDays ?? 0
+  return days === 1 ? 'Každý den' : `${pluralCs(days, 'Každý', 'Každé', 'Každých')} ${days} ${pluralCs(days, 'den', 'dny', 'dní')}`
+}
+

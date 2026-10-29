@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
-import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, closestCenter, type DragEndEvent, type useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { CircleAlert, Plus, RefreshCw, Tags } from 'lucide-react'
+import { CircleAlert, Plus, Tags } from 'lucide-react'
+import { LoadError } from '../../components/load-error'
 import { Button } from '../../components/ui/button'
 import { ScreenHeader } from '../../components/screen-header'
 import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
+import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { List } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { useSortableList } from '../../lib/sortable-list'
 import { CategoryFormScreen } from './category-form-screen'
 import { reorderCategories, listCategories, type Category, type CategoryDirection } from './api'
 import { SortableCategoryRow } from './sortable-category-row'
@@ -23,8 +25,10 @@ export function CategoriesScreen({ onBack }: { onBack: () => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [categories, setCategories] = useState<Category[]>([])
   const [reorderError, setReorderError] = useState<string | null>(null)
-  const [isReordering, setIsReordering] = useState(false)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const { sensors, isReordering, handleDragEnd: reorderByDrag } = useSortableList({
+    onStart: () => setReorderError(null),
+    onError: (error) => setReorderError(error instanceof Error ? error.message : 'Pořadí kategorií se nepodařilo uložit.'),
+  })
 
   async function loadCategories() {
     setStatus('loading')
@@ -42,32 +46,15 @@ export function CategoriesScreen({ onBack }: { onBack: () => void }) {
   }, [])
 
   async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-
     const visibleCategories = categories.filter((category) => category.direction === activeDirection)
-    const oldIndex = visibleCategories.findIndex((category) => category.id === active.id)
-    const newIndex = visibleCategories.findIndex((category) => category.id === over.id)
-    if (oldIndex < 0 || newIndex < 0) return
-
-    const reordered = [...visibleCategories]
-    const [movedCategory] = reordered.splice(oldIndex, 1)
-    reordered.splice(newIndex, 0, movedCategory)
-    const reorderedWithSortOrder = reordered.map((category, sortOrder) => ({ ...category, sortOrder }))
-    setIsReordering(true)
-    setReorderError(null)
-
-    try {
+    await reorderByDrag(event, visibleCategories, async (reordered) => {
+      const reorderedWithSortOrder = reordered.map((category, sortOrder) => ({ ...category, sortOrder }))
       await reorderCategories(activeDirection, reorderedWithSortOrder.map((category) => category.id))
       setCategories((current) => [
         ...current.filter((category) => category.direction !== activeDirection),
         ...reorderedWithSortOrder,
       ])
-    } catch (error) {
-      setReorderError(error instanceof Error ? error.message : 'Pořadí kategorií se nepodařilo uložit.')
-    } finally {
-      setIsReordering(false)
-    }
+    })
   }
 
   function openEdit(category: Category) {
@@ -110,7 +97,7 @@ export function CategoriesScreen({ onBack }: { onBack: () => void }) {
 
 function CategoryPanel({ direction, categories, status, reorderError, isReordering, onRetry, onSelect, onDragEnd, sensors }: { direction: CategoryDirection; categories: Category[]; status: 'loading' | 'ready' | 'error'; reorderError: string | null; isReordering: boolean; onRetry: () => Promise<void>; onSelect: (category: Category) => void; onDragEnd: (event: DragEndEvent) => Promise<void>; sensors: ReturnType<typeof useSensors> }) {
   if (status === 'loading') return <div className="categories-loading" aria-label="Načítání kategorií"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div>
-  if (status === 'error') return <FeedbackState status="error" layout="panel" className="categories-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Kategorie se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => void onRetry()}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState>
+  if (status === 'error') return <LoadError title="Kategorie se nepodařilo načíst" className="categories-feedback" onRetry={() => void onRetry()} />
   if (categories.length === 0) return <EmptyState variant="quiet" size="lg" className="categories-empty"><EmptyStateIcon><Tags aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Bez kategorií</EmptyStateTitle><EmptyStateDescription>Vytvoř první kategorii pro tento typ transakcí.</EmptyStateDescription></EmptyState>
 
   return <section className="categories-list" aria-label={direction === 'expense' ? 'Výdajové kategorie' : 'Příjmové kategorie'}>{reorderError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Pořadí se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{reorderError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(event) => void onDragEnd(event)}><SortableContext items={categories.map((category) => category.id)} strategy={verticalListSortingStrategy}><List gap="sm">{categories.map((category) => <SortableCategoryRow key={category.id} category={category} disabled={isReordering} onSelect={onSelect} />)}</List></SortableContext></DndContext></section>

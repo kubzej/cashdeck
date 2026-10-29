@@ -1,9 +1,11 @@
 import { Buffer } from 'node:buffer'
 import type { Pool, PoolClient } from 'pg'
+import { withTransaction } from '../database.js'
 import type { CategoryDirection, CategoryIconKey, ColorKey, WalletType } from './domain.js'
 import { DomainError } from './domain.js'
 import { getPragueToday } from '../recurring/schedule.js'
 import { invalidateWealthCache } from '../wealth-cache.js'
+import { escapeLikePattern } from '../parsing.js'
 
 export type Wallet = {
   id: string
@@ -363,7 +365,7 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
     },
 
     async createBalanceAdjustment(userId, walletId, actualBalanceCzk) {
-      return withTransaction(pool, async (client) => {
+      const result = await withTransaction(pool, async (client) => {
         const lockedWallet = await client.query<{ id: string }>(
           `select id
            from wallets
@@ -391,7 +393,6 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
           [userId, walletId, Math.abs(differenceCzk), differenceCzk > 0 ? 'add' : 'subtract', getPragueToday()],
         )
         const adjustment = result.rows[0]
-        invalidateWealthCache()
         return {
           adjustment: {
             id: adjustment.id,
@@ -403,6 +404,8 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
           currentBalanceCzk: actualBalanceCzk,
         }
       })
+      if (result?.adjustment) invalidateWealthCache()
+      return result
     },
 
     async listCategories(userId) {
@@ -483,7 +486,7 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
         const values: unknown[] = [userId]
         const filters = ['l.user_id = $1']
         if (query) {
-          values.push(`%${query}%`)
+          values.push(`%${escapeLikePattern(query)}%`)
           filters.push(`l.normalized_name like $${values.length}`)
         }
         values.push(limit)
@@ -511,7 +514,7 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
       const filters = ['user_id = $1']
 
       if (query) {
-        values.push(`%${query}%`)
+        values.push(`%${escapeLikePattern(query)}%`)
         filters.push(`normalized_name like $${values.length}`)
       }
 
@@ -569,21 +572,6 @@ export function createManagementRepository(pool: Pool): ManagementRepository {
   }
 }
 
-async function withTransaction<T>(pool: Pool, callback: (client: PoolClient) => Promise<T>) {
-  const client = await pool.connect()
-  try {
-    await client.query('begin')
-    const result = await callback(client)
-    await client.query('commit')
-    return result
-  } catch (error) {
-    await client.query('rollback')
-    throw error
-  } finally {
-    client.release()
-  }
-}
-
 async function updateSortOrder(client: PoolClient, table: 'wallets' | 'categories', userId: string, ids: string[]) {
   for (const [sortOrder, id] of ids.entries()) {
     await client.query(
@@ -608,7 +596,7 @@ function encodeCursor(cursor: LabelCursor) {
 function decodeCursor(cursor: string): LabelCursor {
   try {
     const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<LabelCursor>
-    if (typeof parsed.name === 'string' && typeof parsed.id === 'string') return { name: parsed.name, id: parsed.id }
+    if (typeof parsed.name === 'string' && typeof parsed.id === 'string' && /^[0-9a-f-]{36}$/i.test(parsed.id)) return { name: parsed.name, id: parsed.id }
   } catch {
     // The generic validation error below intentionally does not expose parser details.
   }

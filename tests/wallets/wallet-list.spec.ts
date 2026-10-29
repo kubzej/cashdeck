@@ -51,6 +51,37 @@ test('reorders wallets with the drag handle and saves the new order', async ({ p
   await expect(page.getByRole('listitem').nth(1)).toContainText('AirBank')
 })
 
+test('keeps the order and explains why when saving a new wallet order fails', async ({ page }) => {
+  const wallets: WalletFixture[] = [
+    wallet('wallet-1', 'AirBank', 0),
+    wallet('wallet-2', 'Hotovost', 1),
+  ]
+
+  await mockAuthAndApi(page)
+  const walletApi = await mockWalletsApi(page, wallets)
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Peněženky' }).click()
+  const source = page.getByRole('button', { name: 'Změnit pořadí peněženky AirBank' })
+  const target = page.getByRole('button', { name: 'Změnit pořadí peněženky Hotovost' })
+  const sourceBox = await source.boundingBox()
+  const targetBox = await target.boundingBox()
+  if (!sourceBox || !targetBox) throw new Error('Drag handle peněženky není viditelný.')
+
+  walletApi.failNext('PUT', { message: 'Dočasně nedostupné.' })
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2 + 12, { steps: 4 })
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 12 })
+  await page.mouse.up()
+
+  await expect(page.getByText('Pořadí se nepodařilo uložit', { exact: true })).toBeVisible()
+  await expect(page.getByText('Dočasně nedostupné.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('listitem').first()).toContainText('AirBank')
+  expect(walletApi.wallets().map((item) => item.id)).toEqual(['wallet-1', 'wallet-2'])
+})
+
 test('shows the current balance instead of the opening balance', async ({ page }) => {
   await mockAuthAndApi(page)
   await mockWalletsApi(page, [{

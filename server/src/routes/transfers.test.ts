@@ -12,12 +12,11 @@ const destinationWalletId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef124'
 const labelId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef125'
 const transferId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef126'
 
-const config: ServerConfig = { databaseUrl: 'postgres://unused', frontendOrigin: 'http://localhost:5173', host: '127.0.0.1', neonAuthUrl: 'https://auth.test/neondb/auth', port: 8000, sessionSigningSecret: 'test-session-signing-secret-32-characters-long', appAccessPassphrase: 'test-passphrase', appUserId: 'test-user-id' }
+const config: ServerConfig = { databaseUrl: 'postgres://unused', frontendOrigin: 'http://localhost:5173', host: '127.0.0.1', port: 8000, sessionSigningSecret: 'test-session-signing-secret-32-characters-long', appAccessPassphrase: 'test-passphrase', appUserId: 'test-user-id' }
 const transfer = { id: transferId, sourceWalletId, sourceWalletName: 'AirBank', destinationWalletId, destinationWalletName: 'Rezerva', amountCzk: 2500, transferDate: '2026-08-20', note: 'Přesun', labels: [{ id: labelId, name: 'rezerva' }] }
 
 function createRepository(): TransferRepository {
   return {
-    listTransfers: vi.fn().mockResolvedValue({ items: [transfer], nextCursor: null }),
     createTransfer: vi.fn().mockResolvedValue(transfer),
     updateTransfer: vi.fn().mockResolvedValue(transfer),
     deleteTransfer: vi.fn().mockResolvedValue(true),
@@ -38,14 +37,6 @@ async function createTestApp(repository = createRepository()) {
   })
   return { app, repository }
 }
-
-test('scopes paginated transfer listing to the verified user', async () => {
-  const { app, repository } = await createTestApp()
-  const response = await app.inject({ method: 'GET', url: `/api/transfers?walletId=${sourceWalletId}&dateFrom=2026-08-01&dateTo=2026-08-31&limit=25`, headers: { authorization: 'Bearer test-token' } })
-  expect(response.statusCode).toBe(200)
-  expect(repository.listTransfers).toHaveBeenCalledWith(userId, { walletId: sourceWalletId, dateFrom: '2026-08-01', dateTo: '2026-08-31', cursor: null, limit: 25 })
-  await app.close()
-})
 
 test('validates complete transfer creation before it reaches the repository', async () => {
   const { app, repository } = await createTestApp()

@@ -1,16 +1,17 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
-import { CircleAlert, Landmark, Search, Tags, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
-import { Button } from '../../components/ui/button'
+import { Landmark, Search, Tags, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import { LoadError } from '../../components/load-error'
+import { formatItemCount, formatTransactionCount } from '../../lib/format'
+import { isAbortError } from '../../lib/api-client'
 import { Card } from '../../components/ui/card'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Skeleton } from '../../components/ui/skeleton'
 import { formatCzk } from '../../lib/format-czk'
 import { parseIsoDate } from '../../lib/prague-date'
-import type { CategoryColorKey, CategoryIconKey } from '../categories/api'
 import { CategoryIcon } from '../categories/category-icon'
 import { resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
 import { getOverview, getOverviewSelectionTrend, type OverviewGranularity, type OverviewMetrics, type OverviewSelectionTrend } from '../overview/api'
 import type { OverviewSelection } from '../overview/overview-screen'
+import { getTrendDelta, type TrendDelta } from './trend-delta'
 
 // `selection` is optional: without it, the card shows the running total for whatever the current
 // filters (wallets, date range, and — like any other filter — search text) resolve to, instead of
@@ -32,6 +33,7 @@ export function SelectionSummaryCard({ filters, selection, search }: { filters: 
       .then((result) => { if (!controller.signal.aborted) { setMetrics(result); setStatus('ready') } })
       .catch((error: unknown) => { if (!controller.signal.aborted && !isAbortError(error)) setStatus('error') })
     return () => controller.abort()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the deps list the stable walletKey and date fields, not the walletIds array / range object that get a new identity on every render
   }, [walletKey, filters.period, range.dateFrom, range.dateTo, selection?.type, selection?.id, search, retryKey])
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export function SelectionSummaryCard({ filters, selection, search }: { filters: 
   }, [metrics, selection?.type, selection?.id])
 
   if (status === 'loading') return <Card aria-label="Načítání přehledu výběru" padding="none" className="selection-summary selection-summary--loading"><Skeleton className="h-10 w-10" /><div><Skeleton className="h-4 w-28" /><Skeleton className="mt-1 h-3 w-20" /></div></Card>
-  if (status === 'error') return <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Přehled se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setRetryKey((current) => current + 1)}>Zkusit znovu</Button></FeedbackStateActions></FeedbackState>
+  if (status === 'error') return <LoadError title="Přehled se nepodařilo načíst" layout="inline" onRetry={() => setRetryKey((current) => current + 1)} />
 
   const series = trend?.series ?? []
 
@@ -82,7 +84,7 @@ export function SelectionSummaryCard({ filters, selection, search }: { filters: 
     const amountCzk = category ? (category.direction === 'income' ? category.amountCzk : -category.amountCzk) : 0
     const delta = trend ? getTrendDelta(amountCzk, trend.previous.amountCzk) : null
     return <SummaryCard
-      icon={category ? <CategoryIcon iconKey={category.iconKey as CategoryIconKey} colorKey={category.colorKey as CategoryColorKey} /> : <Landmark aria-hidden="true" />}
+      icon={category ? <CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /> : <Landmark aria-hidden="true" />}
       colorKey={category?.colorKey}
       title="Kategorie"
       name={selection.name}
@@ -167,20 +169,4 @@ function formatBucketDate(value: string, granularity: OverviewGranularity) {
   return `Q${Math.floor(date.getMonth() / 3) + 1} ${date.getFullYear()}`
 }
 
-type TrendDelta = { tone: 'positive' | 'negative' | 'neutral'; label: string }
 
-function getTrendDelta(currentCzk: number, previousCzk: number): TrendDelta {
-  // With no previous-period activity there's nothing to compare against — a percentage would be
-  // undefined and the raw delta would just repeat the headline amount, so show neither.
-  if (previousCzk === 0) return { tone: 'neutral', label: currentCzk === 0 ? 'beze změny' : 'bez srovnání' }
-  const delta = currentCzk - previousCzk
-  if (delta === 0) return { tone: 'neutral', label: 'beze změny' }
-  const tone = delta > 0 ? 'positive' : 'negative'
-  const percent = Math.round(Math.abs(delta) / Math.abs(previousCzk) * 100)
-  return { tone, label: `${delta > 0 ? '+' : '-'}${percent} %` }
-}
-
-function formatTransactionCount(count: number) { return `${count} ${count === 1 ? 'transakce' : count >= 2 && count <= 4 ? 'transakce' : 'transakcí'}` }
-function formatItemCount(count: number) { return `${count} ${count === 1 ? 'položka' : count >= 2 && count <= 4 ? 'položky' : 'položek'}` }
-
-function isAbortError(error: unknown) { return error instanceof DOMException && error.name === 'AbortError' }

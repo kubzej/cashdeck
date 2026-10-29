@@ -16,6 +16,7 @@ import {
   parseWalletType,
   parseWholeCzk,
 } from '../management/domain.js'
+import { getPragueToday } from '../recurring/schedule.js'
 import type {
   CreateCategoryInput,
   CreateWalletInput,
@@ -24,6 +25,7 @@ import type {
   UpdateCategoryInput,
   UpdateWalletInput,
 } from '../management/repository.js'
+import { parseLimit } from '../parsing.js'
 
 export function createManagementRoutes(repository: ManagementRepository, requireAuth: AuthGuard): FastifyPluginAsync {
   return async function managementRoutes(app) {
@@ -124,6 +126,15 @@ export function createManagementRoutes(repository: ManagementRepository, require
   }
 }
 
+// A wallet is opened for an account that already exists. A future opening date would make the
+// wallet balance (which counts the opening balance immediately) disagree with Overview wealth
+// (which counts it from that date).
+function parseOpeningBalanceDate(value: unknown) {
+  const date = parseCalendarDate(value, 'Datum počátečního zůstatku')
+  if (date > getPragueToday()) throw new DomainError(400, 'Datum počátečního zůstatku nemůže být v budoucnosti.')
+  return date
+}
+
 function parseCreateWallet(body: unknown): CreateWalletInput {
   const value = asRecord(body)
   assertOnlyKeys(value, ['name', 'colorKey', 'openingBalanceCzk', 'openingBalanceDate', 'walletType', 'countsTowardIndependence', 'availableNow'])
@@ -134,7 +145,7 @@ function parseCreateWallet(body: unknown): CreateWalletInput {
     name: normalizeWalletName(value.name),
     colorKey: parseColorKey(value.colorKey),
     openingBalanceCzk: parseWholeCzk(value.openingBalanceCzk, 'Počáteční zůstatek', { allowNegative: true }),
-    openingBalanceDate: parseCalendarDate(value.openingBalanceDate, 'Datum počátečního zůstatku'),
+    openingBalanceDate: parseOpeningBalanceDate(value.openingBalanceDate),
     walletType: value.walletType === undefined ? undefined : parseWalletType(value.walletType),
     countsTowardIndependence,
     availableNow,
@@ -153,7 +164,7 @@ function parseUpdateWallet(body: unknown): UpdateWalletInput {
   if ('availableNow' in value) update.availableNow = parseOptionalBoolean(value.availableNow, 'availableNow')
   if (update.availableNow && update.countsTowardIndependence === false) throw new DomainError(400, 'Peněženka dostupná hned musí být zároveň počítaná do nezávislosti.')
   if ('openingBalanceCzk' in value) update.openingBalanceCzk = parseWholeCzk(value.openingBalanceCzk, 'Počáteční zůstatek', { allowNegative: true })
-  if ('openingBalanceDate' in value) update.openingBalanceDate = parseCalendarDate(value.openingBalanceDate, 'Datum počátečního zůstatku')
+  if ('openingBalanceDate' in value) update.openingBalanceDate = parseOpeningBalanceDate(value.openingBalanceDate)
   if ('isHidden' in value) update.isHidden = parseOptionalBoolean(value.isHidden, 'isHidden')
 
   return update
@@ -234,13 +245,4 @@ function readQueryString(value: unknown, field: string) {
     throw new DomainError(400, `Parametr ${field} není platný.`)
   }
   return value
-}
-
-function parseLimit(value: unknown) {
-  if (typeof value !== 'string' || !/^\d+$/.test(value)) {
-    throw new DomainError(400, 'Parametr limit není platný.')
-  }
-  const limit = Number(value)
-  if (limit < 1 || limit > 100) throw new DomainError(400, 'Parametr limit musí být mezi 1 a 100.')
-  return limit
 }

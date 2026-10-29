@@ -8,6 +8,7 @@ import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { createLabel, deleteLabel, updateLabel, type Label } from './api'
 import './labels.css'
+import { MAX_NAME_LENGTH } from '../../../server/src/catalog'
 
 export function LabelFormScreen({ label, onCancel, onSaved, onDeleted }: { label?: Label; onCancel: () => void; onSaved: () => void; onDeleted?: () => void }) {
   const [name, setName] = useState(label?.name ?? '')
@@ -60,13 +61,13 @@ export function LabelFormScreen({ label, onCancel, onSaved, onDeleted }: { label
         titleId="label-form-title"
         backLabel="Zpět na štítky"
         onBack={onCancel}
-        action={label ? <DeleteConfirmationDialog title="Smazat štítek?" description={`Štítek „${label.name}“ bude trvale smazán.`} triggerLabel="Smazat štítek" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+        action={label ? <DeleteConfirmationDialog title="Smazat štítek?" description={`Štítek „${label.name}“ bude trvale smazán.`} triggerLabel="Smazat štítek" isDeleting={isDeleting} error={deleteError} onConfirm={() => void handleDelete()} /> : undefined}
       />
       <form className="label-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Štítek se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
         <Field invalid={Boolean(nameError)}>
           <FieldLabel>Název</FieldLabel>
-          <Input autoFocus value={name} autoCapitalize="none" autoCorrect="off" placeholder="Např. globus" onChange={(event) => { const nextName = event.currentTarget.value.toLocaleLowerCase('cs-CZ'); setName(nextName); setNameError(null) }} />
+          <Input autoFocus value={name} maxLength={MAX_NAME_LENGTH} autoCapitalize="none" autoCorrect="off" placeholder="Např. globus" onChange={(event) => { const nextName = event.currentTarget.value.toLocaleLowerCase('cs-CZ'); setName(nextName); setNameError(null) }} />
           <FieldError match={Boolean(nameError)}>{nameError}</FieldError>
         </Field>
         <Button type="submit" size="lg" className="label-form-submit" loading={isSubmitting}>{label ? 'Uložit změny' : 'Uložit štítek'}</Button>

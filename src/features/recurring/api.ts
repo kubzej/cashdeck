@@ -1,13 +1,8 @@
 import { apiRequest } from '../../lib/api-client'
+import { recurringFrequencies, type RecurringFrequency, type RecurringRuleKind } from '../../../server/src/catalog'
 import type { CategoryColorKey, CategoryDirection, CategoryIconKey } from '../categories/api'
 
-export const recurringFrequencies = [
-  'daily', 'weekly', 'biweekly', 'monthly', 'every_two_months',
-  'every_three_months', 'semiannual', 'yearly', 'custom_days',
-] as const
-
-export type RecurringFrequency = (typeof recurringFrequencies)[number]
-export type RecurringRuleKind = 'transaction' | 'transfer'
+export { recurringFrequencies, type RecurringFrequency, type RecurringRuleKind }
 
 export type RecurringRuleLabel = { id: string; name: string }
 

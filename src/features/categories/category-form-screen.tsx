@@ -11,6 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group'
 import { CategoryIconPreview, categoryIconLabel } from './category-icon'
 import { categoryIconKeys, createCategory, deleteCategory, updateCategory, type Category, type CategoryColorKey, type CategoryDirection, type CategoryIconKey } from './api'
 import './categories.css'
+import { MAX_NAME_LENGTH } from '../../../server/src/catalog'
 
 type CategoryFormValues = {
   name: string
@@ -76,13 +77,13 @@ export function CategoryFormScreen({ category, direction, existingNames, onCance
         titleId="category-form-title"
         backLabel="Zpět na kategorie"
         onBack={onCancel}
-        action={category ? <DeleteConfirmationDialog title="Smazat kategorii?" description={`Kategorie „${category.name}“ bude trvale smazána.`} triggerLabel="Smazat kategorii" isDeleting={isDeleting} onConfirm={() => void handleDelete()} /> : undefined}
+        action={category ? <DeleteConfirmationDialog title="Smazat kategorii?" description={`Kategorie „${category.name}“ bude trvale smazána.`} triggerLabel="Smazat kategorii" isDeleting={isDeleting} error={deleteError} onConfirm={() => void handleDelete()} /> : undefined}
       />
       <form className="category-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         {submissionError ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Kategorii se nepodařilo uložit</FeedbackStateTitle><FeedbackStateDescription>{submissionError}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
         <Field invalid={Boolean(errors.name)}>
           <FieldLabel>Název</FieldLabel>
-          <Input autoFocus value={values.name} placeholder="Např. Bydlení" onChange={(event) => { const name = event.currentTarget.value; setValues((current) => ({ ...current, name })) }} />
+          <Input autoFocus value={values.name} maxLength={MAX_NAME_LENGTH} placeholder="Např. Bydlení" onChange={(event) => { const name = event.currentTarget.value; setValues((current) => ({ ...current, name })) }} />
           <FieldError match={Boolean(errors.name)}>{errors.name}</FieldError>
         </Field>
         <fieldset className="category-picker-field">

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRightLeft, CircleAlert, ReceiptText, RefreshCw, Scale } from 'lucide-react'
+import { ArrowRightLeft, ReceiptText, Scale } from 'lucide-react'
+import { LoadError } from '../../components/load-error'
+import { isAbortError } from '../../lib/api-client'
+import { formatLongDate } from '../../lib/format'
 import { Button } from '../../components/ui/button'
-import { EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
+import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from '../../components/ui/empty-state'
 import { List, ListItem, ListItemActions, ListItemContent, ListItemDescription, ListItemLeading, ListItemTitle } from '../../components/ui/list'
 import { Skeleton } from '../../components/ui/skeleton'
 import { formatCzk } from '../../lib/format-czk'
@@ -19,15 +21,19 @@ import { listWallets, type Wallet } from '../wallets/api'
 import type { OverviewSelection } from '../overview/overview-screen'
 import './transactions.css'
 
-export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOpenPlanned, initialWalletId, initialFilters, fixedSelection, onResetFilters }: { onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void; onOpenPlanned: (filters: FeedFilterValue) => void; initialWalletId?: string; initialFilters?: FeedFilterValue; fixedSelection?: OverviewSelection; onResetFilters?: () => void }) {
+export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOpenPlanned, initialWalletId, initialFilters, fixedSelection, onResetFilters, onFiltersChange }: { onSelectTransaction: (transaction: Transaction) => void; onSelectTransfer: (transfer: Transfer) => void; onOpenPlanned: (filters: FeedFilterValue) => void; initialWalletId?: string; initialFilters?: FeedFilterValue; fixedSelection?: OverviewSelection; onResetFilters?: () => void; onFiltersChange?: (filters: FeedFilterValue) => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [activities, setActivities] = useState<FeedItem[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false)
   const [wallets, setWallets] = useState<Wallet[]>([])
   const [earliestActivityDate, setEarliestActivityDate] = useState<string | null>(null)
   const [filters, setFilters] = useState<FeedFilterValue>(() => initialFilters ?? { ...createDefaultFeedFilters(), walletIds: initialWalletId ? [initialWalletId] : [] })
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search)
+
+  // Lets the shell keep the filters while a transaction is open and this screen is unmounted.
+  useEffect(() => { onFiltersChange?.(filters) }, [filters, onFiltersChange])
   const [reloadToken, setReloadToken] = useState(0)
   const moreRequest = useRef<AbortController | null>(null)
 
@@ -50,6 +56,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
       if (!controller.signal.aborted && !isAbortError(error)) setEarliestActivityDate(null)
     })
     return () => controller.abort()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the deps list the stable walletKey and date fields, not the walletIds array / range object that get a new identity on every render
   }, [walletFilterKey, fixedSelection?.id, fixedSelection?.type])
 
   const range = resolveFeedDateRange(filters)
@@ -59,6 +66,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
     const controller = new AbortController()
     moreRequest.current?.abort()
     setIsLoadingMore(false)
+    setLoadMoreFailed(false)
     setStatus('loading')
     void listFeed({ walletIds: filters.walletIds, ...range, search: debouncedSearch || undefined, categoryId: fixedSelection?.type === 'category' ? fixedSelection.id : undefined, labelId: fixedSelection?.type === 'label' ? fixedSelection.id : undefined, signal: controller.signal }).then((page) => {
       if (controller.signal.aborted) return
@@ -70,6 +78,7 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
       setStatus('error')
     })
     return () => controller.abort()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the deps list the stable walletKey and date fields, not the walletIds array / range object that get a new identity on every render
   }, [filterKey])
 
   async function loadMore() {
@@ -77,13 +86,14 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
     const controller = new AbortController()
     moreRequest.current = controller
     setIsLoadingMore(true)
+    setLoadMoreFailed(false)
     try {
       const page = await listFeed({ walletIds: filters.walletIds, ...range, search: debouncedSearch || undefined, categoryId: fixedSelection?.type === 'category' ? fixedSelection.id : undefined, labelId: fixedSelection?.type === 'label' ? fixedSelection.id : undefined, cursor: nextCursor, signal: controller.signal })
       if (controller.signal.aborted) return
       setActivities((current) => [...current, ...page.items])
       setNextCursor(page.nextCursor)
     } catch (error) {
-      if (!controller.signal.aborted && !isAbortError(error)) return
+      if (!controller.signal.aborted && !isAbortError(error)) setLoadMoreFailed(true)
     } finally {
       if (!controller.signal.aborted) setIsLoadingMore(false)
     }
@@ -96,6 +106,9 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
   }
 
   const hasFiltersToClear = Boolean(fixedSelection) || !hasDefaultFilters(filters)
+  // What narrows the list beyond its period: search, wallets, or a category/label from Přehled.
+  const isNarrowed = Boolean(fixedSelection) || filters.walletIds.length > 0 || debouncedSearch !== ''
+  const emptyList = describeEmptyList(isNarrowed, filters.period)
 
   // Naplánované is about upcoming activity in general — once a category/label/search filter
   // narrows the view to one slice, it's a distraction pointing at unrelated data, so it only
@@ -105,13 +118,14 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
   const content = <>
     {showPlannedSummary ? <PlannedSummaryCard filters={filters} selection={fixedSelection} onOpen={() => onOpenPlanned(filters)} /> : null}
     {status === 'loading' ? <List gap="sm" className="transactions-loading" aria-label="Načítání transakcí"><TransactionRowSkeleton /><TransactionRowSkeleton /><TransactionRowSkeleton /></List> : null}
-    {status === 'error' ? <FeedbackState status="error" layout="panel" className="transactions-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Transakce se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState> : null}
-    {status === 'ready' && activities.length === 0 ? <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><ReceiptText aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>Zatím bez transakcí</EmptyStateTitle><EmptyStateDescription>Přidej první příjem nebo výdaj.</EmptyStateDescription></EmptyState> : null}
-    {status === 'ready' ? <>{groupActivities(activities).map(([date, items]) => <div className="transaction-day" key={date}><h2>{formatDate(date)}</h2><List gap="sm">{items.map((activity) => {
+    {status === 'error' ? <LoadError title="Transakce se nepodařilo načíst" className="transactions-feedback" onRetry={() => setReloadToken((current) => current + 1)} /> : null}
+    {status === 'ready' && activities.length === 0 ? <EmptyState variant="quiet" size="lg" className="screen-placeholder"><EmptyStateIcon><ReceiptText aria-hidden="true" /></EmptyStateIcon><EmptyStateTitle>{emptyList.title}</EmptyStateTitle><EmptyStateDescription>{emptyList.description}</EmptyStateDescription>{isNarrowed ? <EmptyStateActions><Button variant="outline" onClick={resetAllFilters}>Zrušit filtry</Button></EmptyStateActions> : null}</EmptyState> : null}
+    {status === 'ready' ? <>{groupActivities(activities).map(([date, items]) => <div className="transaction-day" key={date}><h2>{formatLongDate(date)}</h2><List gap="sm">{items.map((activity) => {
       if (activity.kind === 'transaction') return <TransactionRow key={activity.id} transaction={activity} onSelect={onSelectTransaction} />
       if (activity.kind === 'transfer') return <TransferRow key={activity.id} transfer={activity} onSelect={onSelectTransfer} />
       return <BalanceAdjustmentRow key={activity.id} adjustment={activity} />
     })}</List></div>)}
+    {loadMoreFailed ? <LoadError title="Další položky se nepodařilo načíst" layout="inline" description="Zkus to znovu." /> : null}
     {nextCursor ? <Button variant="outline" className="transactions-load-more" loading={isLoadingMore} onClick={() => void loadMore()}>Načíst další</Button> : null}</> : null}
   </>
 
@@ -120,6 +134,14 @@ export function TransactionsScreen({ onSelectTransaction, onSelectTransfer, onOp
     <SelectionSummaryCard filters={filters} selection={fixedSelection} search={debouncedSearch} />
     {isNavigablePeriod(filters.period) ? <FeedPeriodPager period={filters.period} periodAnchor={filters.periodAnchor} earliestActivityDate={earliestActivityDate} onNavigate={(periodAnchor) => setFilters((current) => ({ ...current, periodAnchor }))}>{content}</FeedPeriodPager> : content}
   </section>
+}
+
+// An empty list says very different things depending on what is hiding the rest of it, and
+// "add your first transaction" is only true when nothing at all is filtered out.
+function describeEmptyList(isNarrowed: boolean, period: FeedFilterValue['period']) {
+  if (isNarrowed) return { title: 'Nic neodpovídá filtrům', description: 'Zkus upravit hledání nebo vybrané peněženky.' }
+  if (period !== 'all') return { title: 'V tomto období nic není', description: 'Přidej příjem nebo výdaj, nebo přepni období.' }
+  return { title: 'Zatím bez transakcí', description: 'Přidej první příjem nebo výdaj.' }
 }
 
 function hasDefaultFilters(filters: FeedFilterValue) {
@@ -168,9 +190,3 @@ function groupActivities(activities: FeedItem[]) {
 
 function activityDate(activity: FeedItem) { return activity.kind === 'transaction' ? activity.transactionDate : activity.kind === 'transfer' ? activity.transferDate : activity.adjustmentDate }
 
-function formatDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number)
-  return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(year, month - 1, day))
-}
-
-function isAbortError(error: unknown) { return error instanceof DOMException && error.name === 'AbortError' }

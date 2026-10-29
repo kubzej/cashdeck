@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { invalidateWealthCache, resetWealthCacheForTests, withWealthCache } from './wealth-cache.js'
+import { invalidateWealthCache, resetWealthCacheForTests, wealthCacheSizeForTests, withWealthCache } from './wealth-cache.js'
 
 beforeEach(() => resetWealthCacheForTests())
 afterEach(() => vi.useRealTimers())
@@ -47,4 +47,41 @@ test('recomputes once the TTL has elapsed, even without an explicit invalidation
 
   expect(afterTtl).toBe('stale-refreshed')
   expect(compute).toHaveBeenCalledTimes(2)
+})
+
+test('a result computed while a write invalidated the cache is not served as fresh afterwards', async () => {
+  let finishCompute: (value: string) => void = () => {}
+  const slowCompute = vi.fn(() => new Promise<string>((resolve) => { finishCompute = resolve }))
+
+  const inFlight = withWealthCache('key-1', slowCompute)
+  invalidateWealthCache()
+  finishCompute('before-write')
+  expect(await inFlight).toBe('before-write')
+
+  const fresh = vi.fn().mockResolvedValue('after-write')
+  expect(await withWealthCache('key-1', fresh)).toBe('after-write')
+  expect(fresh).toHaveBeenCalledTimes(1)
+})
+
+test('drops expired and invalidated entries when storing a new one', async () => {
+  vi.useFakeTimers()
+  await withWealthCache('expired', async () => 1, 1_000)
+  await withWealthCache('invalidated', async () => 2)
+  invalidateWealthCache()
+  vi.advanceTimersByTime(2_000)
+
+  await withWealthCache('fresh', async () => 3)
+
+  expect(wealthCacheSizeForTests()).toBe(1)
+})
+
+test('never stores more than 500 entries, evicting the oldest first', async () => {
+  for (let index = 0; index < 501; index += 1) await withWealthCache(`key-${index}`, async () => index)
+
+  expect(wealthCacheSizeForTests()).toBe(500)
+  const recomputeOldest = vi.fn().mockResolvedValue('recomputed')
+  expect(await withWealthCache('key-0', recomputeOldest)).toBe('recomputed')
+  const newest = vi.fn()
+  expect(await withWealthCache('key-500', newest)).toBe(500)
+  expect(newest).not.toHaveBeenCalled()
 })

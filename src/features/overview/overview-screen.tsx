@@ -1,13 +1,14 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
-import { BarChart3, CircleAlert, RefreshCw, Tags } from 'lucide-react'
-import { Button } from '../../components/ui/button'
+import { BarChart3, Tags } from 'lucide-react'
+import { LoadError } from '../../components/load-error'
+import { parseIsoDate } from '../../lib/prague-date'
+import { isAbortError } from '../../lib/api-client'
+import { formatCompactMoney, formatItemCount, formatPercent, formatTransactionCount } from '../../lib/format'
 import { Card } from '../../components/ui/card'
 import { EmptyState, EmptyStateTitle } from '../../components/ui/empty-state'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group'
 import { formatCzk } from '../../lib/format-czk'
 import { CategoryIcon } from '../categories/category-icon'
-import type { CategoryColorKey, CategoryIconKey } from '../categories/api'
 import { createDefaultFeedFilters, FeedFilters, isNavigablePeriod, resolveFeedDateRange, type FeedFilterValue } from '../feed/feed-filters'
 import { FeedPeriodPager } from '../feed/feed-period-pager'
 import { OverviewSkeleton } from './overview-skeleton'
@@ -52,6 +53,7 @@ export function OverviewScreen({ onOpenTransactions }: { onOpenTransactions: (fi
       setStatus('error')
     })
     return () => controller.abort()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the deps list the stable walletKey and date fields, not the walletIds array / range object that get a new identity on every render
   }, [requestKey])
 
   function setOverviewFilters(next: FeedFilterValue) {
@@ -59,7 +61,7 @@ export function OverviewScreen({ onOpenTransactions }: { onOpenTransactions: (fi
   }
 
   const content = status === 'loading' ? <OverviewSkeleton />
-    : status === 'error' ? <FeedbackState status="error" layout="panel" className="overview-feedback"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateTitle>Přehled se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent><FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions></FeedbackState>
+    : status === 'error' ? <LoadError title="Přehled se nepodařilo načíst" className="overview-feedback" onRetry={() => setReloadToken((current) => current + 1)} />
       : metrics ? <OverviewContent metrics={metrics} mode={mode} onModeChange={setMode} onOpenTransactions={(selection) => onOpenTransactions(filters, selection)} />
         : null
 
@@ -111,8 +113,11 @@ function BreakdownSection({ title, emptyText, children }: { title: string; empty
 
 function CategoryBreakdown({ categories, mode, onOpenTransactions }: { categories: OverviewCategory[]; mode: OverviewMode; onOpenTransactions: (selection: OverviewSelection) => void }) {
   const maxAmount = Math.max(...categories.map((category) => category.amountCzk), 1)
-  return <><CategoryDonut categories={categories} /><div className="overview-breakdown-list">{categories.map((category) => <Card render={<button type="button" onClick={() => onOpenTransactions({ type: 'category', id: category.id, name: category.name })} />} interactive padding="none" className="overview-breakdown-row" key={category.id}>
-    <span className={`overview-breakdown-row__icon color-key--${category.colorKey}`}><CategoryIcon iconKey={category.iconKey as CategoryIconKey} colorKey={category.colorKey as CategoryColorKey} /></span>
+  // The donut states shares of a whole, which only means something within one direction; with
+  // income and expenses in the same list (Celkem, Cashflow) it would compare unlike amounts.
+  const showDonut = mode === 'income' || mode === 'expense'
+  return <>{showDonut ? <CategoryDonut categories={categories} /> : null}<div className="overview-breakdown-list">{categories.map((category) => <Card render={<button type="button" onClick={() => onOpenTransactions({ type: 'category', id: category.id, name: category.name })} />} interactive padding="none" className="overview-breakdown-row" key={category.id}>
+    <span className={`overview-breakdown-row__icon color-key--${category.colorKey}`}><CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /></span>
     <span className="overview-breakdown-row__content"><span className="overview-breakdown-row__name">{category.name}</span><span className="overview-breakdown-row__meta">{formatTransactionCount(category.transactionCount)}</span><span className="overview-breakdown-row__bar"><i style={{ '--overview-bar-size': `${Math.max(5, category.amountCzk / maxAmount * 100)}%` } as CSSProperties} /></span></span>
     <strong className={category.direction === 'income' ? 'is-positive' : mode === 'total' ? 'is-negative' : 'is-negative'}>{category.direction === 'income' ? '+' : '-'}{formatCzk(category.amountCzk)}</strong>
   </Card>)}</div></>
@@ -120,13 +125,12 @@ function CategoryBreakdown({ categories, mode, onOpenTransactions }: { categorie
 
 function CategoryDonut({ categories }: { categories: OverviewCategory[] }) {
   const total = categories.reduce((sum, category) => sum + category.amountCzk, 0)
-  let offset = 0
-  const segments: DonutSegment[] = categories.map((category) => {
-    const share = category.amountCzk / total * 100
-    const segment = { category, share, offset }
-    offset += share
-    return segment
-  })
+  const shares = categories.map((category) => category.amountCzk / total * 100)
+  const segments: DonutSegment[] = categories.map((category, index) => ({
+    category,
+    share: shares[index],
+    offset: shares.slice(0, index).reduce((sum, share) => sum + share, 0),
+  }))
   const annotations = selectDonutAnnotations(segments)
   return <Card aria-label="Podíl kategorií" padding="none" className="overview-category-donut">
     <div className="overview-category-donut__canvas">
@@ -145,7 +149,7 @@ function CategoryDonut({ categories }: { categories: OverviewCategory[] }) {
         {annotations.map(({ category, startX, startY, endX, endY }) => <line className={`overview-category-donut__leader color-key--${category.colorKey}`} key={category.id} x1={startX} y1={startY} x2={endX} y2={endY} />)}
       </svg>
       {annotations.map(({ category, share, x, y }) => <div className={`overview-category-donut__annotation color-key--${category.colorKey}`} key={category.id} style={{ left: `${x / 220 * 100}%`, top: `${y / 220 * 100}%` }}>
-        <span className="overview-category-donut__annotation-badge"><CategoryIcon iconKey={category.iconKey as CategoryIconKey} colorKey={category.colorKey as CategoryColorKey} /></span>
+        <span className="overview-category-donut__annotation-badge"><CategoryIcon iconKey={category.iconKey} colorKey={category.colorKey} /></span>
         <span className="overview-category-donut__percentage">{formatPercent(share)}</span>
       </div>)}
     </div>
@@ -256,19 +260,14 @@ function getLabelDisplay(label: OverviewLabel, mode: OverviewMode): LabelDisplay
 }
 function formatLabelCount(transactionCount: number, transferCount: number) {
   const count = transactionCount + transferCount
-  return `${count} ${count === 1 ? 'položka' : count >= 2 && count <= 4 ? 'položky' : 'položek'}`
+  return formatItemCount(count)
 }
 function isOverviewMode(value: string) : value is OverviewMode { return value === 'total' || value === 'income' || value === 'expense' || value === 'cashflow' }
 function formatSignedMoney(value: number, signed: boolean) { return `${signed ? value >= 0 ? '+' : '-' : value < 0 ? '-' : ''}${formatCzk(value)}` }
-function formatPercent(value: number) { return new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 1 }).format(value) + ' %' }
 function formatFlowValue(value: number, mode: Exclude<OverviewMode, 'total'>) { return `${mode === 'expense' ? '-' : value < 0 ? '-' : value > 0 ? '+' : ''}${formatCzk(value)}` }
 function getBarSize(value: number, max: number) { return value === 0 ? 0 : Math.max(5, value / max * 100) }
-function formatCompactMoney(value: number) { return new Intl.NumberFormat('cs-CZ', { notation: 'compact', maximumFractionDigits: 1 }).format(value) + ' Kč' }
-function formatTransactionCount(value: number) { return `${value} ${value === 1 ? 'transakce' : value >= 2 && value <= 4 ? 'transakce' : 'transakcí'}` }
-function formatRange(from: string, to: string) { const formatter = new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' }); return `${formatter.format(parseDate(from))} až ${formatter.format(parseDate(to))}` }
-function formatChartDate(value: string) { return new Intl.DateTimeFormat('cs-CZ', { month: 'short', year: 'numeric' }).format(parseDate(value)) }
-function formatTooltipDate(value: string) { return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' }).format(parseDate(value)) }
+function formatRange(from: string, to: string) { const formatter = new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' }); return `${formatter.format(parseIsoDate(from))} až ${formatter.format(parseIsoDate(to))}` }
+function formatChartDate(value: string) { return new Intl.DateTimeFormat('cs-CZ', { month: 'short', year: 'numeric' }).format(parseIsoDate(value)) }
+function formatTooltipDate(value: string) { return new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' }).format(parseIsoDate(value)) }
 function getChartPoint(value: number, index: number, count: number, min: number, span: number) { return `${count === 1 ? 150 : index / (count - 1) * 300},${132 - (value - min) / span * 100}` }
 function parseChartCoordinates(value: string) { const [x, y] = value.split(',').map(Number); return { x, y } }
-function parseDate(value: string) { const [year, month, day] = value.split('-').map(Number); return new Date(year, month - 1, day) }
-function isAbortError(error: unknown) { return error instanceof DOMException && error.name === 'AbortError' }

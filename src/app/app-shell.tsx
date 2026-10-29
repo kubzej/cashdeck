@@ -21,6 +21,7 @@ import { WalletFormScreen } from '../features/wallets/wallet-form-screen'
 import { WalletsScreen } from '../features/wallets/wallets-screen'
 import type { OverviewSelection } from '../features/overview/overview-screen'
 import { OverviewSkeleton } from '../features/overview/overview-skeleton'
+import { ErrorBoundary } from './error-boundary'
 
 const OverviewScreen = lazy(() => import('../features/overview/overview-screen').then((module) => ({ default: module.OverviewScreen })))
 
@@ -50,19 +51,27 @@ export function AppShell() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null)
   const [plannedFilters, setPlannedFilters] = useState<FeedFilterValue | null>(null)
+  // The list's own filters (period, search, wallets). The list unmounts while a transaction is
+  // open, so the shell keeps them and hands them back when the list returns.
+  const [listFilters, setListFilters] = useState<FeedFilterValue | null>(null)
   const [feedSelection, setFeedSelection] = useState<OverviewSelection | null>(null)
   const [transactionReturnView, setTransactionReturnView] = useState<'list' | 'planned'>('list')
   const [settingsView, setSettingsView] = useState<SettingsView>('index')
+  // Opened from the Nezávislost tab: the tab stays active so back returns there, not to the Nastavení index.
+  const [isIndependenceSettingsOpen, setIsIndependenceSettingsOpen] = useState(false)
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false)
   const activeItem = navItems.find((item) => item.key === activeNav)
-  const isDetailScreen = (activeNav === 'wallets' && walletView !== 'list') || (activeNav === 'transactions' && (transactionView !== 'list' || transferView !== 'list')) || (activeNav === 'settings' && settingsView !== 'index')
+  const isDetailScreen = (activeNav === 'wallets' && walletView !== 'list') || (activeNav === 'transactions' && (transactionView !== 'list' || transferView !== 'list')) || (activeNav === 'settings' && settingsView !== 'index') || (activeNav === 'independence' && isIndependenceSettingsOpen)
 
   // Without this, a screen entered from a scrolled-down list (e.g. tapping a transaction deep in
   // Transakce) would render already scrolled past its own top, since the SPA swaps content in
   // place and the browser has no reason to reset scroll on its own.
-  useEffect(() => { window.scrollTo(0, 0) }, [activeNav, transactionView, transferView, walletView, settingsView])
+  useEffect(() => { window.scrollTo(0, 0) }, [activeNav, transactionView, transferView, walletView, settingsView, isIndependenceSettingsOpen])
 
   function selectNavigation(key: NavKey) {
+    // Coming to the list from another tab starts from the default filters; tapping the tab while
+    // already on the list leaves them alone, as before.
+    if (key === 'transactions' && activeNav !== 'transactions') setListFilters(null)
     setActiveNav(key)
     if (key === 'transactions') {
       setTransactionWalletId(null)
@@ -81,6 +90,7 @@ export function AppShell() {
       setTransactionReturnView('list')
     }
     if (key !== 'settings') setSettingsView('index')
+    setIsIndependenceSettingsOpen(false)
   }
 
   if (status !== 'signed-in') return null
@@ -89,25 +99,28 @@ export function AppShell() {
     <div className="app-shell">
       <div className="app-main">
         <main className={`app-content${isDetailScreen ? ' app-content--form' : ''}${!isDetailScreen && activeNav === 'transactions' ? ' app-content--transaction-fab' : ''}`}>
-          {walletView === 'new' ? <WalletFormScreen onCancel={() => setWalletView('list')} onSaved={() => setWalletView('list')} /> : null}
-          {walletView === 'edit' && selectedWallet ? <WalletFormScreen wallet={selectedWallet} onCancel={() => setWalletView('list')} onSaved={() => setWalletView('list')} onDeleted={() => { setSelectedWallet(null); setWalletView('list') }} /> : null}
-          {transactionView === 'new' ? <TransactionFormScreen onCancel={() => setTransactionView('list')} onSaved={() => setTransactionView('list')} /> : null}
-          {transactionView === 'edit' && selectedTransaction ? <TransactionFormScreen transaction={selectedTransaction} onCancel={() => setTransactionView(transactionReturnView)} onSaved={() => { setSelectedTransaction(null); setTransactionView(transactionReturnView) }} onDeleted={() => { setSelectedTransaction(null); setTransactionView(transactionReturnView) }} /> : null}
-          {transferView === 'new' ? <TransferFormScreen onCancel={() => setTransferView('list')} onSaved={() => setTransferView('list')} /> : null}
-          {transferView === 'edit' && selectedTransfer ? <TransferFormScreen transfer={selectedTransfer} onCancel={() => { setSelectedTransfer(null); setTransferView('list') }} onSaved={() => { setSelectedTransfer(null); setTransferView('list') }} onDeleted={() => { setSelectedTransfer(null); setTransferView('list') }} /> : null}
-          {transactionView === 'planned' && transferView === 'list' && plannedFilters ? <PlannedScreen filters={plannedFilters} selection={feedSelection ?? undefined} onBack={() => setTransactionView('list')} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('planned'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('planned'); setTransferView('edit') }} /> : null}
-          {activeNav === 'settings' && settingsView === 'categories' ? <CategoriesScreen onBack={() => setSettingsView('index')} /> : null}
-          {activeNav === 'settings' && settingsView === 'labels' ? <LabelsScreen onBack={() => setSettingsView('index')} /> : null}
-          {activeNav === 'settings' && settingsView === 'recurring' ? <RecurringRulesScreen onBack={() => setSettingsView('index')} /> : null}
-          {activeNav === 'settings' && settingsView === 'independence' ? <IndependenceSettingsScreen onBack={() => setSettingsView('index')} /> : null}
-          {!isDetailScreen ? <>
-            <div className={`screen-heading${activeNav === 'wallets' || activeNav === 'independence' ? ' screen-heading--action' : ''}`}>
-              <h1>{activeItem?.label}</h1>
-              {activeNav === 'wallets' ? <Button variant="ghost" size="icon" aria-label="Přidat peněženku" onClick={() => setWalletView('new')}><Plus aria-hidden="true" /></Button> : null}
-              {activeNav === 'independence' ? <Button variant="ghost" size="icon" aria-label="Nastavení nezávislosti" onClick={() => { setActiveNav('settings'); setSettingsView('independence') }}><Settings2 aria-hidden="true" /></Button> : null}
-            </div>
-          {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} onOpenRecurring={() => setSettingsView('recurring')} onOpenIndependence={() => setSettingsView('independence')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setPlannedFilters(null); setFeedSelection(null); setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} initialFilters={plannedFilters ?? undefined} fixedSelection={feedSelection ?? undefined} onResetFilters={() => { setTransactionWalletId(null); setPlannedFilters(null); setFeedSelection(null) }} onOpenPlanned={(filters) => { setPlannedFilters(filters); setTransactionView('planned') }} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('list'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('list'); setTransferView('edit') }} /> : activeNav === 'overview' ? <Suspense fallback={<OverviewSkeleton />}><OverviewScreen onOpenTransactions={(filters, selection) => { setPlannedFilters(filters); setFeedSelection(selection); setTransactionWalletId(null); setActiveNav('transactions') }} /></Suspense> : activeNav === 'independence' ? <IndependenceScreen onOpenSettings={() => { setActiveNav('settings'); setSettingsView('independence') }} /> : null}
-          </> : null}
+          <ErrorBoundary layout="panel" resetKey={`${activeNav}:${walletView}:${transactionView}:${transferView}:${settingsView}:${isIndependenceSettingsOpen}`}>
+            {walletView === 'new' ? <WalletFormScreen onCancel={() => setWalletView('list')} onSaved={() => setWalletView('list')} /> : null}
+            {walletView === 'edit' && selectedWallet ? <WalletFormScreen wallet={selectedWallet} onCancel={() => setWalletView('list')} onSaved={() => setWalletView('list')} onDeleted={() => { setSelectedWallet(null); setWalletView('list') }} /> : null}
+            {transactionView === 'new' ? <TransactionFormScreen onCancel={() => setTransactionView('list')} onSaved={() => setTransactionView('list')} /> : null}
+            {transactionView === 'edit' && selectedTransaction ? <TransactionFormScreen transaction={selectedTransaction} onCancel={() => { setSelectedTransaction(null); setTransactionView(transactionReturnView) }} onSaved={() => { setSelectedTransaction(null); setTransactionView(transactionReturnView) }} onDeleted={() => { setSelectedTransaction(null); setTransactionView(transactionReturnView) }} /> : null}
+            {transferView === 'new' ? <TransferFormScreen onCancel={() => setTransferView('list')} onSaved={() => setTransferView('list')} /> : null}
+            {transferView === 'edit' && selectedTransfer ? <TransferFormScreen transfer={selectedTransfer} onCancel={() => { setSelectedTransfer(null); setTransferView('list') }} onSaved={() => { setSelectedTransfer(null); setTransferView('list') }} onDeleted={() => { setSelectedTransfer(null); setTransferView('list') }} /> : null}
+            {transactionView === 'planned' && transferView === 'list' && plannedFilters ? <PlannedScreen filters={plannedFilters} selection={feedSelection ?? undefined} onBack={() => setTransactionView('list')} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('planned'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('planned'); setTransferView('edit') }} /> : null}
+            {activeNav === 'settings' && settingsView === 'categories' ? <CategoriesScreen onBack={() => setSettingsView('index')} /> : null}
+            {activeNav === 'settings' && settingsView === 'labels' ? <LabelsScreen onBack={() => setSettingsView('index')} /> : null}
+            {activeNav === 'settings' && settingsView === 'recurring' ? <RecurringRulesScreen onBack={() => setSettingsView('index')} /> : null}
+            {activeNav === 'settings' && settingsView === 'independence' ? <IndependenceSettingsScreen onBack={() => setSettingsView('index')} /> : null}
+            {activeNav === 'independence' && isIndependenceSettingsOpen ? <IndependenceSettingsScreen backLabel="Zpět na nezávislost" onBack={() => setIsIndependenceSettingsOpen(false)} /> : null}
+            {!isDetailScreen ? <>
+              <div className={`screen-heading${activeNav === 'wallets' || activeNav === 'independence' ? ' screen-heading--action' : ''}`}>
+                <h1>{activeItem?.label}</h1>
+                {activeNav === 'wallets' ? <Button variant="ghost" size="icon" aria-label="Přidat peněženku" onClick={() => setWalletView('new')}><Plus aria-hidden="true" /></Button> : null}
+                {activeNav === 'independence' ? <Button variant="ghost" size="icon" aria-label="Nastavení nezávislosti" onClick={() => setIsIndependenceSettingsOpen(true)}><Settings2 aria-hidden="true" /></Button> : null}
+              </div>
+            {activeNav === 'settings' ? <SettingsScreen onOpenCategories={() => setSettingsView('categories')} onOpenLabels={() => setSettingsView('labels')} onOpenRecurring={() => setSettingsView('recurring')} onOpenIndependence={() => setSettingsView('independence')} /> : activeNav === 'wallets' ? <WalletsScreen onCreate={() => setWalletView('new')} onSelect={(wallet) => { setListFilters(null); setPlannedFilters(null); setFeedSelection(null); setTransactionWalletId(wallet.id); setActiveNav('transactions') }} onManage={(wallet) => { setSelectedWallet(wallet); setWalletView('edit') }} /> : activeNav === 'transactions' ? <TransactionsScreen initialWalletId={transactionWalletId ?? undefined} initialFilters={listFilters ?? plannedFilters ?? undefined} onFiltersChange={setListFilters} fixedSelection={feedSelection ?? undefined} onResetFilters={() => { setTransactionWalletId(null); setPlannedFilters(null); setFeedSelection(null) }} onOpenPlanned={(filters) => { setPlannedFilters(filters); setTransactionView('planned') }} onSelectTransaction={(transaction) => { setSelectedTransaction(transaction); setTransactionReturnView('list'); setTransactionView('edit') }} onSelectTransfer={(transfer) => { setSelectedTransfer(transfer); setTransactionReturnView('list'); setTransferView('edit') }} /> : activeNav === 'overview' ? <Suspense fallback={<OverviewSkeleton />}><OverviewScreen onOpenTransactions={(filters, selection) => { setListFilters(null); setPlannedFilters(filters); setFeedSelection(selection); setTransactionWalletId(null); setActiveNav('transactions') }} /></Suspense> : activeNav === 'independence' ? <IndependenceScreen onOpenSettings={() => setIsIndependenceSettingsOpen(true)} /> : null}
+            </> : null}
+          </ErrorBoundary>
         </main>
         {!isDetailScreen && activeNav === 'transactions' ? <Button size="icon" className="transaction-fab" aria-label="Přidat záznam" onClick={() => setIsAddActivityOpen(true)}><Plus aria-hidden="true" /></Button> : null}
         {!isDetailScreen ? <nav className="bottom-nav" aria-label="Hlavní navigace">{navItems.map(({ key, label, icon: Icon }) => <Button key={key} variant="ghost" size="sm" className={`bottom-nav__item${key === activeNav ? ' bottom-nav__item--active' : ''}`} aria-current={key === activeNav ? 'page' : undefined} onClick={() => selectNavigation(key)}><span className="bottom-nav__icon"><Icon aria-hidden={true} /></span><span>{label}</span></Button>)}</nav> : null}

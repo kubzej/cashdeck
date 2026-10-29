@@ -26,6 +26,8 @@ test('validates, creates a label inline, and retries a failed transfer creation'
   await expect(page.getByText('Vyber jinou cílovou peněženku.', { exact: true })).toBeVisible()
   await page.locator('.transfer-wallet-pickers .transaction-primary-picker').nth(1).getByRole('button', { name: 'Běžný účet', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Spoření', exact: true }).click()
+  // Fixing the destination removes the error about it straight away, without another save.
+  await expect(page.getByText('Vyber jinou cílovou peněženku.', { exact: true })).toHaveCount(0)
   await page.getByRole('textbox', { name: 'Hledat nebo vytvořit štítek' }).fill('rezerva')
   await page.getByRole('button', { name: 'Vytvořit „rezerva“' }).click()
 

@@ -15,7 +15,7 @@ const jobSecret = 'recurring-job-secret-that-is-long-enough'
 
 const config: ServerConfig = {
   databaseUrl: 'postgres://unused', frontendOrigin: 'http://localhost:5173', host: '127.0.0.1',
-  neonAuthUrl: 'https://auth.test/neondb/auth', port: 8000, recurringJobSecret: jobSecret,
+  port: 8000, recurringJobSecret: jobSecret,
   sessionSigningSecret: 'test-session-signing-secret-32-characters-long',
   appAccessPassphrase: 'test-passphrase', appUserId: 'test-user-id',
 }
@@ -37,7 +37,7 @@ function createRepository(): RecurringRuleRepository {
     updateRule: vi.fn().mockResolvedValue(rule),
     deleteRule: vi.fn().mockResolvedValue(true),
     reorderRules: vi.fn().mockResolvedValue(undefined),
-    generateDue: vi.fn().mockResolvedValue({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0, failedRuleIds: [] }),
+    generateDue: vi.fn().mockResolvedValue({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0, failures: [] }),
   }
 }
 
@@ -131,7 +131,19 @@ test('runs recurring generation only with the internal job secret', async () => 
 
   const response = await app.inject({ method: 'POST', url: '/internal/jobs/recurring', headers: { 'x-cashdeck-job-secret': jobSecret } })
   expect(response.statusCode).toBe(200)
-  expect(response.json()).toEqual({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0, failedRuleIds: [] })
+  expect(response.json()).toEqual({ processedRules: 1, generatedTransactions: 1, generatedTransfers: 0, failures: [] })
   expect(repository.generateDue).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
+  await app.close()
+})
+
+test('reports a failed recurring run with a 500 so the scheduler sees it, keeping the generation summary', async () => {
+  const { app, repository } = await createTestApp()
+  const failedRun = { processedRules: 1, generatedTransactions: 1, generatedTransfers: 0, failures: [{ ruleId, message: 'Transaction date cannot be before the wallet opening balance date' }] }
+  vi.mocked(repository.generateDue).mockResolvedValueOnce(failedRun)
+
+  const response = await app.inject({ method: 'POST', url: '/internal/jobs/recurring', headers: { 'x-cashdeck-job-secret': jobSecret } })
+
+  expect(response.statusCode).toBe(500)
+  expect(response.json()).toEqual(failedRun)
   await app.close()
 })

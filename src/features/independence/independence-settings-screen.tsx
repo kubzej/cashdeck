@@ -1,9 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { CircleAlert, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { CircleAlert, Pencil, Plus } from 'lucide-react'
+import { LoadError } from '../../components/load-error'
+import { formatYears } from '../../lib/format'
+import { parseNonNegativeCzk, parsePercentInput, parsePositiveInteger } from '../../lib/amount-input'
+import { DeleteConfirmationDialog } from '../../components/delete-confirmation-dialog'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { ScreenHeader } from '../../components/screen-header'
-import { FeedbackState, FeedbackStateActions, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
+import { FeedbackState, FeedbackStateContent, FeedbackStateDescription, FeedbackStateIcon, FeedbackStateTitle } from '../../components/ui/feedback-state'
 import { Field, FieldDescription, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { List, ListItem, ListItemActions, ListItemContent, ListItemTitle } from '../../components/ui/list'
@@ -20,6 +24,7 @@ import {
   type IrregularExpense,
 } from './api'
 import './independence.css'
+import { MAX_NAME_LENGTH } from '../../../server/src/catalog'
 
 const categoryFields = [
   ['housingMonthlyCzk', 'Bydlení'],
@@ -53,7 +58,7 @@ function toFormValues(settings: IndependenceSettings): FormValues {
   return Object.fromEntries(Object.entries(settings).map(([key, value]) => [key, String(value)])) as FormValues
 }
 
-export function IndependenceSettingsScreen({ onBack }: { onBack: () => void }) {
+export function IndependenceSettingsScreen({ onBack, backLabel = 'Zpět do nastavení' }: { onBack: () => void; backLabel?: string }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [values, setValues] = useState<FormValues>(defaultValues)
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({})
@@ -84,9 +89,9 @@ export function IndependenceSettingsScreen({ onBack }: { onBack: () => void }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors: Partial<Record<keyof FormValues, string>> = {}
-    const withdrawalRatePercent = parsePercent(values.withdrawalRatePercent, 0.01, 20)
-    const expectedRealReturnPercent = parsePercent(values.expectedRealReturnPercent, 0, 20)
-    const inflationRatePercent = parsePercent(values.inflationRatePercent, 0, 20)
+    const withdrawalRatePercent = parsePercentInput(values.withdrawalRatePercent, 0.01, 20)
+    const expectedRealReturnPercent = parsePercentInput(values.expectedRealReturnPercent, 0, 20)
+    const inflationRatePercent = parsePercentInput(values.inflationRatePercent, 0, 20)
     const monthlyContributionCzk = parseNonNegativeCzk(values.monthlyContributionCzk)
     if (withdrawalRatePercent === null) nextErrors.withdrawalRatePercent = 'Zadej sazbu mezi 0,01 a 20 %.'
     if (expectedRealReturnPercent === null) nextErrors.expectedRealReturnPercent = 'Zadej hodnotu mezi 0 a 20 %.'
@@ -129,16 +134,12 @@ export function IndependenceSettingsScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <section className="independence-settings-screen" aria-labelledby="independence-settings-title">
-      <ScreenHeader title="Nezávislost" titleId="independence-settings-title" backLabel="Zpět do nastavení" onBack={onBack} />
+      <ScreenHeader title="Nezávislost" titleId="independence-settings-title" backLabel={backLabel} onBack={onBack} />
 
       {status === 'loading' ? <div className="independence-settings-loading" aria-label="Načítání nastavení"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div> : null}
 
       {status === 'error' ? (
-        <FeedbackState status="error" layout="panel" className="independence-settings-feedback">
-          <FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon>
-          <FeedbackStateContent><FeedbackStateTitle>Nastavení se nepodařilo načíst</FeedbackStateTitle><FeedbackStateDescription>Zkus to prosím znovu.</FeedbackStateDescription></FeedbackStateContent>
-          <FeedbackStateActions><Button variant="outline" onClick={() => setReloadToken((current) => current + 1)}><RefreshCw aria-hidden="true" />Zkusit znovu</Button></FeedbackStateActions>
-        </FeedbackState>
+        <LoadError title="Nastavení se nepodařilo načíst" className="independence-settings-feedback" onRetry={() => setReloadToken((current) => current + 1)} />
       ) : null}
 
       {status === 'ready' ? (
@@ -200,6 +201,21 @@ export function IndependenceSettingsScreen({ onBack }: { onBack: () => void }) {
 
 function IrregularExpensesSection({ irregularExpenses, onChanged }: { irregularExpenses: IrregularExpense[]; onChanged: () => void }) {
   const [editing, setEditing] = useState<IrregularExpense | 'new' | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(null)
+
+  async function handleDelete(item: IrregularExpense) {
+    setDeletingId(item.id)
+    setDeleteError(null)
+    try {
+      await deleteIrregularExpense(item.id)
+      onChanged()
+    } catch (error) {
+      setDeleteError({ id: item.id, message: error instanceof Error ? error.message : 'Výdaj se nepodařilo smazat.' })
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   return (
     <Card render={<section aria-labelledby="independence-irregular-title" />} padding="none" className="independence-settings-section">
@@ -213,12 +229,12 @@ function IrregularExpensesSection({ irregularExpenses, onChanged }: { irregularE
             <ListItem key={item.id} variant="quiet" size="default" className="surface-row independence-irregular-row">
               <ListItemContent>
                 <ListItemTitle>{item.name}</ListItemTitle>
-                <span className="independence-irregular-row__meta">{formatCzk(item.amountCzk)}, jednou za {item.frequencyYears} {item.frequencyYears === 1 ? 'rok' : item.frequencyYears >= 2 && item.frequencyYears <= 4 ? 'roky' : 'let'}</span>
+                <span className="independence-irregular-row__meta">{formatCzk(item.amountCzk)}, jednou za {formatYears(item.frequencyYears)}</span>
                 <span className="independence-irregular-row__annual">ročně {formatCzk(Math.round(item.amountCzk / item.frequencyYears))}</span>
               </ListItemContent>
               <ListItemActions>
                 <Button type="button" variant="ghost" size="icon" aria-label={`Upravit ${item.name}`} onClick={() => setEditing(item)}><Pencil aria-hidden="true" /></Button>
-                <Button type="button" variant="ghost" size="icon" aria-label={`Smazat ${item.name}`} onClick={() => void deleteIrregularExpense(item.id).then(onChanged)}><Trash2 aria-hidden="true" /></Button>
+                <DeleteConfirmationDialog title="Smazat nepravidelný výdaj?" description={`Výdaj „${item.name}“ bude trvale smazán a přestane se počítat do nezávislosti.`} triggerLabel={`Smazat ${item.name}`} isDeleting={deletingId === item.id} error={deleteError?.id === item.id ? deleteError.message : null} onConfirm={() => void handleDelete(item)} />
               </ListItemActions>
             </ListItem>
           ))}
@@ -260,7 +276,7 @@ function IrregularExpenseForm({ item, onCancel, onSaved }: { item: IrregularExpe
   return (
     <form className="independence-irregular-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
       {error ? <FeedbackState status="error" layout="inline"><FeedbackStateIcon><CircleAlert aria-hidden="true" /></FeedbackStateIcon><FeedbackStateContent><FeedbackStateDescription>{error}</FeedbackStateDescription></FeedbackStateContent></FeedbackState> : null}
-      <Field><FieldLabel>Název</FieldLabel><Input autoFocus value={name} placeholder="Např. Výměna auta" onChange={(event) => setName(event.currentTarget.value)} /></Field>
+      <Field><FieldLabel>Název</FieldLabel><Input autoFocus value={name} maxLength={MAX_NAME_LENGTH} placeholder="Např. Výměna auta" onChange={(event) => setName(event.currentTarget.value)} /></Field>
       <Field><FieldLabel>Částka</FieldLabel><Input type="text" inputMode="numeric" value={amountCzk} placeholder="např. 400000" onChange={(event) => setAmountCzk(event.currentTarget.value)} /></Field>
       <Field><FieldLabel>Frekvence (roky)</FieldLabel><Input type="text" inputMode="numeric" value={frequencyYears} placeholder="např. 8" onChange={(event) => setFrequencyYears(event.currentTarget.value)} /><FieldDescription>Jak často výdaj nastává. Např. 8 = jednou za 8 let (appka si sama spočítá roční ekvivalent).</FieldDescription></Field>
       <div className="independence-irregular-form__actions">
@@ -271,29 +287,8 @@ function IrregularExpenseForm({ item, onCancel, onSaved }: { item: IrregularExpe
   )
 }
 
-function parsePercent(value: string, min: number, max: number) {
-  const normalized = value.replace(',', '.').trim()
-  if (!/^\d+(\.\d+)?$/.test(normalized)) return null
-  const amount = Number(normalized)
-  return amount >= min && amount <= max ? amount : null
-}
-
-function parseNonNegativeCzk(value: string) {
-  const normalized = value.replaceAll(/\s/g, '')
-  if (normalized === '') return 0
-  if (!/^\d+$/.test(normalized)) return null
-  const amount = Number(normalized)
-  return Number.isSafeInteger(amount) ? amount : null
-}
-
 function parsePositiveCzk(value: string) {
   const amount = parseNonNegativeCzk(value)
   return amount !== null && amount > 0 ? amount : null
 }
 
-function parsePositiveInteger(value: string) {
-  const normalized = value.trim()
-  if (!/^\d+$/.test(normalized)) return null
-  const amount = Number(normalized)
-  return Number.isSafeInteger(amount) && amount > 0 ? amount : null
-}

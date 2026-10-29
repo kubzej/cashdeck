@@ -1,4 +1,5 @@
-import { expect, type Page, type Route } from '@playwright/test'
+import { type Page, type Route } from '@playwright/test'
+import { rejectUnauthorized } from './authorization'
 
 export type LabelFixture = {
   id: string
@@ -21,7 +22,7 @@ export async function mockLabelsApi(page: Page, initialLabels: LabelFixture[] = 
   const failures = new Map<LabelRequestMethod, QueuedLabelApiFailure>()
 
   await page.route('http://api.test/api/labels**', async (route) => {
-    expect(route.request().headers().authorization).toBe('Bearer token-1')
+    if (await rejectUnauthorized(route)) return
     const request = route.request()
     const url = new URL(request.url())
     const pathname = url.pathname
@@ -52,7 +53,7 @@ export async function mockLabelsApi(page: Page, initialLabels: LabelFixture[] = 
       const { name } = request.postDataJSON() as { name: string }
       labels = labels.map((label) => label.id === labelId ? { ...label, name } : label)
       const label = labels.find((item) => item.id === labelId)
-      await route.fulfill(label ? json(label) : json({ message: 'Štítek neexistuje.' }, 404))
+      await route.fulfill(label ? json(label) : json({ error: 'Štítek neexistuje.' }, 404))
       return
     }
 
@@ -63,7 +64,7 @@ export async function mockLabelsApi(page: Page, initialLabels: LabelFixture[] = 
       return
     }
 
-    await route.fulfill(json({ message: `Nepodporovaný label požadavek: ${request.method()} ${pathname}` }, 500))
+    await route.fulfill(json({ error: `Nepodporovaný label požadavek: ${request.method()} ${pathname}` }, 500))
   })
 
   return {
@@ -96,6 +97,6 @@ async function fulfillFailure(route: Route, failures: Map<LabelRequestMethod, Qu
 
   if (failure.remaining <= 1) failures.delete(method)
   else failures.set(method, { ...failure, remaining: failure.remaining - 1 })
-  await route.fulfill(json({ message: failure.message }, failure.status))
+  await route.fulfill(json({ error: failure.message }, failure.status))
   return true
 }

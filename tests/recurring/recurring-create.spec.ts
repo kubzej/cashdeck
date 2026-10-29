@@ -53,7 +53,7 @@ async function openRecurringManager(page: Parameters<typeof mockAuthAndApi>[0]) 
   await mockWalletsApi(page, wallets)
   await mockCategoriesApi(page, [
     { id: 'category-home', name: 'Domov', direction: 'expense', iconKey: 'house', colorKey: 'orange', sortOrder: 0 },
-    { id: 'category-income', name: 'Výplata', direction: 'income', iconKey: 'banknote', colorKey: 'green', sortOrder: 0 },
+    { id: 'category-income', name: 'Výplata', direction: 'income', iconKey: 'banknote-arrow-up', colorKey: 'green', sortOrder: 0 },
   ])
   const labelsApi = await mockLabelsApi(page, [{ id: 'label-1', name: 'bydlení' }])
   await mockTransactionsApi(page)

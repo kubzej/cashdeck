@@ -5,10 +5,13 @@ import { safeEqual } from '../security.js'
 
 export function createRecurringJobRoutes(repository: RecurringRuleRepository, secret: string): FastifyPluginAsync {
   return async function recurringJobRoutes(app) {
-    app.post('/internal/jobs/recurring', { preHandler: requireJobSecret(secret) }, async (request) => {
+    app.post('/internal/jobs/recurring', { preHandler: requireJobSecret(secret) }, async (request, reply) => {
       const result = await repository.generateDue(getPragueToday())
-      if (result.failedRuleIds.length > 0) {
-        request.log.error({ failedRuleIds: result.failedRuleIds }, 'Some recurring rules failed to generate their due occurrences')
+      if (result.failures.length > 0) {
+        request.log.error({ failures: result.failures }, 'Some recurring rules failed to generate their due occurrences')
+        // A non-2xx status is what lets the scheduler mark the run as failed; the body still
+        // reports what did get generated.
+        return reply.code(500).send(result)
       }
       return result
     })

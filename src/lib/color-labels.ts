@@ -1,24 +1,4 @@
-export const colorKeys = [
-  'slate-light', 'slate', 'slate-dark',
-  'gray-light', 'gray', 'gray-dark',
-  'red-light', 'red', 'red-dark',
-  'orange-light', 'orange', 'orange-dark',
-  'yellow-light', 'yellow', 'yellow-dark',
-  'amber-light', 'amber', 'amber-dark',
-  'lime-light', 'lime', 'lime-dark',
-  'green-light', 'green', 'green-dark',
-  'teal-light', 'teal', 'teal-dark',
-  'cyan-light', 'cyan', 'cyan-dark',
-  'sky-light', 'sky', 'sky-dark',
-  'blue-light', 'blue', 'blue-dark',
-  'indigo-light', 'indigo', 'indigo-dark',
-  'violet-light', 'violet', 'violet-dark',
-  'pink-light', 'pink', 'pink-dark',
-  'rose-light', 'rose', 'rose-dark',
-  'brown-light', 'brown', 'brown-dark',
-] as const
-
-export type ColorKey = (typeof colorKeys)[number]
+import type { ColorKey } from '../../server/src/catalog'
 
 export const colorLabels: Record<ColorKey, string> = {
   'slate-light': 'Světlá břidlicová', slate: 'Břidlicová', 'slate-dark': 'Tmavá břidlicová',

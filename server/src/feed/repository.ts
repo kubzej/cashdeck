@@ -1,8 +1,10 @@
 import { Buffer } from 'node:buffer'
 import type { Pool } from 'pg'
+import { feedItemKinds, type CategoryDirection, type FeedItemKind } from '../catalog.js'
 import { DomainError } from '../management/domain.js'
 import { getPragueToday } from '../recurring/schedule.js'
 import { calculateTransferImpactCzk, type FeedBoundsInput, type FeedListInput } from './domain.js'
+import { escapeLikePattern, parseLabels } from '../parsing.js'
 
 export type FeedLabel = { id: string; name: string }
 
@@ -15,7 +17,7 @@ export type FeedTransaction = {
   categoryName: string
   categoryIconKey: string
   categoryColorKey: string
-  direction: 'income' | 'expense'
+  direction: CategoryDirection
   amountCzk: number
   transactionDate: string
   note: string | null
@@ -53,12 +55,14 @@ export type FeedPage = { items: FeedItem[]; nextCursor: string | null }
 export type FeedBounds = { earliestActivityDate: string | null }
 export type FeedRepository = { listFeed(userId: string, input: FeedListInput): Promise<FeedPage>; getBounds(userId: string, input: FeedBoundsInput): Promise<FeedBounds> }
 
-type FeedCursor = { activityDate: string; createdAt: string; kind: 'transaction' | 'transfer' | 'balance_adjustment'; id: string }
+type FeedCursor = { activityDate: string; createdAt: string; kind: FeedItemKind; id: string }
 type FeedRow = {
-  kind: 'transaction' | 'transfer' | 'balance_adjustment'
+  kind: FeedItemKind
   id: string
   activity_date: string
-  created_at: Date
+  // Text with full microsecond precision: a JS Date keeps only milliseconds, so a cursor built
+  // from it would sort before its own row and the next page would skip same-timestamp rows.
+  created_at: string
   amount_czk: string
   note: string | null
   wallet_id: string | null
@@ -67,7 +71,7 @@ type FeedRow = {
   category_name: string | null
   category_icon_key: string | null
   category_color_key: string | null
-  direction: 'income' | 'expense' | null
+  direction: CategoryDirection | null
   source_wallet_id: string | null
   source_wallet_name: string | null
   destination_wallet_id: string | null
@@ -112,7 +116,7 @@ export function createFeedRepository(pool: Pool): FeedRepository {
         adjustmentFilters.push(`adjustment.adjustment_date <= ${parameter}`)
       }
       if (input.search) {
-        values.push(input.search)
+        values.push(escapeLikePattern(input.search))
         const parameter = `$${values.length}`
         transactionFilters.push(`(
           transaction_category.name ilike '%' || ${parameter} || '%'
@@ -270,7 +274,7 @@ function feedSelect(transactionFilters: string, transferFilters: string, adjustm
     limit ${limit}
   )
   select page.kind, page.id, to_char(page.activity_date, 'YYYY-MM-DD') as activity_date,
-    page.created_at, page.amount_czk, page.note,
+    to_char(page.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at, page.amount_czk, page.note,
     page.wallet_id, wallet.name as wallet_name,
     page.category_id, category.name as category_name,
     category.icon_key as category_icon_key, category.color_key as category_color_key,
@@ -356,20 +360,14 @@ function toFeedItem(row: FeedRow, selectedWalletIds: string[] | null): FeedItem 
   return { kind: 'transfer', id: row.id, sourceWalletId: row.source_wallet_id, sourceWalletName: row.source_wallet_name, destinationWalletId: row.destination_wallet_id, destinationWalletName: row.destination_wallet_name, amountCzk, impactCzk: calculateTransferImpactCzk({ amountCzk, sourceWalletId: row.source_wallet_id, destinationWalletId: row.destination_wallet_id, selectedWalletIds }), transferDate: row.activity_date, note: row.note, labels, recurringRuleName: row.recurring_rule_name }
 }
 
-function parseLabels(value: unknown): FeedLabel[] {
-  const labels = typeof value === 'string' ? JSON.parse(value) : value
-  if (!Array.isArray(labels)) return []
-  return labels.filter((label): label is FeedLabel => typeof label === 'object' && label !== null && 'id' in label && 'name' in label && typeof label.id === 'string' && typeof label.name === 'string')
-}
-
 function encodeCursor(row: FeedRow) {
-  return Buffer.from(JSON.stringify({ activityDate: row.activity_date, createdAt: row.created_at.toISOString(), kind: row.kind, id: row.id } satisfies FeedCursor)).toString('base64url')
+  return Buffer.from(JSON.stringify({ activityDate: row.activity_date, createdAt: row.created_at, kind: row.kind, id: row.id } satisfies FeedCursor)).toString('base64url')
 }
 
 function decodeCursor(cursor: string): FeedCursor {
   try {
     const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as Partial<FeedCursor>
-    if (typeof parsed.activityDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.activityDate) && typeof parsed.createdAt === 'string' && !Number.isNaN(new Date(parsed.createdAt).valueOf()) && (parsed.kind === 'transaction' || parsed.kind === 'transfer' || parsed.kind === 'balance_adjustment') && typeof parsed.id === 'string' && /^[0-9a-f-]{36}$/i.test(parsed.id)) return parsed as FeedCursor
+    if (typeof parsed.activityDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.activityDate) && typeof parsed.createdAt === 'string' && !Number.isNaN(new Date(parsed.createdAt).valueOf()) && (feedItemKinds as readonly unknown[]).includes(parsed.kind) && typeof parsed.id === 'string' && /^[0-9a-f-]{36}$/i.test(parsed.id)) return parsed as FeedCursor
   } catch {
     // The generic validation error below intentionally does not expose parser details.
   }

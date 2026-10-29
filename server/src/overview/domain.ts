@@ -1,22 +1,16 @@
+import { feedPeriods, overviewGranularities, overviewSelectionTypes, type FeedPeriod, type OverviewGranularity, type OverviewSelectionType } from '../catalog.js'
 import { asRecord, assertOnlyKeys, DomainError, parseCalendarDate, parseUuid } from '../management/domain.js'
+import { parseSearch, parseWalletIds } from '../parsing.js'
 
-export type OverviewPeriod = 'week' | 'month' | 'year' | 'all' | 'custom'
+export type { OverviewGranularity, OverviewSelectionType }
 
 export type OverviewInput = {
   walletIds: string[] | null
   dateFrom: string | null
   dateTo: string | null
-  period: OverviewPeriod
+  period: FeedPeriod
   search: string | null
 }
-
-export type OverviewGranularity = 'day' | 'month' | 'quarter'
-
-// 'total' means no category/label filter at all — just the current wallets/date range/search,
-// the same "everything" scope getOverview's headline uses. It still goes through this endpoint
-// so the totals card gets a real previous-period comparison and bucketed series, not a lesser
-// version of what a category/label selection gets.
-export type OverviewSelectionType = 'category' | 'label' | 'total'
 
 export type OverviewSelectionInput = {
   type: OverviewSelectionType
@@ -38,6 +32,7 @@ export function parseOverviewSelectionQuery(value: unknown): OverviewSelectionIn
   const dateTo = parseCalendarDate(query.dateTo, 'Datum do')
   if (dateFrom > dateTo) throw new DomainError(400, 'Datum od nesmí být po datu do.')
   const granularity = parseGranularity(query.granularity)
+  assertOverviewBucketLimit(dateFrom, dateTo, granularity)
   const walletIds = query.walletIds === undefined ? null : parseWalletIds(query.walletIds)
   const search = query.search === undefined ? null : parseSearch(query.search)
 
@@ -45,12 +40,12 @@ export function parseOverviewSelectionQuery(value: unknown): OverviewSelectionIn
 }
 
 function parseSelectionType(value: unknown): OverviewSelectionType {
-  if (value === 'category' || value === 'label' || value === 'total') return value
+  if (typeof value === 'string' && (overviewSelectionTypes as readonly string[]).includes(value)) return value as OverviewSelectionType
   throw new DomainError(400, 'Typ výběru není platný.')
 }
 
 function parseGranularity(value: unknown): OverviewGranularity {
-  if (value === 'day' || value === 'month' || value === 'quarter') return value
+  if (typeof value === 'string' && (overviewGranularities as readonly string[]).includes(value)) return value as OverviewGranularity
   throw new DomainError(400, 'Granularita přehledu není platná.')
 }
 
@@ -74,33 +69,32 @@ export function parseOverviewQuery(value: unknown): OverviewInput {
   }
 }
 
-export function resolveOverviewGranularity(period: OverviewPeriod, dateFrom: string, dateTo: string): OverviewGranularity {
-  if (period === 'week' || period === 'month') return 'day'
-  if (period === 'year') return 'month'
+// The chart series is one generated bucket per day/month/quarter; anything beyond this is a
+// malformed range, not a chart anyone can read.
+const MAX_OVERVIEW_BUCKETS = 1000
+const APPROXIMATE_DAYS_PER_BUCKET: Record<OverviewGranularity, number> = { day: 1, month: 30, quarter: 91 }
 
-  const days = Math.max(0, Math.round((Date.parse(`${dateTo}T00:00:00Z`) - Date.parse(`${dateFrom}T00:00:00Z`)) / 86_400_000))
-  if (period === 'custom') return days <= 93 ? 'day' : days <= 730 ? 'month' : 'quarter'
-  return days <= 730 ? 'month' : 'quarter'
+// The period is only a preference: a week/month/year period with a range far longer than
+// that period falls back to the length-based rule instead of generating day buckets for it.
+export function resolveOverviewGranularity(period: FeedPeriod, dateFrom: string, dateTo: string): OverviewGranularity {
+  const days = daysBetween(dateFrom, dateTo)
+  if ((period === 'week' || period === 'month') && days <= 93) return 'day'
+  if (period === 'year' && days <= 366) return 'month'
+  if (period === 'all') return days <= 730 ? 'month' : 'quarter'
+  return days <= 93 ? 'day' : days <= 730 ? 'month' : 'quarter'
 }
 
-function parsePeriod(value: unknown): OverviewPeriod {
-  if (value === 'week' || value === 'month' || value === 'year' || value === 'all' || value === 'custom') return value
+export function assertOverviewBucketLimit(dateFrom: string, dateTo: string, granularity: OverviewGranularity) {
+  if (daysBetween(dateFrom, dateTo) / APPROXIMATE_DAYS_PER_BUCKET[granularity] > MAX_OVERVIEW_BUCKETS) {
+    throw new DomainError(400, 'Zvolené období je pro přehled příliš dlouhé.')
+  }
+}
+
+function daysBetween(dateFrom: string, dateTo: string) {
+  return Math.max(0, Math.round((Date.parse(`${dateTo}T00:00:00Z`) - Date.parse(`${dateFrom}T00:00:00Z`)) / 86_400_000))
+}
+
+function parsePeriod(value: unknown): FeedPeriod {
+  if (typeof value === 'string' && (feedPeriods as readonly string[]).includes(value)) return value as FeedPeriod
   throw new DomainError(400, 'Období přehledu není platné.')
-}
-
-function parseWalletIds(value: unknown) {
-  if (typeof value !== 'string' || !value) throw new DomainError(400, 'Výběr peněženek není platný.')
-  const walletIds = value.split(',')
-  if (walletIds.length > 50 || walletIds.some((walletId) => !walletId)) throw new DomainError(400, 'Výběr peněženek není platný.')
-  const parsed = walletIds.map((walletId) => parseUuid(walletId, 'Peněženka'))
-  if (new Set(parsed).size !== parsed.length) throw new DomainError(400, 'Výběr peněženek obsahuje duplicitu.')
-  return parsed
-}
-
-function parseSearch(value: unknown) {
-  if (typeof value !== 'string') throw new DomainError(400, 'Hledání není platné.')
-  const search = value.trim()
-  if (!search) return null
-  if (search.length > 100) throw new DomainError(400, 'Hledání může mít nejvýše 100 znaků.')
-  return search
 }

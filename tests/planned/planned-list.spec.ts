@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { mockAuthAndApi, signIn } from '../support/auth'
-import { mockCategoriesApi } from '../support/categories'
+import { mockCategoriesApi, type CategoryFixture } from '../support/categories'
 import { mockFeedApi } from '../support/feed'
 import { mockLabelsApi } from '../support/labels'
 import { mockPlannedApi } from '../support/planned'
@@ -8,7 +8,7 @@ import { mockTransactionsApi } from '../support/transactions'
 import { mockWalletsApi } from '../support/wallets'
 
 const wallet = { id: 'wallet-1', name: 'Moneta', colorKey: 'teal', openingBalanceCzk: 0, openingBalanceDate: '2026-01-01', sortOrder: 0, isHidden: false, openingBalanceLocked: false }
-const category = { id: 'category-1', name: 'Domov', direction: 'expense' as const, iconKey: 'house', colorKey: 'orange', sortOrder: 0 }
+const category: CategoryFixture = { id: 'category-1', name: 'Domov', direction: 'expense', iconKey: 'house', colorKey: 'orange', sortOrder: 0 }
 
 test('keeps future manual and recurring items in Naplanovane, with only manual items editable', async ({ page }) => {
   await mockAuthAndApi(page)

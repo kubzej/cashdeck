@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { DomainError } from '../management/domain.js'
-import { parseCreateTransfer, parseTransferListQuery, parseUpdateTransfer } from './domain.js'
+import { parseCreateTransfer, parseUpdateTransfer } from './domain.js'
 
 const sourceWalletId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef123'
 const destinationWalletId = 'c00f7a6a-d0c1-4f08-9bd4-643415bef124'
@@ -22,13 +22,6 @@ test('rejects transfers between the same wallet and invalid amounts', () => {
   expect(() => parseCreateTransfer({ sourceWalletId, destinationWalletId, amountCzk: 0, transferDate: '2026-08-20' })).toThrow(new DomainError(400, 'Částka musí být alespoň 1 Kč.'))
 })
 
-test('parses partial updates and wallet-scoped listing', () => {
+test('parses partial updates', () => {
   expect(parseUpdateTransfer({ note: '  Přesun  ', labelIds: [] })).toEqual({ note: 'Přesun', labelIds: [] })
-  expect(parseTransferListQuery({ walletId: sourceWalletId, dateFrom: '2026-08-01', dateTo: '2026-08-31', limit: '25' })).toEqual({
-    walletId: sourceWalletId,
-    dateFrom: '2026-08-01',
-    dateTo: '2026-08-31',
-    cursor: null,
-    limit: 25,
-  })
 })

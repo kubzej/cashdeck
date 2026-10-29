@@ -1,3 +1,7 @@
+// Repository tests run against a mocked `pg` pool: they check which queries and parameters the
+// repository sends and how it handles the rows it is handed (transactions, cache invalidation,
+// validation), never what Postgres would return. SQL correctness is not covered here.
+
 import type { Pool } from 'pg'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { resetWealthCacheForTests } from '../wealth-cache.js'
@@ -100,6 +104,12 @@ test('search filters flow, its bucketed series, categories, and the transaction 
   expect(normalized).toContain("search_recurring_rule.name ilike '%' || $5 || '%'")
   const [labelsSql] = query.mock.calls[5]
   expect(String(labelsSql).replace(/\s+/g, ' ')).toContain('search_recurring_rule')
+  // The transfer half of the label totals must honour the search too, not just the transaction half.
+  const labelsNormalized = String(labelsSql).replace(/\s+/g, ' ')
+  const transferHalf = labelsNormalized.slice(labelsNormalized.indexOf('transfer_label_totals as ('))
+  expect(transferHalf).toContain("source_wallet.name ilike '%' || $5 || '%'")
+  expect(transferHalf).toContain("coalesce(tr.note, '') ilike '%' || $5 || '%'")
+  expect(transferHalf).toContain('search_occurrence.transfer_id = tr.id')
   expect(result.flow).toEqual({ incomeCzk: 0, expenseCzk: 698, cashflowCzk: -698 })
 })
 
@@ -222,4 +232,57 @@ test('a selection trend combined with search text is filtered by both — the pr
   const normalized = String(previousSql).replace(/\s+/g, ' ')
   expect(normalized).toContain('t.category_id = $5::uuid')
   expect(normalized).toContain("search_recurring_rule.name ilike '%' || $6 || '%'")
+})
+
+test('label totals only count a transfer on a wallet side from that wallet\'s opening date onwards', async () => {
+  const query = vi.fn().mockResolvedValue({ rows: [] })
+  const repository = createOverviewRepository({ query } as unknown as Pool)
+
+  await repository.getOverview('user-1', { walletIds: null, period: 'month', dateFrom: '2026-08-01', dateTo: '2026-08-21', search: null })
+
+  const labelsSql = String(query.mock.calls.map(([sql]) => String(sql)).find((sql) => sql.includes('transfer_label_totals as (')))
+  const transferHalf = labelsSql.replace(/\s+/g, ' ')
+  expect(transferHalf).toContain('tr.transfer_date >= source_scope.opening_balance_date')
+  expect(transferHalf).toContain('tr.transfer_date >= destination_scope.opening_balance_date')
+})
+
+test('overview and selection search text is bound with LIKE wildcards escaped', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-08-21T12:00:00+02:00'))
+  const query = vi.fn().mockResolvedValue({ rows: [{ earliest_activity_date: '2025-01-01' }] })
+  const repository = createOverviewRepository({ query } as unknown as Pool)
+
+  await repository.getOverview('user-1', { walletIds: null, period: 'month', dateFrom: '2026-08-01', dateTo: '2026-08-21', search: '50%' }).catch(() => {})
+  await repository.getSelectionTrend('user-1', { type: 'total', id: null, walletIds: null, dateFrom: '2026-08-01', dateTo: '2026-08-21', granularity: 'day', search: '50%' }).catch(() => {})
+
+  const searchValues = query.mock.calls.flatMap(([, values]) => (values as unknown[]) ?? []).filter((value) => typeof value === 'string' && value.includes('50'))
+  expect(searchValues.length).toBeGreaterThan(0)
+  expect(searchValues.every((value) => value === '50\\%')).toBe(true)
+})
+
+test('selection trend caps a range that reaches into the future at today, like the main overview does', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-10-27T12:00:00+02:00'))
+  const query = vi.fn().mockResolvedValue({ rows: [] })
+  const repository = createOverviewRepository({ query } as unknown as Pool)
+
+  await repository.getSelectionTrend('user-1', { type: 'total', id: null, walletIds: null, dateFrom: '2026-10-01', dateTo: '2026-10-31', granularity: 'day', search: null })
+
+  for (const [, parameters] of query.mock.calls) {
+    expect((parameters as unknown[]).slice(2, 4)).toEqual(['2026-10-01', '2026-10-27'])
+  }
+  expect(query).toHaveBeenCalledTimes(2)
+})
+
+test('selection trend for a range that lies entirely in the future collapses to today', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-10-27T12:00:00+02:00'))
+  const query = vi.fn().mockResolvedValue({ rows: [] })
+  const repository = createOverviewRepository({ query } as unknown as Pool)
+
+  await repository.getSelectionTrend('user-1', { type: 'total', id: null, walletIds: null, dateFrom: '2026-11-01', dateTo: '2026-11-30', granularity: 'day', search: null })
+
+  for (const [, parameters] of query.mock.calls) {
+    expect((parameters as unknown[]).slice(2, 4)).toEqual(['2026-10-27', '2026-10-27'])
+  }
 })
