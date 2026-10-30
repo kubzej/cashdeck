@@ -13,7 +13,7 @@ import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { Label as FormLabel } from '../../components/ui/label'
 import { Skeleton } from '../../components/ui/skeleton'
-import { amountErrorMessage, parsePositiveWholeCzk } from '../../lib/amount-input'
+import { amountErrorMessage, parseAmountCzk } from '../../lib/amount-input'
 import { formatIsoDate, getPragueToday, parseIsoDate } from '../../lib/prague-date'
 import { InlineLabelPicker } from '../labels/inline-label-picker'
 import { mergeLabels } from '../labels/label-chips'
@@ -81,7 +81,7 @@ export function TransferFormScreen({ transfer, onCancel, onSaved, onDeleted }: {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors: ValidationErrors = {}
-    const amountCzk = parsePositiveWholeCzk(values.amountCzk)
+    const amountCzk = parseAmountCzk(values.amountCzk)
     if (!values.sourceWalletId) nextErrors.sourceWalletId = 'Vyber odkud peníze převádíš.'
     if (!values.destinationWalletId) nextErrors.destinationWalletId = 'Vyber kam peníze převádíš.'
     if (values.sourceWalletId && values.sourceWalletId === values.destinationWalletId) nextErrors.destinationWalletId = 'Vyber jinou cílovou peněženku.'

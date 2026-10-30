@@ -31,6 +31,7 @@ export const categoryIconKeys = [
   'utensils',
   'briefcase-business',
   'car-front',
+  'car',
   'ellipsis',
   'banknote-arrow-up',
   'rotate-ccw',

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { MAX_AMOUNT_CZK } from '../../server/src/catalog'
-import { AMOUNT_TOO_LARGE_ERROR, amountErrorMessage, applyAmountInput, DECIMAL_INPUT_ERROR, MAX_SCENARIO_PERCENT, parseDecimalInput, parseNonNegativeCzk, parseNonNegativeInteger, parsePercentInput, parsePositiveInteger, parsePositiveWholeCzk, parseScenarioPercent, parseSignedWholeCzk, resolveField, SIGN_INPUT_ERROR } from './amount-input'
+import { AMOUNT_TOO_LARGE_ERROR, SUM_NOT_POSITIVE_ERROR, amountErrorMessage, applyAmountInput, evaluateAmountExpression, DECIMAL_INPUT_ERROR, MAX_SCENARIO_PERCENT, parseDecimalInput, parseNonNegativeCzk, parseNonNegativeInteger, parsePercentInput, parsePositiveInteger, parseAmountCzk, parsePositiveWholeCzk, parseScenarioPercent, parseSignedWholeCzk, resolveField, SIGN_INPUT_ERROR } from './amount-input'
 
 test('pasted text with a decimal separator is rejected as a whole, never turned into a different amount', () => {
   expect(applyAmountInput('99,90', '12')).toEqual({ value: '12', error: DECIMAL_INPUT_ERROR })
@@ -8,7 +8,7 @@ test('pasted text with a decimal separator is rejected as a whole, never turned 
   expect(applyAmountInput('12.5', '7')).toEqual({ value: '7', error: DECIMAL_INPUT_ERROR })
 })
 
-test('a pasted sign is rejected instead of silently dropped', () => {
+test('a leading sign is rejected instead of silently dropped', () => {
   expect(applyAmountInput('-500', '3')).toEqual({ value: '3', error: SIGN_INPUT_ERROR })
   expect(applyAmountInput('+500', '')).toEqual({ value: '', error: SIGN_INPUT_ERROR })
   expect(applyAmountInput('−500', '')).toEqual({ value: '', error: SIGN_INPUT_ERROR })
@@ -112,4 +112,27 @@ test('an unusable field keeps its fallback and reports an error only if somethin
   expect(resolveField('abc', null, 4, 'chyba')).toEqual({ value: 4, error: 'chyba' })
   expect(resolveField('   ', null, 4, 'chyba')).toEqual({ value: 4, error: undefined })
   expect(resolveField('', null, 4, 'chyba')).toEqual({ value: 4, error: undefined })
+})
+
+test('a sum of whole amounts is kept, repeated operators collapse to the last one', () => {
+  expect(applyAmountInput('1 250 + 300', '')).toEqual({ value: '1 250 + 300', error: undefined })
+  expect(applyAmountInput('500+−80', '')).toEqual({ value: '500-80', error: undefined })
+  expect(applyAmountInput('5,5+3', '5')).toEqual({ value: '5', error: DECIMAL_INPUT_ERROR })
+})
+
+test('a sum evaluates to its total, anything else is not a sum', () => {
+  expect(evaluateAmountExpression('1 250 + 300 - 80')).toBe(1470)
+  expect(evaluateAmountExpression('300')).toBe(300)
+  expect(evaluateAmountExpression('300 +')).toBeNull()
+  expect(evaluateAmountExpression('')).toBeNull()
+})
+
+test('an amount sum must come out positive and within the cap', () => {
+  expect(parseAmountCzk('1 250 + 300')).toBe(1550)
+  expect(parseAmountCzk('100 - 100')).toBeNull()
+  expect(parseAmountCzk('100 - 200')).toBeNull()
+  expect(parseAmountCzk(`${MAX_AMOUNT_CZK} + 1`)).toBeNull()
+  expect(amountErrorMessage('300 - 400')).toBe(SUM_NOT_POSITIVE_ERROR)
+  expect(amountErrorMessage('0')).toBe('Zadej celý počet korun větší než nula.')
+  expect(amountErrorMessage(`${MAX_AMOUNT_CZK} + 1`)).toBe(AMOUNT_TOO_LARGE_ERROR)
 })

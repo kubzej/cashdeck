@@ -79,7 +79,7 @@ test('opens an exact category filter in the transaction list', async ({ page }) 
   await expect(summary).toContainText('Bydlení')
   await expect(summary).toContainText('-18 500 Kč')
   await expect(summary).toContainText('2 transakce')
-  await expect(summary).toContainText('12 %')
+  await expect(summary).toContainText('+2 500 Kč')
   await expect(page.getByText('Nic neodpovídá filtrům', { exact: true })).toBeVisible()
 })
 

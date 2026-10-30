@@ -1,4 +1,4 @@
-import { amountErrorMessage, parsePositiveWholeCzk } from '../../lib/amount-input'
+import { amountErrorMessage, parseAmountCzk, parsePositiveWholeCzk } from '../../lib/amount-input'
 import { pluralCs } from '../../lib/format'
 import type { CategoryDirection } from '../categories/api'
 import type { RecurringFrequency, RecurringRule, RecurringRuleInput, RecurringRuleKind } from './api'
@@ -42,7 +42,7 @@ export function initialRecurringRuleFormValues(rule: RecurringRule | undefined, 
 }
 
 export function toRecurringRuleInput(values: RecurringRuleFormValues): RecurringRuleInput | null {
-  const amountCzk = parsePositiveWholeCzk(values.amountCzk)
+  const amountCzk = parseAmountCzk(values.amountCzk)
   const customIntervalDays = values.frequency === 'custom_days' ? parsePositiveWholeCzk(values.customIntervalDays) : null
   if (amountCzk === null || (values.frequency === 'custom_days' && customIntervalDays === null)) return null
 

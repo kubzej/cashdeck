@@ -88,7 +88,7 @@ test('a pasted amount with a decimal comma never reaches the saved transaction a
 
   await amount.fill('-40')
   await expect(amount).toHaveValue('250')
-  await expect(page.getByText('Zadej částku bez znaménka.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Částka nemůže začínat znaménkem.', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Vyber kategorii' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Jídlo', exact: true }).click()
@@ -96,6 +96,64 @@ test('a pasted amount with a decimal comma never reaches the saved transaction a
 
   await expect.poll(() => transactionsApi.transactions().length).toBe(1)
   expect(transactionsApi.transactions()[0].amountCzk).toBe(250)
+})
+
+test('adds and subtracts in the amount field and saves the total', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page, [wallet])
+  await mockCategoriesApi(page, [expenseCategory])
+  await mockLabelsApi(page, [])
+  const transactionsApi = await mockTransactionsApi(page)
+  await mockTransfersApi(page)
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Přidat záznam' }).click()
+  await page.getByRole('button', { name: 'Transakce', exact: true }).click()
+  const amount = page.getByRole('textbox', { name: 'Částka', exact: true })
+  await expect(page.getByRole('button', { name: 'Přičíst' })).toBeDisabled()
+
+  await amount.fill('1250')
+  await page.getByRole('button', { name: 'Přičíst' }).click()
+  await amount.pressSequentially('300')
+  await page.getByRole('button', { name: 'Odečíst' }).click()
+  await amount.pressSequentially('80')
+  await expect(amount).toHaveValue('1250 + 300 - 80')
+  await expect(page.getByLabel('Částka transakce').getByText(/= 1\s470/)).toBeVisible()
+
+  // Leaving the field replaces the sum with its total.
+  await page.getByRole('textbox', { name: 'Hledat nebo vytvořit štítek' }).click()
+  await expect(amount).toHaveValue('1470')
+
+  await page.getByRole('button', { name: 'Vyber kategorii' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Jídlo', exact: true }).click()
+  await page.getByRole('button', { name: 'Uložit transakci' }).click()
+  await expect.poll(() => transactionsApi.transactions().map((transaction) => transaction.amountCzk)).toEqual([1470])
+})
+
+test('a sum that is not above zero is rejected and nothing is saved', async ({ page }) => {
+  await mockAuthAndApi(page)
+  await mockWalletsApi(page, [wallet])
+  await mockCategoriesApi(page, [expenseCategory])
+  await mockLabelsApi(page, [])
+  const transactionsApi = await mockTransactionsApi(page)
+  await mockTransfersApi(page)
+  await page.goto('/')
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Přidat záznam' }).click()
+  await page.getByRole('button', { name: 'Transakce', exact: true }).click()
+  const amount = page.getByRole('textbox', { name: 'Částka', exact: true })
+  await amount.fill('300 - 400')
+  await page.getByRole('textbox', { name: 'Hledat nebo vytvořit štítek' }).click()
+  await expect(amount).toHaveValue('300 - 400')
+  await expect(page.getByText('Výsledek musí být větší než nula.', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Vyber kategorii' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Jídlo', exact: true }).click()
+  await page.getByRole('button', { name: 'Uložit transakci' }).click()
+  await expect(page.getByText('Výsledek musí být větší než nula.', { exact: true })).toBeVisible()
+  expect(transactionsApi.transactions()).toEqual([])
 })
 
 test('rejects a transaction date before the selected wallet was opened', async ({ page }) => {
