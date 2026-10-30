@@ -12,7 +12,7 @@ import { Field, FieldError, FieldLabel } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import { Label as FormLabel } from '../../components/ui/label'
 import { Skeleton } from '../../components/ui/skeleton'
-import { amountErrorMessage, parsePositiveWholeCzk } from '../../lib/amount-input'
+import { amountErrorMessage, parseAmountCzk } from '../../lib/amount-input'
 import { formatIsoDate, getPragueToday, parseIsoDate } from '../../lib/prague-date'
 import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group'
 import { CategoryPickerDialog } from '../categories/category-picker-dialog'
@@ -87,7 +87,7 @@ export function TransactionFormScreen({ transaction, onCancel, onSaved, onDelete
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors: ValidationErrors = {}
-    const amountCzk = parsePositiveWholeCzk(values.amountCzk)
+    const amountCzk = parseAmountCzk(values.amountCzk)
     if (!values.walletId) nextErrors.walletId = 'Vyber peněženku.'
     if (!values.categoryId) nextErrors.categoryId = 'Vyber kategorii.'
     if (amountCzk === null) nextErrors.amountCzk = amountErrorMessage(values.amountCzk)

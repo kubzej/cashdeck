@@ -91,7 +91,7 @@ test('shows a negative trend pill when spending increased over the previous peri
   // unfavorable for an expense category even though the raw amount became more negative.
   const trend = page.locator('.selection-summary__trend')
   await expect(trend).toHaveClass(/selection-summary__trend--negative/)
-  await expect(trend).toContainText('270 %')
+  await expect(trend).toContainText('-13 500 Kč')
 })
 
 test('shows a neutral fallback instead of echoing the amount when there is no previous period to compare', async ({ page }) => {

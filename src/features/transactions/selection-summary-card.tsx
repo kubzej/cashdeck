@@ -76,6 +76,7 @@ export function SelectionSummaryCard({ filters, selection, search }: { filters: 
       delta={delta}
       series={series}
       granularity={metrics?.range.granularity ?? 'day'}
+      period={filters.period}
     />
   }
 
@@ -93,6 +94,7 @@ export function SelectionSummaryCard({ filters, selection, search }: { filters: 
       delta={delta}
       series={series}
       granularity={metrics?.range.granularity ?? 'day'}
+      period={filters.period}
     />
   }
 
@@ -102,10 +104,10 @@ export function SelectionSummaryCard({ filters, selection, search }: { filters: 
   const amountCzk = label ? label.incomeCzk - label.expenseCzk : 0
   const delta = trend ? getTrendDelta(amountCzk, trend.previous.amountCzk) : null
   const count = (label?.transactionCount ?? 0) + (label?.transferCount ?? 0)
-  return <SummaryCard icon={<Tags aria-hidden="true" />} title="Štítek" name={selection.name} meta={formatItemCount(count)} amountCzk={amountCzk} delta={delta} series={series} granularity={metrics?.range.granularity ?? 'day'} />
+  return <SummaryCard icon={<Tags aria-hidden="true" />} title="Štítek" name={selection.name} meta={formatItemCount(count)} amountCzk={amountCzk} delta={delta} series={series} granularity={metrics?.range.granularity ?? 'day'} period={filters.period} />
 }
 
-function SummaryCard({ icon, colorKey, title, name, meta, amountCzk, delta, series, granularity }: { icon: ReactNode; colorKey?: string; title: string; name?: string; meta: string; amountCzk: number; delta: TrendDelta | null; series: OverviewSelectionTrend['series']; granularity: OverviewGranularity }) {
+function SummaryCard({ icon, colorKey, title, name, meta, amountCzk, delta, series, granularity, period }: { icon: ReactNode; colorKey?: string; title: string; name?: string; meta: string; amountCzk: number; delta: TrendDelta | null; series: OverviewSelectionTrend['series']; granularity: OverviewGranularity; period: FeedFilterValue['period'] }) {
   return <Card padding="none" className="selection-summary">
     <div className="selection-summary__header">
       <span className={`selection-summary__icon ${colorKey ? `color-key--${colorKey}` : ''}`.trim()}>{icon}</span>
@@ -114,40 +116,71 @@ function SummaryCard({ icon, colorKey, title, name, meta, amountCzk, delta, seri
     </div>
     <div className="selection-summary__headline">
       <strong className={amountCzk < 0 ? 'selection-summary__amount selection-summary__amount--expense' : 'selection-summary__amount'}>{formatCzk(amountCzk, { signed: true })}</strong>
-      {delta ? <TrendPill delta={delta} /> : null}
+      {delta ? <TrendNote delta={delta} period={period} /> : null}
     </div>
     <small className="selection-summary__meta">{meta}</small>
     {series.length > 1 ? <Sparkline points={series} granularity={granularity} /> : null}
   </Card>
 }
 
-function TrendPill({ delta }: { delta: TrendDelta }) {
-  return <span className={`selection-summary__trend selection-summary__trend--${delta.tone}`}>
+const COMPARED_TO: Record<FeedFilterValue['period'], string> = {
+  week: 'oproti minulému týdnu',
+  month: 'oproti minulému měsíci',
+  year: 'oproti minulému roku',
+  all: 'oproti předchozímu období',
+  custom: 'oproti předchozímu období',
+}
+
+function TrendNote({ delta, period }: { delta: TrendDelta; period: FeedFilterValue['period'] }) {
+  const title = delta.comparable ? `${delta.label} ${COMPARED_TO[period]}` : delta.label
+  return <span className={`selection-summary__trend selection-summary__trend--${delta.tone}`} title={title} aria-label={title}>
     {delta.tone === 'positive' ? <TrendingUp aria-hidden="true" /> : delta.tone === 'negative' ? <TrendingDown aria-hidden="true" /> : null}
     {delta.label}
   </span>
 }
 
+// Bars show each bucket's own amount; the hatched grey area behind them is the running total from
+// the start of the period. Both share one zero line: income and a positive total rise above it,
+// spending and a negative total hang below it. Each side is scaled on its own, so one large payday
+// can't flatten the spending bars.
 function Sparkline({ points, granularity }: { points: OverviewSelectionTrend['series']; granularity: OverviewGranularity }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
-  const max = Math.max(...points.map((point) => Math.abs(point.amountCzk)), 1)
+  const totals = points.reduce<number[]>((acc, point) => [...acc, (acc[acc.length - 1] ?? 0) + point.amountCzk], [])
+  const maxIncome = Math.max(...points.map((point) => point.amountCzk), 0)
+  const maxExpense = Math.max(...points.map((point) => -point.amountCzk), 0)
+  const top = Math.max(...totals, 0)
+  const bottom = Math.min(...totals, 0)
+  const hasAbove = top > 0 || maxIncome > 0
+  const hasBelow = bottom < 0 || maxExpense > 0
+  // Share of the chart height above the zero line.
+  const zero = hasAbove && hasBelow ? Math.min(Math.max(top / ((top - bottom) || 1), 0.3), 0.7) : hasAbove ? 0.85 : hasBelow ? 0.15 : 0.5
+  const toX = (index: number) => (index + 0.5) / points.length * 100
+  const toY = (value: number) => (value >= 0 ? zero * (1 - value / (top || 1)) : zero + (1 - zero) * (value / (bottom || -1))) * 100
+  const line = totals.map((value, index) => `${toX(index).toFixed(2)}% ${toY(value).toFixed(2)}%`)
+  const area = `polygon(${line.join(', ')}, ${toX(points.length - 1).toFixed(2)}% ${toY(0).toFixed(2)}%, ${toX(0).toFixed(2)}% ${toY(0).toFixed(2)}%)`
+  const barStyle = (amountCzk: number): CSSProperties => amountCzk >= 0
+    ? { bottom: `${(1 - zero) * 100}%`, height: `${amountCzk === 0 ? 0 : Math.max(0.08, amountCzk / (maxIncome || 1)) * zero * 100}%` }
+    : { top: `${zero * 100}%`, height: `${Math.max(0.08, -amountCzk / (maxExpense || 1)) * (1 - zero) * 100}%` }
   const activePoint = activeIndex === null ? null : points[activeIndex]
 
   return <div className="selection-summary__sparkline-wrap">
-    {activePoint && activeIndex !== null ? <div className="selection-summary__sparkline-tooltip" style={{ left: `${clampTooltipLeftPercent((activeIndex + 0.5) / points.length * 100)}%` } as CSSProperties}>
+    {activePoint && activeIndex !== null ? <div className="selection-summary__sparkline-tooltip" style={{ left: `${clampTooltipLeftPercent(toX(activeIndex))}%` } as CSSProperties}>
       <span>{formatBucketDate(activePoint.date, granularity)}</span>
       <strong>{formatCzk(activePoint.amountCzk, { signed: true })}</strong>
+      <span>Celkem {formatCzk(totals[activeIndex], { signed: true })}</span>
     </div> : null}
     <div className="selection-summary__sparkline">
+      <div className="selection-summary__sparkline-total" style={{ clipPath: area } as CSSProperties} aria-hidden="true" />
+      <div className="selection-summary__sparkline-zero" style={{ top: `${zero * 100}%` } as CSSProperties} aria-hidden="true" />
       {points.map((point, index) => <button
         type="button"
         key={point.date}
         className={point.amountCzk < 0 ? 'is-negative' : point.amountCzk > 0 ? 'is-positive' : 'is-neutral'}
-        aria-label={`${formatBucketDate(point.date, granularity)}: ${formatCzk(point.amountCzk, { signed: true })}`}
+        aria-label={`${formatBucketDate(point.date, granularity)}: ${formatCzk(point.amountCzk, { signed: true })}, celkem ${formatCzk(totals[index], { signed: true })}`}
         aria-pressed={activeIndex === index}
         onClick={() => setActiveIndex((current) => current === index ? null : index)}
       >
-        <i style={{ '--bar-size': `${point.amountCzk === 0 ? 4 : Math.max(8, Math.abs(point.amountCzk) / max * 100)}%` } as CSSProperties} />
+        <i style={barStyle(point.amountCzk)} />
       </button>)}
     </div>
   </div>
